@@ -203,6 +203,16 @@ pruefe("Bild nach dem Umbenennen abrufbar",
                                     "datei": "Bild.png"}).status_code == 200)
 neu = neu2
 
+# Verwaister Anhangsordner unter dem Zielnamen darf das Umbenennen nicht zerreissen
+(DATEN / "Arbeit/Projekte/Ziel.anhang").mkdir()
+(DATEN / "Arbeit/Projekte/Ziel.anhang/fremd.png").write_bytes(PNG)
+r = k.post("/api/seite/titel", json={"notizbuch": buch, "abschnitt": absch, "name": neu, "titel": "Ziel"})
+pruefe("Umbenennen trotz verwaistem Anhangsordner", r.status_code == 200 and r.json()["name"] == "Ziel (2)", r.text)
+pruefe("Anhaenge ziehen mit", (DATEN / "Arbeit/Projekte/Ziel (2).anhang/Bild.png").is_file())
+pruefe("Fremder Ordner unberuehrt", (DATEN / "Arbeit/Projekte/Ziel.anhang/fremd.png").is_file())
+shutil.rmtree(DATEN / "Arbeit/Projekte/Ziel.anhang")
+neu = r.json()["name"]
+
 # --- Bilder mitten im Text ---------------------------------------------------
 r = hoch("ImText.png", PNG)
 imtext = r.json()["datei"]

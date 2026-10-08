@@ -421,7 +421,13 @@ def seite_umbenennen(buch: str, abschnitt: str, name: str, titel: str) -> str:
     daten["rev"] = int(daten.get("rev", 1)) + 1
     neuer = slug(titel)
     if neuer != datei.stem:
-        neuer = frei(datei.parent, neuer, ".json")
+        # Frei heisst: weder die Seite noch ihr Anhangsordner gibt es schon. Lag
+        # ein verwaister "Neu.anhang" im Weg, scheiterte das Verschieben der
+        # Anhaenge, nachdem die Seite schon umbenannt war - Bilder weg, Fehler 500.
+        stamm, n = neuer, 2
+        while (datei.parent / f"{neuer}.json").exists() or (datei.parent / f"{neuer}{ANHANG}").exists():
+            neuer = f"{stamm} ({n})"
+            n += 1
         _schreiben(datei.parent / f"{neuer}.json", daten)
         datei.unlink()
         # Die Anhaenge heissen nach der Seite - sonst findet sie danach niemand mehr.
