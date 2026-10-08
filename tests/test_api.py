@@ -15,6 +15,7 @@ DATEN = Path(tempfile.mkdtemp(prefix="notizen-test-"))
 os.environ["NOTIZEN_ORDNER"] = str(DATEN)
 KONFIG = Path(tempfile.mkdtemp(prefix="notizen-konfig-"))
 os.environ["NOTIZMAPPE_KONFIG"] = str(KONFIG)                # echte Einstellungen nicht anfassen
+os.environ["NOTIZMAPPE_OPTIONEN"] = str(KONFIG / "optionen.json")
 os.environ["NOTIZMAPPE_QUELLE"] = "http://127.0.0.1:1"      # kein echtes GitHub im Test
 sys.path.insert(0, str(WURZEL / "app"))
 

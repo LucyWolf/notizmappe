@@ -5,3 +5,4 @@ dist/
 .update-stand.json
 .update.log
 output/
+.optionen.json
