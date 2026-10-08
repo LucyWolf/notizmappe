@@ -90,9 +90,21 @@ async def api_einstellungen(request: Request):
         "frei": platz.free,
         "papierkorb": sum(1 for _ in (ordner / speicher.PAPIERKORB).glob("*")) if (ordner / speicher.PAPIERKORB).is_dir() else 0,
         "aus_installation": aktualisieren.aus_installation(),
+        "optionen": aktualisieren.optionen_lesen(),
         "hier": (request.client.host if request.client else "") in {"127.0.0.1", "::1"},
         "quelle": aktualisieren.QUELLE,
     }
+
+
+@app.post("/api/einstellungen")
+async def api_einstellungen_setzen(request: Request, rumpf: dict):
+    # Steuert, ob ungefragt fremder Code geholt und ausgefuehrt wird - also
+    # dieselbe Schranke wie beim Update selbst.
+    _nur_hier(request)
+    try:
+        return aktualisieren.optionen_schreiben(rumpf)
+    except RuntimeError as f:
+        raise HTTPException(500, str(f))
 
 
 @app.get("/api/baum")

@@ -50,6 +50,39 @@ def aus_installation() -> bool:
     return (ORDNER / ".einrichtung").is_file()
 
 
+# --- Einstellungen zum Update ------------------------------------------------
+
+OPTIONEN = ORDNER / ".optionen.json"
+STANDARD = {"beim_start_pruefen": True, "automatisch_einspielen": False}
+
+
+def optionen_lesen() -> dict:
+    o = dict(STANDARD)
+    try:
+        gelesen = json.loads(OPTIONEN.read_text(encoding="utf-8"))
+        for schluessel in STANDARD:
+            if schluessel in gelesen:
+                o[schluessel] = bool(gelesen[schluessel])
+    except (OSError, ValueError):
+        pass
+    return o
+
+
+def optionen_schreiben(neu: dict) -> dict:
+    """Liegt bei der Installation, nicht bei den Notizen: es geht um das Programm,
+    nicht um den Inhalt - und ein Sync soll das nicht zwischen Rechnern hin- und
+    herschieben."""
+    o = optionen_lesen()
+    for schluessel in STANDARD:
+        if schluessel in neu:
+            o[schluessel] = bool(neu[schluessel])
+    try:
+        OPTIONEN.write_text(json.dumps(o, ensure_ascii=False, indent=1), encoding="utf-8")
+    except OSError as f:
+        raise RuntimeError(f"Einstellungen ließen sich nicht sichern: {f}")
+    return o
+
+
 def _token() -> str | None:
     """Nur fuer ein privates Repo noetig. Steht er nicht in der Umgebung, darf er
     in einer Datei liegen - die sollte dann nur dem eigenen Benutzer gehoeren."""
