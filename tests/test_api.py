@@ -160,6 +160,11 @@ pruefe("Nichts ausserhalb gelandet", not (DATEN / "Arbeit/flucht.png").exists() 
 pruefe("Ausbruch beim Abruf abgelehnt",
        k.get("/api/anhang", params={"notizbuch": buch, "abschnitt": absch, "name": neu,
                                     "datei": "../../../etc/passwd"}).status_code == 400)
+for sonder in ["Übersicht.pdf", "Plan → 2026.pdf", "日本.txt", "Foto 😀.bin"]:
+    d = hoch(sonder, b"%PDF-1.4 x").json()["datei"]
+    r = k.get("/api/anhang", params={"notizbuch": buch, "abschnitt": absch, "name": neu, "datei": d})
+    pruefe(f"Download mit Sonderzeichen: {sonder}", r.status_code == 200
+           and "filename*=UTF-8''" in r.headers.get("content-disposition", ""), r.status_code)
 pruefe("Leere Datei abgelehnt", hoch("leer.txt", b"").status_code == 400)
 pruefe("Zu grosse Datei abgelehnt (413)", hoch("riesig.bin", b"x" * (26 * 1024 * 1024)).status_code == 413)
 
@@ -185,7 +190,7 @@ arten = [(e["typ"], e.get("datei")) for e in
 pruefe("Bild- und Dateielement bleiben", ("bild", "Bild.png") in arten and ("datei", svgname) in arten, arten)
 pruefe("Ausbruchspfad im Element verworfen", not any("passwd" in str(d) for _, d in arten), arten)
 pruefe("Unbekannte Art verworfen", all(t in {"bild", "datei", "text"} for t, _ in arten), arten)
-pruefe("Verwaiste Dateien aufgeraeumt", r.json()["aufgeraeumt"] == 2, r.json())
+pruefe("Verwaiste Dateien aufgeraeumt", r.json()["aufgeraeumt"] == 6, r.json())   # 2 + die 4 Sonderzeichen-Dateien
 pruefe("Benutzte Datei ist noch da", (DATEN / f"Arbeit/Projekte/{neu}.anhang/Bild.png").is_file())
 pruefe("Unbenutzte im Papierkorb", any("Bild (2)" in p.name for p in (DATEN / ".papierkorb").glob("*")))
 

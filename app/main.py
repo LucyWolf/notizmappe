@@ -697,14 +697,21 @@ async def api_anhang_runter(request: Request, notizbuch: str, abschnitt: str, na
     return FileResponse(
         pfad,
         media_type=typ or "application/octet-stream",
-        filename=None if typ else pfad.name,
         headers={
             "X-Content-Type-Options": "nosniff",
-            "Content-Disposition": (f'inline; filename="{pfad.name}"' if typ
-                                    else f'attachment; filename="{pfad.name}"'),
+            "Content-Disposition": _dateiname_kopf("inline" if typ else "attachment", pfad.name),
             "Cache-Control": "no-cache",
         },
     )
+
+
+def _dateiname_kopf(art: str, name: str) -> str:
+    """Content-Disposition mit Umlauten, Emoji usw. Header sind Latin-1 - ein
+    "Plan → 2026.pdf" roh hineingeschrieben gab einen Serverfehler. Deshalb nach
+    RFC 5987: ASCII-Ersatz fuer alte Programme, dazu filename* in UTF-8."""
+    from urllib.parse import quote
+    ersatz = "".join(z if 32 <= ord(z) < 127 and z not in '"\\' else "_" for z in name) or "Datei"
+    return f"{art}; filename=\"{ersatz}\"; filename*=UTF-8''{quote(name, safe='')}"
 
 
 @app.get("/api/stand")
