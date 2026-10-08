@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notizmappe</title>
+<link rel="stylesheet" href="/static/stil.css">
+</head>
+<body>
+<div id="rahmen">
+
+  <aside id="leiste">
+    <header>
+      <strong>Notizmappe</strong>
+      <code id="ordner" title="Datenordner">{{ ordner }}</code>
+    </header>
+    <nav id="baum" aria-label="Notizbücher"></nav>
+    <footer>
+      <button type="button" id="neues-buch">+ Notizbuch</button>
+      <span id="version">v{{ version }}</span>
+    </footer>
+  </aside>
+
+  <main id="haupt">
+    <div id="kopf">
+      <input id="titel" type="text" placeholder="Seitentitel" autocomplete="off" disabled>
+      <div id="werkzeuge">
+        <button type="button" data-befehl="bold" title="Fett (Strg+B)"><b>B</b></button>
+        <button type="button" data-befehl="italic" title="Kursiv (Strg+I)"><i>I</i></button>
+        <button type="button" data-befehl="underline" title="Unterstrichen (Strg+U)"><u>U</u></button>
+        <button type="button" data-befehl="insertUnorderedList" title="Liste">•</button>
+        <span class="trenner"></span>
+        <button type="button" id="raus" title="Kleiner (Strg+-)">−</button>
+        <span id="zoomwert">100%</span>
+        <button type="button" id="rein" title="Größer (Strg++)">+</button>
+      </div>
+      <span id="zustand"></span>
+    </div>
+
+    <div id="meldung" hidden></div>
+
+    <div id="buehne" tabindex="0">
+      <div id="flaeche"></div>
+      <p id="leerhinweis">Doppelklick irgendwohin, um zu schreiben.</p>
+    </div>
+  </main>
+
+</div>
+<script src="/static/mappe.js"></script>
+</body>
+</html>
