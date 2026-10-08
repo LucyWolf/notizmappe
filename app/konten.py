@@ -213,16 +213,33 @@ def sitzung_anlegen(name: str, art: str = "sitzung", geraet: str = "") -> str:
 
 
 def sitzung(token: str | None) -> dict | None:
+    """Gueltige Sitzung - und gleitend: wer sie benutzt, verlaengert sie. Vorher
+    lief sie nach fester Zeit ab, auch mitten in der Arbeit; das naechste
+    Speichern bekam 401, und was ungespeichert war, war weg."""
     if not token:
         return None
+    schluessel = _schluessel(token)
     d = _laden()
-    s = d["sitzungen"].get(_schluessel(token))
-    if not s or s.get("bis", 0) < time.time():
+    s = d["sitzungen"].get(schluessel)
+    jetzt = time.time()
+    if not s or s.get("bis", 0) < jetzt:
         return None
     k = d["konten"].get(s.get("name"))
     if not k:
         return None
-    return {"name": s["name"], "admin": bool(k.get("admin")), "art": s.get("art", "sitzung")}
+    art = s.get("art", "sitzung")
+    verlaengert = False
+    if art == "sitzung":
+        dauer = SITZUNG_SERVER if server_modus() else SITZUNG_LOKAL
+        # Erst ab der Haelfte verlaengern - sonst schriebe jede Anfrage die Datei.
+        if s["bis"] - jetzt < dauer / 2:
+            with _sperre:
+                d = _laden()
+                if schluessel in d["sitzungen"]:
+                    d["sitzungen"][schluessel]["bis"] = int(jetzt + dauer)
+                    _sichern(d)
+                    verlaengert = True
+    return {"name": s["name"], "admin": bool(k.get("admin")), "art": art, "verlaengert": verlaengert}
 
 
 def abmelden(token: str | None) -> None:

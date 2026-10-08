@@ -114,7 +114,11 @@ async def _waechter(request: Request, call_next):
             return JSONResponse({"fehler": "Bitte anmelden", "anmelden": True}, status_code=401)
         return RedirectResponse("/anmelden", status_code=303)
     request.state.konto = k
-    return await call_next(request)
+    antwort = await call_next(request)
+    if k.get("verlaengert") and konten.server_modus():
+        # Der Keks hat ein festes Ablaufdatum - mit der Sitzung mitziehen.
+        _keks_setzen(antwort, request, request.cookies.get(KEKS))
+    return antwort
 
 
 def _konto(request: Request) -> dict:
