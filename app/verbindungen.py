@@ -32,7 +32,23 @@ def adresse_ordnen(roh: str) -> str:
         raise VerbindungsFehler("Die Adresse sieht nicht aus wie notizen.example.de oder https://…")
     if teile.path not in ("", "/") or teile.query:
         raise VerbindungsFehler("Bitte nur die Adresse des Servers, ohne Pfad")
+    if teile.scheme == "http" and not im_eigenen_netz(teile.hostname or ""):
+        # Ueber http gingen Passwort und Geraeteschluessel im Klartext durchs Netz.
+        raise VerbindungsFehler("Ohne https ginge das Passwort unverschlüsselt durchs Internet - "
+                                "bitte https://… verwenden (http nur im eigenen Netz)")
     return f"{teile.scheme}://{teile.netloc}"
+
+
+def im_eigenen_netz(host: str) -> bool:
+    """localhost, private IPs und Namen, die es nur im eigenen Netz gibt."""
+    import ipaddress
+    host = host.lower().strip("[]")
+    try:
+        ip = ipaddress.ip_address(host)
+        return ip.is_private or ip.is_loopback or ip.is_link_local
+    except ValueError:
+        pass
+    return host == "localhost" or "." not in host or host.endswith((".local", ".lan", ".home.arpa", ".internal"))
 
 
 def _rufen(url: str, rumpf: dict | None = None) -> dict:
