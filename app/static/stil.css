@@ -146,3 +146,12 @@ body {
   #leiste.zu { display: none; }
   #werkzeuge .trenner, #zustand { display: none; }
 }
+
+/* --- Update-Knopf, nur sichtbar wenn es wirklich etwas Neues gibt --- */
+#update {
+  border: 1px solid var(--akzent); border-radius: 6px; cursor: pointer;
+  background: color-mix(in srgb, var(--akzent) 18%, var(--papier));
+  color: var(--schrift); padding: 4px 9px; font-size: 13px; white-space: nowrap;
+}
+#update:hover { background: color-mix(in srgb, var(--akzent) 30%, var(--papier)); }
+#update:disabled { opacity: .6; cursor: default; }

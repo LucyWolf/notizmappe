@@ -444,6 +444,67 @@ window.addEventListener('resize', flaecheMessen);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) nachsehen(); });
 setInterval(nachsehen, POLL);
 
+/* ------------------------------------------------------------------ Update */
+
+const updateKnopf = $('#update');
+
+async function versionPruefen(frisch = false) {
+  try {
+    const v = await api('/api/version' + (frisch ? '?frisch=true' : ''));
+    if (!v.neuer || !v.aktualisierbar) { updateKnopf.hidden = true; return v; }
+    updateKnopf.hidden = false;
+    updateKnopf.disabled = false;
+    updateKnopf.textContent = `Version ${v.verfuegbar} laden`;
+    updateKnopf.title = `Installiert ist ${v.installiert}.` + (v.notizen ? '\n\n' + v.notizen.slice(0, 500) : '');
+    return v;
+  } catch (f) { updateKnopf.hidden = true; }
+}
+
+updateKnopf.addEventListener('click', async () => {
+  const v = await api('/api/version');
+  if (!confirm(`Version ${v.verfuegbar} einspielen? Installiert ist ${v.installiert}.\n\n`
+    + 'Die Notizen bleiben unberührt. Der Dienst startet dabei neu, die Seite ist kurz weg.')) return;
+  updateKnopf.disabled = true;
+  updateKnopf.textContent = 'lädt …';
+  if (schmutzig) await speichernJetzt();
+  try {
+    const r = await api('/api/update', 'POST');
+    melden(`Update ${r.von} → ${r.nach} läuft. Die Seite lädt sich neu, sobald der Dienst wieder da ist.`);
+    updateVerfolgen(r.nach);
+  } catch (f) {
+    updateKnopf.disabled = false;
+    updateKnopf.textContent = 'Update fehlgeschlagen';
+    melden('Update ging nicht: ' + f.message, [['Nochmal versuchen', () => versionPruefen(true)]]);
+  }
+});
+
+/* Waehrend des Updates startet der Dienst neu - die Abfragen laufen also eine
+ * Weile ins Leere. Das ist kein Fehler, sondern genau der Moment. */
+function updateVerfolgen(ziel) {
+  let versuche = 0;
+  const uhr = setInterval(async () => {
+    versuche++;
+    try {
+      const v = await api('/api/version');
+      if (v.installiert === ziel) {
+        clearInterval(uhr);
+        melden(`Version ${ziel} ist da. Seite wird neu geladen …`);
+        setTimeout(() => location.reload(), 1200);
+        return;
+      }
+      const p = await api('/api/update/stand');
+      if (p.fehler) {
+        clearInterval(uhr);
+        melden('Das Update ist auf einen Fehler gelaufen:', [['Protokoll zeigen', () => alert(p.text)]]);
+      }
+    } catch (f) { /* Dienst gerade weg - weiter warten */ }
+    if (versuche > 60) {   // 3 Minuten
+      clearInterval(uhr);
+      melden('Das Update dauert ungewöhnlich lange. Protokoll: ~/.local/share/notizmappe/.update.log');
+    }
+  }, 3000);
+}
+
 /* ------------------------------------------------------------------ Anlauf */
 
 (async () => {
@@ -456,6 +517,7 @@ setInterval(nachsehen, POLL);
     await api('/api/seite', 'POST', { notizbuch: 'Notizbuch', abschnitt: 'Allgemein', titel: 'Erste Seite' });
     await baumLaden();
   }
+  versionPruefen();
   try {
     const z = JSON.parse(localStorage.getItem('zuletzt') || 'null');
     if (z) await seiteOeffnen(z.buch, z.abschnitt, z.name);

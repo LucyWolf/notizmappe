@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+import aktualisieren
 import reinigen
 import speicher
 
@@ -42,6 +43,37 @@ async def start(request: Request):
         "version": VERSION,
         "ordner": str(speicher.wurzel()),
     })
+
+
+def _nur_hier(request: Request) -> None:
+    """Update heisst: fremder Code wird heruntergeladen und ausgefuehrt. Solange es
+    keine Anmeldung gibt, darf das nur von diesem Rechner aus angestossen werden -
+    sonst genuegt ein Besuch im selben Netz, um Code einzuspielen."""
+    gast = request.client.host if request.client else ""
+    if gast not in {"127.0.0.1", "::1", "localhost"}:
+        raise HTTPException(403, "Aktualisieren geht nur direkt an diesem Rechner")
+
+
+@app.get("/api/version")
+async def api_version(frisch: bool = False):
+    return aktualisieren.pruefen(frisch=frisch)
+
+
+@app.post("/api/update")
+async def api_update(request: Request):
+    _nur_hier(request)
+    try:
+        return aktualisieren.einspielen()
+    except RuntimeError as f:
+        raise HTTPException(409, str(f))
+    except Exception as f:
+        raise HTTPException(502, f"Update fehlgeschlagen: {f}")
+
+
+@app.get("/api/update/stand")
+async def api_update_stand(request: Request):
+    _nur_hier(request)
+    return aktualisieren.protokoll()
 
 
 @app.get("/api/baum")

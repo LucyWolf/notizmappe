@@ -45,6 +45,80 @@ geworden ist, und sagt es, bevor etwas kaputtgeht.
 
 ## Installieren
 
+**Linux, Doppelklick** — die `.desktop`-Datei zum eigenen System aus dem Release
+herunterladen und doppelklicken (Arch/CachyOS, Debian/Ubuntu, oder die allgemeine).
+Sie holt die Installationsdatei, installiert fehlende Pakete mit **einer**
+Passwortfrage und legt den Menüeintrag an. Nochmal angeklickt: aktualisieren oder
+entfernen.
+
+**Windows** — `setup.exe` aus dem Release, doppelklicken. Kein Python nötig, das
+steckt in der `.exe`. SmartScreen warnt bei unsignierten Programmen:
+*Weitere Informationen → Trotzdem ausführen*. Die Notizmappe läuft, solange ihr
+Fenster offen ist, und öffnet den Browser selbst.
+
+**Linux, von Hand** — die Installationsdatei direkt:
+
+```
+https://github.com/LucyWolf/notizmappe/releases/latest/download/notizmappe-installer.sh
+```
+
+## Updates
+
+Läuft eine Installation, schaut sie einmal pro Stunde beim neuesten Release vorbei.
+Gibt es eine höhere Nummer, erscheint in der Kopfzeile *„Version x.y.z laden"* —
+ein Klick lädt das Paket, vergleicht die SHA256-Summe und spielt es ein. Der Dienst
+startet dabei neu, die Seite lädt sich von selbst wieder. Die Notizen bleiben unberührt.
+
+Das Einspielen geht **nur direkt an dem Rechner**, auf dem die Notizmappe läuft
+(`127.0.0.1`) — solange es keine Anmeldung gibt, soll niemand aus dem Netz Code
+einspielen können. Protokoll des letzten Updates:
+`~/.local/share/notizmappe/.update.log`.
+
+Ist das Repo **privat**, kommt die Update-Prüfung nicht an die GitHub-API (404) und
+der Knopf bleibt aus. Dann entweder das Repo öffentlich machen oder einen Token
+hinlegen:
+
+```bash
+mkdir -p ~/.config/notizmappe && install -m 600 /dev/null ~/.config/notizmappe/token
+printf '%s' "ghp_…" > ~/.config/notizmappe/token     # oder NOTIZMAPPE_TOKEN=…
+```
+
+Auf Windows gibt es kein Selbstupdate — dort die neue `setup.exe` ausführen.
+
+## Neue Fassung herausgeben
+
+```bash
+./tools/veroeffentlichen.sh          # letzte Stelle +1, committen, taggen, pushen
+./tools/veroeffentlichen.sh 1.1.0    # oder eine bestimmte Nummer
+```
+
+Danach macht GitHub den Rest:
+
+| Workflow | baut |
+|---|---|
+| `release.yml` | `notizmappe-v<ver>-installer.sh` (+ fester Name, + SHA256) und `Notizmappe.exe`, legt das Release an |
+| `installer.yml` | aus `installer.conf` die drei Linux-Doppelklick-Dateien und `notizmappe-setup.exe` |
+
+`release.yml` bricht ab, wenn `app/VERSION` nicht zum Tag passt, installiert das
+gebaute Paket zur Probe in ein Wegwerf-Heimverzeichnis und startet die
+`Notizmappe.exe` einmal wirklich — ein fehlender PyInstaller-Import fällt sonst
+erst beim Anwender auf.
+
+Die Workflow-Vorlage und `installer.conf` kommen aus
+[LucyWolf/double-click-installer](https://github.com/LucyWolf/double-click-installer)
+und liegen hier unverändert, damit Verbesserungen dort übernehmbar bleiben.
+
+### Wo der Doppelklick-Installer und dieses Paket sich treffen
+
+Beide benutzen `~/.local/share/notizmappe`. Der Doppelklick-Installer legt dort nur
+die Installationsdatei ab und ruft sie mit `--starten` auf; die richtet daneben
+`app/` und `.venv/` ein. Beide schreiben denselben Menüeintrag, es entsteht also
+kein zweiter. Entfernt der Doppelklick-Installer alles per `rm -rf`, bleibt die
+Dienstdatei zurück — sie startet dann aber nicht mehr (`ConditionPathExists`), und
+der Menüeintrag verschwindet mit dem Programm (`TryExec`).
+
+## Datei direkt herunterladen
+
 Die fertige Datei hängt am jeweiligen Release. Der Link zeigt immer auf die neueste:
 
 ```

@@ -1,0 +1,130 @@
+# Baut bei jedem Tag v* die beiden Programmdateien und haengt sie an ein Release:
+#   notizmappe-v<version>-installer.sh   Linux, alles enthalten (auch die Python-Pakete)
+#   notizmappe-installer.sh              dieselbe Datei unter festem Namen, damit
+#                                        releases/latest/download fuer den
+#                                        Doppelklick-Installer immer passt
+#   Notizmappe.exe                       Windows, PyInstaller-Buendel mit Python drin
+#
+# Sobald das Release veroeffentlicht ist, uebernimmt installer.yml und macht daraus
+# die Doppelklick-Dateien und setup.exe.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Die Versionsnummer steht in app/VERSION. Laeuft der Tag davon weg, sieht eine
+      # laufende Installation nie wieder ein Update - also hier abbrechen.
+      - name: Version gegen den Tag pruefen
+        run: |
+          VER=$(tr -d ' \n' < app/VERSION)
+          TAG="${GITHUB_REF_NAME#v}"
+          echo "app/VERSION=$VER  Tag=$TAG"
+          if [ "${{ github.event_name }}" = "push" ] && [ "$VER" != "$TAG" ]; then
+            echo "::error::app/VERSION ($VER) passt nicht zum Tag ($TAG)."
+            exit 1
+          fi
+          echo "VER=$VER" >> "$GITHUB_ENV"
+
+      - name: Werkzeuge fuer die Pruefung
+        run: pip install jinja2 esprima
+
+      - name: Paket bauen
+        run: PY=python ./tools/paket_bauen.sh
+
+      - name: Unter festem Namen danebenlegen
+        run: cp "dist/notizmappe-v$VER-installer.sh" dist/notizmappe-installer.sh
+
+      # Das Paket einmal wirklich auspacken und einrichten - in einem Wegwerf-Heim,
+      # damit auffaellt, wenn die mitgelieferten Pakete nicht passen.
+      - name: Paket zur Probe installieren
+        run: |
+          H=$(mktemp -d)
+          env -u XDG_RUNTIME_DIR -u DBUS_SESSION_BUS_ADDRESS HOME="$H" \
+            NOTIZMAPPE_ZIEL="$H/nm" NOTIZEN_ORDNER="$H/Notizen" PORT=8111 \
+            bash "dist/notizmappe-v$VER-installer.sh" --install
+          env HOME="$H" NOTIZEN_ORDNER="$H/Notizen" PORT=8111 "$H/nm/starten.sh" &
+          for i in $(seq 25); do curl -sf -o /dev/null http://127.0.0.1:8111/ && break; sleep 0.5; done
+          curl -sf http://127.0.0.1:8111/ > /dev/null || { echo "::error::Installierte Fassung antwortet nicht"; exit 1; }
+          curl -sf http://127.0.0.1:8111/api/version | tee /dev/stderr | grep -q installiert
+          echo "Probeinstallation läuft."
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: |
+            dist/notizmappe-v*-installer.sh
+            dist/notizmappe-v*-installer.sh.sha256
+            dist/notizmappe-installer.sh
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Abhaengigkeiten
+        run: pip install -r requirements.txt pyinstaller
+
+      # --collect-all: uvicorn und fastapi laden einen Teil ihrer Module erst zur
+      # Laufzeit nach Namen. PyInstaller sieht das nicht, also alles mitnehmen.
+      - name: Buendeln
+        run: >
+          pyinstaller --onefile --name Notizmappe
+          --add-data "app;app"
+          --collect-all uvicorn --collect-all fastapi --collect-all starlette
+          --collect-all jinja2 --collect-all pydantic
+          windows/notizmappe_start.py
+
+      - name: Buendel wirklich starten
+        shell: pwsh
+        run: |
+          $env:PORT = "8112"
+          $p = Start-Process -FilePath dist\Notizmappe.exe -PassThru
+          $ok = $false
+          foreach ($i in 1..30) {
+            Start-Sleep -Seconds 2
+            try { if ((Invoke-WebRequest "http://127.0.0.1:8112/" -UseBasicParsing).StatusCode -eq 200) { $ok = $true; break } } catch {}
+          }
+          if (-not $ok) { Stop-Process -Id $p.Id -Force; throw "Notizmappe.exe antwortet nicht auf 8112" }
+          $baum = Invoke-WebRequest "http://127.0.0.1:8112/api/baum" -UseBasicParsing
+          if ($baum.Content -notmatch "notizbuecher") { throw "API antwortet nicht wie erwartet" }
+          Stop-Process -Id $p.Id -Force
+          Write-Host "Buendel läuft."
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/Notizmappe.exe
+
+  release:
+    needs: [linux, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: anhaenge
+      - name: Release anlegen und anhaengen
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Notizmappe ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            anhaenge/linux/*
+            anhaenge/windows/*
