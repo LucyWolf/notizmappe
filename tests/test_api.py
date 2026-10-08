@@ -13,6 +13,8 @@ from pathlib import Path
 WURZEL = Path(__file__).resolve().parent.parent
 DATEN = Path(tempfile.mkdtemp(prefix="notizen-test-"))
 os.environ["NOTIZEN_ORDNER"] = str(DATEN)
+KONFIG = Path(tempfile.mkdtemp(prefix="notizen-konfig-"))
+os.environ["NOTIZMAPPE_KONFIG"] = str(KONFIG)                # echte Einstellungen nicht anfassen
 os.environ["NOTIZMAPPE_QUELLE"] = "http://127.0.0.1:1"      # kein echtes GitHub im Test
 sys.path.insert(0, str(WURZEL / "app"))
 
@@ -252,7 +254,35 @@ pruefe("Notizbuch geloescht",
        k.post("/api/loeschen", json={"art": "notizbuch", "pfad": [buch]}).status_code == 200
        and not (DATEN / "Arbeit").exists())
 
+# --- Datenordner umstellen ---------------------------------------------------
+hier = TestClient(main.app, client=("127.0.0.1", 50000))
+pruefe("Ordner von fremder Adresse nicht umstellbar",
+       k.post("/api/ordner", json={"ordner": "/tmp/x"}).status_code == 403)
+pruefe("Mit NOTIZEN_ORDNER ist der Ordner fest",
+       hier.post("/api/ordner", json={"ordner": "/tmp/x"}).status_code == 409)
+os.environ.pop("NOTIZEN_ORDNER")
+pruefe("Ohne Wahl gilt der Standard", hier.get("/api/einstellungen").json()["ordner_quelle"] == "standard")
+main.konfig.aendern(ordner=str(DATEN))          # Standard waere ~/Notizen - nie im Test
+pruefe("Relativer Pfad abgelehnt", hier.post("/api/ordner", json={"ordner": "Notizen"}).status_code == 400)
+k.post("/api/notizbuch", json={"name": "Mitnehmen"})
+ZWEIT = Path(tempfile.mkdtemp(prefix="notizen-zweit-")) / "neu"
+r = hier.post("/api/ordner", json={"ordner": str(ZWEIT), "mitnehmen": True})
+pruefe("Neuer Ordner uebernommen", r.status_code == 200 and r.json()["ordner"] == str(ZWEIT.resolve()), r.text)
+pruefe("Neuer Ordner angelegt", ZWEIT.is_dir())
+pruefe("Notizbuch mitkopiert", (ZWEIT / "Mitnehmen").is_dir() and r.json()["kopiert"] >= 1, r.json())
+pruefe("Alter Ordner unangetastet", (DATEN / "Mitnehmen").is_dir())
+pruefe("Wahl steht in den Einstellungen", main.konfig.lesen().get("ordner") == str(ZWEIT.resolve()))
+pruefe("Server arbeitet im neuen Ordner", main.speicher.wurzel() == ZWEIT.resolve())
+pruefe("Unterordner des alten nicht mitnehmbar",
+       hier.post("/api/ordner", json={"ordner": str(ZWEIT / "drin"), "mitnehmen": True}).status_code == 400)
+datei = ZWEIT / "eine-datei"
+datei.write_text("x")
+pruefe("Datei statt Ordner abgelehnt", hier.post("/api/ordner", json={"ordner": str(datei)}).status_code == 400)
+os.environ["NOTIZEN_ORDNER"] = str(DATEN)
+shutil.rmtree(ZWEIT.parent, ignore_errors=True)
+
 print()
 print("alles gruen" if not fehler else f"{len(fehler)} FEHLER:\n - " + "\n - ".join(fehler))
 shutil.rmtree(DATEN, ignore_errors=True)
+shutil.rmtree(KONFIG, ignore_errors=True)
 sys.exit(1 if fehler else 0)

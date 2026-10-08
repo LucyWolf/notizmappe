@@ -63,7 +63,7 @@ async function api(weg, art = 'GET', rumpf = null) {
   const a = await fetch(weg, o);
   let daten = null;
   try { daten = await a.json(); } catch (e) { /* leere Antwort */ }
-  if (!a.ok) { const f = new Error((daten && daten.fehler) || a.statusText); f.status = a.status; f.daten = daten; throw f; }
+  if (!a.ok) { const f = new Error((daten && (daten.fehler || daten.detail)) || a.statusText); f.status = a.status; f.daten = daten; throw f; }
   return daten;
 }
 
@@ -815,11 +815,43 @@ $('#zu').addEventListener('click', () => tafelZeigen(false));
 tafel.addEventListener('click', (ev) => { if (ev.target === tafel) tafelZeigen(false); });
 document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !tafel.hidden) tafelZeigen(false); });
 
+$('#e-ordner-waehlen').addEventListener('click', async () => {
+  try {
+    const r = await api('/api/ordner/waehlen', 'POST');
+    if (r.ordner) $('#e-ordner-neu').value = r.ordner;
+  } catch (f) { melden(f.message); }
+});
+
+async function ordnerSetzen(rumpf) {
+  if (schmutzig) await speichernJetzt();
+  try {
+    const r = await api('/api/ordner', 'POST', rumpf);
+    sagen(r.kopiert ? `Ordner umgestellt, ${r.kopiert} Einträge kopiert` : 'Ordner umgestellt', 0);
+    // Neu laden, damit keine offene Seite mehr auf den alten Ordner zeigt.
+    merker.legen('zuletzt', 'null');
+    setTimeout(() => location.reload(), 600);
+  } catch (f) {
+    $('#e-ordner-hinweis').textContent = f.message;
+  }
+}
+$('#e-ordner-setzen').addEventListener('click', () => {
+  const ordner = $('#e-ordner-neu').value.trim();
+  if (!ordner) { $('#e-ordner-neu').focus(); return; }
+  ordnerSetzen({ ordner, mitnehmen: $('#e-mitnehmen').checked });
+});
+$('#e-ordner-standard').addEventListener('click', () => ordnerSetzen({ standard: true }));
+
 async function einstellungenLaden() {
   try {
     const e = await api('/api/einstellungen');
     $('#e-version').textContent = e.version;
     $('#e-ordner').textContent = e.ordner;
+    const fest = e.ordner_quelle === 'umgebung';
+    $('#e-ordnerwahl').hidden = fest || !e.hier;
+    $('#e-ordner-waehlen').hidden = !e.ordner_waehlbar;
+    $('#e-ordner-standard').hidden = e.ordner_quelle !== 'gewaehlt';
+    if (fest) $('#e-ordner-hinweis').textContent = 'Der Ordner ist beim Start über NOTIZEN_ORDNER fest vorgegeben.';
+    else if (!e.hier) $('#e-ordner-hinweis').textContent = 'Den Ordner kann man nur direkt an dem Rechner umstellen, auf dem die Notizmappe läuft.';
     $('#e-seiten').textContent = e.seiten;
     $('#e-papierkorb').textContent = e.papierkorb;
     $('#e-frei').textContent = groesse(e.frei);

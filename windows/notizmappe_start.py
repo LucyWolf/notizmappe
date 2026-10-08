@@ -30,8 +30,7 @@ def main() -> int:
     ausgabe_absichern()
     ordner = basis() / "app"
     sys.path.insert(0, str(ordner))
-    os.environ.setdefault("NOTIZEN_ORDNER", str(Path.home() / "Notizen"))
-    Path(os.environ["NOTIZEN_ORDNER"]).mkdir(parents=True, exist_ok=True)
+    # Der Datenordner kommt aus den Einstellungen (%APPDATA%\\notizmappe), sonst ~/Notizen.
 
     import fenster
     return fenster.oeffnen()

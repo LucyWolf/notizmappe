@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 import aktualisieren
+import konfig
 import reinigen
 import speicher
 
@@ -86,6 +87,8 @@ async def api_einstellungen(request: Request):
     return {
         "version": VERSION,
         "ordner": str(ordner),
+        "ordner_quelle": speicher.ordner_quelle(),
+        "ordner_waehlbar": bool(_ordnerdialog()),
         "seiten": gesamt,
         "frei": platz.free,
         "papierkorb": sum(1 for _ in (ordner / speicher.PAPIERKORB).glob("*")) if (ordner / speicher.PAPIERKORB).is_dir() else 0,
@@ -105,6 +108,51 @@ async def api_einstellungen_setzen(request: Request, rumpf: dict):
         return aktualisieren.optionen_schreiben(rumpf)
     except RuntimeError as f:
         raise HTTPException(500, str(f))
+
+
+def _ordnerdialog() -> list[str] | None:
+    """Der Ordner-Dialog des Systems, wenn es einen gibt. Er geht auf dem Rechner
+    auf, auf dem der Server laeuft - deshalb nur zusammen mit _nur_hier."""
+    import shutil
+    if shutil.which("kdialog"):
+        return ["kdialog", "--getexistingdirectory", str(Path.home()), "--title", "Ordner für die Notizen"]
+    if shutil.which("zenity"):
+        return ["zenity", "--file-selection", "--directory", "--title=Ordner für die Notizen"]
+    return None
+
+
+@app.post("/api/ordner/waehlen")
+def api_ordner_waehlen(request: Request):
+    _nur_hier(request)
+    befehl = _ordnerdialog()
+    if not befehl:
+        raise HTTPException(404, "Kein Ordner-Dialog auf diesem System - bitte den Pfad eintippen")
+    import subprocess
+    try:
+        lauf = subprocess.run(befehl, capture_output=True, text=True, timeout=600)
+    except (OSError, subprocess.TimeoutExpired) as f:
+        raise HTTPException(500, f"Ordner-Dialog ging nicht auf: {f}")
+    gewaehlt = lauf.stdout.strip() if lauf.returncode == 0 else ""
+    return {"ordner": gewaehlt or None}
+
+
+@app.post("/api/ordner")
+def api_ordner_setzen(request: Request, rumpf: dict):
+    """Datenordner umstellen. Gilt sofort; die Oberflaeche laedt danach neu, damit
+    keine offene Seite noch auf den alten Ordner zeigt."""
+    _nur_hier(request)
+    if speicher.ordner_quelle() == "umgebung":
+        raise HTTPException(409, "Der Ordner ist über NOTIZEN_ORDNER fest vorgegeben")
+    if rumpf.get("standard"):
+        konfig.aendern(ordner=None)
+        return {"ordner": str(speicher.wurzel()), "kopiert": 0}
+    alt = speicher.wurzel()
+    neu = speicher.ordner_pruefen(str(rumpf.get("ordner") or ""))
+    kopiert = 0
+    if rumpf.get("mitnehmen") and neu != alt.resolve():
+        kopiert = speicher.inhalt_kopieren(alt, neu)
+    konfig.aendern(ordner=str(neu))
+    return {"ordner": str(neu), "kopiert": kopiert}
 
 
 @app.get("/api/baum")

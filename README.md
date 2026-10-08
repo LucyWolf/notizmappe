@@ -120,10 +120,16 @@ Zahnrad unten in der Seitenleiste, neben der Versionsnummer. Dort steht, welche 
 zum Einspielen; der Datenordner, wie viele Seiten darin liegen, was im Papierkorb
 ist und wie viel Platz das Laufwerk noch hat; dazu die Darstellungsgröße.
 
-Der **Datenordner wird dort nicht umgestellt**, sondern beim Start über
-`NOTIZEN_ORDNER`. So bleibt eindeutig, welche Dateien ein laufendes Programm
-gerade in der Hand hat — ein Wechsel im laufenden Betrieb würde offene Seiten und
-Anhänge auseinanderreißen.
+**Datenordner wählen:** Unter „Daten“ einen Pfad eintragen oder „Durchsuchen …“
+(Ordner-Dialog des Systems über kdialog/zenity). Auf Wunsch werden die vorhandenen
+Notizen in den neuen Ordner **kopiert** — nur was dort noch fehlt, der alte Ordner
+bleibt unangetastet. Vor dem Wechsel wird die offene Seite gespeichert, danach lädt
+die Oberfläche neu, damit nichts mehr auf den alten Ordner zeigt. Umstellen geht nur
+direkt an dem Rechner, auf dem die Notizmappe läuft.
+
+Die Wahl steht in `~/.config/notizmappe/einstellungen.json` (Windows:
+`%APPDATA%\notizmappe`), nicht im Datenordner selbst. Ist `NOTIZEN_ORDNER` gesetzt,
+gewinnt das und die Wahl ist gesperrt — Tests und Docker verlassen sich darauf.
 
 ## Wenn die Oberfläche nicht reagiert
 

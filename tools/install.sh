@@ -95,7 +95,7 @@ Wenn du das wirklich willst: erst deinstallieren (--deinstallieren)."
   cat > "$ZIEL/starten.sh" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
-exec env PYTHONPATH="$ZIEL/app" NOTIZEN_ORDNER="\${NOTIZEN_ORDNER:-$DATEN}" \\
+exec env PYTHONPATH="$ZIEL/app" \\
   "$ZIEL/.venv/bin/python" -m uvicorn main:app --app-dir "$ZIEL/app" \\
   --host "\${HOST:-127.0.0.1}" --port "\${PORT:-$PORT}"
 EOF
@@ -108,10 +108,31 @@ EOF
   cat > "$ZIEL/notizmappe" <<EOF
 #!/usr/bin/env bash
 set -uo pipefail
-exec env PYTHONPATH="$ZIEL/app" NOTIZEN_ORDNER="\${NOTIZEN_ORDNER:-$DATEN}" \
+exec env PYTHONPATH="$ZIEL/app" \
   PORT="\${PORT:-$PORT}" "$ZIEL/.venv/bin/python" "$ZIEL/app/fenster.py" "\$@"
 EOF
   chmod +x "$ZIEL/notizmappe"
+
+  # Der Datenordner steht nicht mehr fest im Starter, sondern in den Einstellungen
+  # dieses Rechners - dort laesst er sich in der Oberflaeche umstellen. Hier nur
+  # eintragen, wenn bei der Installation ausdruecklich einer genannt wurde und
+  # noch keiner gewaehlt ist.
+  if [ -n "${NOTIZEN_ORDNER:-}" ]; then
+    "$ZIEL/.venv/bin/python" - "$DATEN" <<'EINTRAG' || true
+import json, os, sys
+from pathlib import Path
+k = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "notizmappe"
+k.mkdir(parents=True, exist_ok=True)
+f = k / "einstellungen.json"
+try:
+    d = json.loads(f.read_text(encoding="utf-8"))
+except (OSError, ValueError):
+    d = {}
+if not d.get("ordner"):
+    d["ordner"] = sys.argv[1]
+    f.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
+EINTRAG
+  fi
 
   printf '%s\n' "$NEU" > "$ZIEL/.version"
   printf 'ZIEL=%s\nDATEN=%s\nPORT=%s\n' "$ZIEL" "$DATEN" "$PORT" > "$ZIEL/.einrichtung"
@@ -160,7 +181,6 @@ ConditionPathExists=$ZIEL/.venv/bin/python
 [Service]
 Type=simple
 Environment=PYTHONPATH=$ZIEL/app
-Environment=NOTIZEN_ORDNER=$DATEN
 ExecStart=$ZIEL/.venv/bin/python -m uvicorn main:app --app-dir $ZIEL/app --host 127.0.0.1 --port $PORT
 Restart=on-failure
 RestartSec=3
