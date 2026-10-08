@@ -148,3 +148,14 @@ jobs:
           files: |
             anhaenge/linux/*
             anhaenge/windows/*
+
+  # Macht aus installer.conf die drei Linux-Doppelklick-Dateien und setup.exe und
+  # haengt sie an dasselbe Release.
+  doppelklick:
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/')
+    uses: ./.github/workflows/installer.yml
+    with:
+      tag: ${{ github.ref_name }}
+    permissions:
+      contents: write
