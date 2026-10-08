@@ -198,6 +198,12 @@ function flaecheLeeren() {
 
 async function seiteOeffnen(buch, abschnitt, name) {
   if (schmutzig) await speichernJetzt();
+  if (schmutzig) {
+    // Speichern ging nicht (Konflikt, Server weg): nicht wegwechseln, sonst sind
+    // die Aenderungen still verworfen. Die Meldung dazu steht schon oben.
+    sagen('Erst speichern - die Seite hat ungesicherte Änderungen', 4000);
+    return false;
+  }
   meldungWeg();
   const s = await api(`/api/seite?notizbuch=${encodeURIComponent(buch)}&abschnitt=${encodeURIComponent(abschnitt)}&name=${encodeURIComponent(name)}`);
   offen = { notizbuch: buch, abschnitt, name: s.name, rev: s.rev, mtime: s.mtime };
@@ -714,6 +720,7 @@ $('#titel').addEventListener('input', angefasst);
 $('#titel').addEventListener('change', async () => {
   if (!offen) return;
   await speichernJetzt();
+  if (schmutzig) return;      // ungespeichert umbenennen gaebe gleich den naechsten Konflikt
   const r = await api('/api/seite/titel', 'POST', {
     notizbuch: offen.notizbuch, abschnitt: offen.abschnitt, name: offen.name, titel: $('#titel').value,
   });
