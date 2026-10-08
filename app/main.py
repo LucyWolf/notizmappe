@@ -421,18 +421,26 @@ async def api_update_stand(request: Request):
 async def api_einstellungen(request: Request):
     """Was die Oberflaeche ueber die Installation wissen muss."""
     import shutil
-    ordner = speicher.wurzel()
-    gesamt = sum(1 for _ in ordner.rglob("*.json"))
-    platz = shutil.disk_usage(ordner)
     admin = _konto(request)["admin"]
+    try:
+        ordner = speicher.wurzel()
+        fehlt = ""
+    except speicher.SpeicherFehler as f:
+        # Ordner nicht da: trotzdem antworten, sonst kommt man nicht einmal an die
+        # Einstellung, mit der man ihn umstellt.
+        ordner, fehlt = None, str(f)
+    gesamt = sum(1 for _ in ordner.rglob("*.json")) if ordner else 0
+    platz = shutil.disk_usage(ordner).free if ordner else 0
+    korb = ordner / speicher.PAPIERKORB if ordner else None
     return {
         "version": VERSION,
-        "ordner": str(ordner) if admin else "",
+        "ordner": (str(ordner) if ordner else speicher.gewaehlter_ordner()) if admin else "",
+        "ordner_fehlt": fehlt,
         "ordner_quelle": speicher.ordner_quelle(),
         "ordner_waehlbar": bool(_ordnerdialog()),
         "seiten": gesamt,
-        "frei": platz.free,
-        "papierkorb": sum(1 for _ in (ordner / speicher.PAPIERKORB).glob("*")) if (ordner / speicher.PAPIERKORB).is_dir() else 0,
+        "frei": platz,
+        "papierkorb": sum(1 for _ in korb.glob("*")) if korb and korb.is_dir() else 0,
         "aus_installation": aktualisieren.aus_installation(),
         "optionen": aktualisieren.optionen_lesen(),
         "hier": _gast(request) in {"127.0.0.1", "::1"} and not konten.server_modus() and admin,
@@ -487,10 +495,13 @@ def api_ordner_setzen(request: Request, rumpf: dict):
     if rumpf.get("standard"):
         konfig.aendern(ordner=None)
         return {"ordner": str(speicher.wurzel()), "kopiert": 0}
-    alt = speicher.wurzel()
+    try:
+        alt = speicher.wurzel()
+    except speicher.SpeicherFehler:
+        alt = None                      # alter Ordner nicht da - dann gibt es nichts mitzunehmen
     neu = speicher.ordner_pruefen(str(rumpf.get("ordner") or ""))
     kopiert = 0
-    if rumpf.get("mitnehmen") and neu != alt.resolve():
+    if rumpf.get("mitnehmen") and alt and neu != alt.resolve():
         kopiert = speicher.inhalt_kopieren(alt, neu)
     konfig.aendern(ordner=str(neu))
     return {"ordner": str(neu), "kopiert": kopiert}

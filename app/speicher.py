@@ -47,10 +47,26 @@ def ordner_quelle() -> str:
 def wurzel() -> Path:
     # NOTIZEN_ORDNER vor der Einstellung: Tests und Docker muessen sich darauf
     # verlassen koennen, dass nichts anderes angefasst wird.
-    roh = os.environ.get("NOTIZEN_ORDNER") or konfig.lesen().get("ordner") or "~/Notizen"
-    p = Path(roh).expanduser()
+    if not os.environ.get("NOTIZEN_ORDNER"):
+        gewaehlt = konfig.lesen().get("ordner")
+        if gewaehlt:
+            p = Path(gewaehlt).expanduser()
+            # Nicht anlegen: liegt der Ordner auf einem NAS oder USB-Laufwerk, das
+            # gerade nicht eingehaengt ist, entstuende sonst still ein leerer Ordner
+            # auf der lokalen Platte - und die Notizen landeten dort statt dort.
+            if not p.is_dir():
+                raise SpeicherFehler(
+                    f"Der gewählte Datenordner {p} ist nicht da - ist das Laufwerk eingehängt? "
+                    "Unter Einstellungen → Daten lässt er sich umstellen.")
+            return p
+    p = Path(os.environ.get("NOTIZEN_ORDNER") or "~/Notizen").expanduser()
     p.mkdir(parents=True, exist_ok=True)
     return p
+
+
+def gewaehlter_ordner() -> str:
+    """Der eingestellte Ordner als Text, auch wenn er gerade nicht da ist."""
+    return os.environ.get("NOTIZEN_ORDNER") or konfig.lesen().get("ordner") or str(Path("~/Notizen").expanduser())
 
 
 def inhalt_kopieren(alt: Path, neu: Path) -> int:

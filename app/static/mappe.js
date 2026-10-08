@@ -898,6 +898,7 @@ async function einstellungenLaden() {
     const e = await api('/api/einstellungen');
     $('#e-version').textContent = e.version;
     $('#e-ordner').textContent = e.ordner;
+    if (e.ordner_fehlt) $('#e-ordner-hinweis').textContent = e.ordner_fehlt;
     amRechner = !!e.hier;
     const fest = e.ordner_quelle === 'umgebung';
     $('#e-ordnerwahl').hidden = fest || !e.hier;
@@ -961,7 +962,14 @@ $('#e-zoom-zurueck').addEventListener('click', () => { zoomSetzen(1); $('#e-zoom
 
 (async () => {
   zoomSetzen(parseFloat(merker.holen('zoom', '1')));
-  await baumLaden();
+  try {
+    await baumLaden();
+  } catch (f) {
+    // Z. B. Datenordner auf einem nicht eingehaengten Laufwerk: sagen, was los ist,
+    // statt eine leere Flaeche zu zeigen - und nichts anlegen.
+    melden(f.message, [['Einstellungen', () => tafelZeigen(true)]]);
+    return;
+  }
   // Nicht nur beim ganz leeren Datenordner: auch ein Notizbuch ohne Abschnitte oder
   // ein Abschnitt ohne Seiten lässt einen vor einer Fläche sitzen, auf der sich
   // nichts schreiben lässt - und nichts sagt einem, warum.
