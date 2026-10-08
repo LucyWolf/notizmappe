@@ -188,6 +188,9 @@ def pruefen(name: str, passwort: str, wer: str = "") -> dict:
         warten = max(_gebremst(bremse), _gebremst(nur_name, 15))
         if warten:
             raise KontoFehler(f"Zu viele Fehlversuche - bitte {int(warten) + 1} Sekunden warten")
+        # Gross/klein egal - Namen sind ohnehin nur so eindeutig angelegt. Weiter
+        # geht es mit der Schreibweise des Kontos, nicht der eingetippten.
+        name = next((n for n in d["konten"] if n.lower() == (name or "").lower()), name)
         k = d["konten"].get(name or "")
         # Auch bei unbekanntem Namen einmal hashen, damit die Antwortzeit nicht
         # verraet, ob es das Konto gibt.

@@ -159,6 +159,10 @@ admin.post("/api/abschnitt", json={"notizbuch": "Projekt B", "name": "Intern"})
 seite_b = admin.post("/api/seite", json={"notizbuch": "Projekt B", "abschnitt": "Intern", "titel": "Geheim"}).json()["name"]
 
 ben = neu(False)
+klein = neu(False)
+r = klein.post("/api/anmelden", json={"name": "ben", "passwort": "benpass12"})
+pruefe("Anmelden mit anderer Gross-/Kleinschreibung", r.status_code == 200 and r.json()["name"] == "Ben", r.text)
+pruefe("Sitzung laeuft auf den richtigen Namen", klein.get("/api/ich").json()["name"] == "Ben")
 pruefe("Ben meldet sich an", ben.post("/api/anmelden", json={"name": "Ben", "passwort": "benpass12"}).status_code == 200)
 pruefe("Ben sieht ohne Freigabe nichts",
        [b["name"] for b in ben.get("/api/baum").json()["notizbuecher"]] == [])
