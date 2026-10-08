@@ -973,7 +973,16 @@ $('#e-zoom-zurueck').addEventListener('click', () => { zoomSetzen(1); $('#e-zoom
   // Nicht nur beim ganz leeren Datenordner: auch ein Notizbuch ohne Abschnitte oder
   // ein Abschnitt ohne Seiten lässt einen vor einer Fläche sitzen, auf der sich
   // nichts schreiben lässt - und nichts sagt einem, warum.
-  if (!erstesSeitchen()) {
+  let wer = null;
+  try { wer = await api('/api/ich'); } catch (f) { /* dann wie bisher */ }
+  if (!erstesSeitchen() && wer && wer.server) {
+    // Auf dem Server nichts von selbst anlegen: ein neues Mitglied ohne Freigabe
+    // bekaeme sonst ein leeres eigenes Notizbuch, und in ein geteiltes Projekt
+    // ohne Abschnitte wuerde ungefragt einer geschrieben.
+    melden(baumDaten.length
+      ? 'Hier gibt es noch keine Seite. Mit ＋ am Notizbuch einen Abschnitt anlegen, dann eine Seite.'
+      : 'Dir ist noch kein Projekt freigegeben. Frag einen Admin - oder lege unten mit „+ Notizbuch“ ein eigenes an.');
+  } else if (!erstesSeitchen()) {
     const buch = baumDaten[0] ? baumDaten[0].name
       : (await api('/api/notizbuch', 'POST', { name: 'Notizbuch' })).name;
     const ab = (baumDaten[0] && baumDaten[0].abschnitte[0]) ? baumDaten[0].abschnitte[0].name
