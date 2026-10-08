@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -122,16 +122,35 @@ def _elemente(roh) -> list[dict]:
         raise HTTPException(400, f"Mehr als {MAX_ELEMENTE} Elemente auf einer Seite")
     aus = []
     for e in roh:
-        if not isinstance(e, dict) or e.get("typ") != "text":
+        if not isinstance(e, dict):
             continue
-        aus.append({
+        art = e.get("typ")
+        if art not in {"text", "bild", "datei"}:
+            continue
+        gemein = {
             "id": reinigen.text(e.get("id"), 40) or speicher.uuid.uuid4().hex[:12],
-            "typ": "text",
+            "typ": art,
             "x": reinigen.zahl(e.get("x"), 40, 0),
             "y": reinigen.zahl(e.get("y"), 40, 0),
-            "b": reinigen.zahl(e.get("b"), 420, 80, 4000),
-            "html": reinigen.html(e.get("html") or ""),
-        })
+            "b": reinigen.zahl(e.get("b"), 420, 40, 4000),
+        }
+        if art == "text":
+            gemein["html"] = reinigen.html(e.get("html") or "")
+        else:
+            # Der Dateiname kommt vom Browser zurueck. Beim Ablegen hat ihn slug()
+            # schon geformt und genau so zurueckgegeben - kommt er veraendert
+            # wieder, hat ihn nie diese Anwendung vergeben. Dann ist das Element
+            # Muell (oder ein Versuch) und fliegt raus, statt als Leiche in der
+            # Datei zu stehen und spaeter "Bild fehlt" anzuzeigen.
+            roh = reinigen.text(e.get("datei"), 120)
+            datei = speicher.slug(roh)
+            if not datei or datei != roh or datei.startswith("."):
+                continue
+            gemein["datei"] = datei
+            gemein["beschriftung"] = reinigen.text(e.get("beschriftung"), 200)
+            if art == "datei":
+                gemein["groesse"] = int(reinigen.zahl(e.get("groesse"), 0, 0, 10 ** 9))
+        aus.append(gemein)
     return aus
 
 
@@ -146,12 +165,17 @@ async def api_seite_speichern(rumpf: dict):
         rev = int(rumpf.get("rev"))
     except (TypeError, ValueError):
         raise HTTPException(400, "rev fehlt")
-    return speicher.seite_speichern(
+    elemente = _elemente(rumpf.get("elemente"))
+    ergebnis = speicher.seite_speichern(
         buch, absch, name, rev,
         reinigen.text(rumpf.get("titel"), 120),
-        _elemente(rumpf.get("elemente")),
+        elemente,
         reinigen.text(rumpf.get("geraet"), 40),
     )
+    # Erst nach dem erfolgreichen Schreiben: solange die Seite nicht auf der Platte
+    # steht, zeigt sie noch auf die Dateien.
+    ergebnis["aufgeraeumt"] = speicher.anhaenge_aufraeumen(buch, absch, name, elemente)
+    return ergebnis
 
 
 @app.post("/api/seite/titel")
@@ -163,6 +187,49 @@ async def api_seite_titel(rumpf: dict):
     if not (buch and absch and name and titel):
         raise HTTPException(400, "Angaben unvollstaendig")
     return {"name": speicher.seite_umbenennen(buch, absch, name, titel)}
+
+
+@app.post("/api/anhang")
+async def api_anhang_hoch(notizbuch: str = Form(...), abschnitt: str = Form(...),
+                          name: str = Form(...), datei: UploadFile = File(...)):
+    buch = reinigen.text(notizbuch, 80)
+    absch = reinigen.text(abschnitt, 80)
+    seite = reinigen.text(name, 120)
+    if not (buch and absch and seite):
+        raise HTTPException(400, "Pfad unvollstaendig")
+
+    daten = await datei.read(speicher.MAX_ANHANG + 1)
+    if len(daten) > speicher.MAX_ANHANG:
+        raise HTTPException(413, f"Datei ist groesser als {speicher.MAX_ANHANG // 1024 // 1024} MB")
+    if not daten:
+        raise HTTPException(400, "Datei ist leer")
+
+    abgelegt = speicher.anhang_ablegen(buch, absch, seite, datei.filename or "Datei", daten)
+    typ = reinigen.bildtyp(daten)
+    abgelegt["art"] = "bild" if typ else "datei"
+    abgelegt["medientyp"] = typ or "application/octet-stream"
+    return abgelegt
+
+
+@app.get("/api/anhang")
+async def api_anhang_runter(notizbuch: str, abschnitt: str, name: str, datei: str):
+    pfad = speicher.anhang_lesen(notizbuch, abschnitt, name, datei)
+    kopf = pfad.read_bytes()[:16]
+    typ = reinigen.bildtyp(kopf)
+    # Alles, was kein erkanntes Bild ist, wird heruntergeladen statt angezeigt.
+    # Sonst fuehrt eine hochgeladene HTML- oder SVG-Datei im Fenster eigenen Code
+    # aus - mit Zugriff auf alles, was hier sonst noch offen ist.
+    return FileResponse(
+        pfad,
+        media_type=typ or "application/octet-stream",
+        filename=None if typ else pfad.name,
+        headers={
+            "X-Content-Type-Options": "nosniff",
+            "Content-Disposition": (f'inline; filename="{pfad.name}"' if typ
+                                    else f'attachment; filename="{pfad.name}"'),
+            "Cache-Control": "no-cache",
+        },
+    )
 
 
 @app.get("/api/stand")

@@ -155,6 +155,74 @@ def seite_anlegen(buch: str, abschnitt: str, titel: str) -> str:
     return name
 
 
+# --- Anhaenge -----------------------------------------------------------------
+#
+# Liegen neben der Seite in "<Seitenname>.anhang/". Also im selben Ordner, den der
+# Sync-Client ohnehin traegt - kein zweiter Ablageort, der auseinanderlaufen kann,
+# und im Dateimanager sieht man sofort, was zu welcher Seite gehoert.
+
+ANHANG = ".anhang"
+MAX_ANHANG = 25 * 1024 * 1024       # pro Datei
+
+
+def anhang_ordner(buch: str, abschnitt: str, name: str) -> Path:
+    return pfad_von([buch, abschnitt]) / f"{slug(name)}{ANHANG}"
+
+
+def anhang_ablegen(buch: str, abschnitt: str, seite: str, dateiname: str, daten: bytes) -> dict:
+    if len(daten) > MAX_ANHANG:
+        raise SpeicherFehler(f"Datei ist groesser als {MAX_ANHANG // 1024 // 1024} MB")
+    ordner = anhang_ordner(buch, abschnitt, seite)
+    ordner.mkdir(parents=True, exist_ok=True)
+    stamm, punkt, endung = slug(dateiname).rpartition(".")
+    if not stamm:
+        stamm, endung = slug(dateiname) or "Datei", ""
+    endung = ("." + endung[:12]) if endung else ""
+    name = frei(ordner, stamm[:60], endung) + endung
+    ziel = ordner / name
+    tmp = ziel.with_name(f".{name}.neu")
+    tmp.write_bytes(daten)
+    os.replace(tmp, ziel)
+    return {"datei": name, "groesse": len(daten)}
+
+
+def anhang_lesen(buch: str, abschnitt: str, seite: str, datei: str) -> Path:
+    name = slug(datei)
+    if not name or name.startswith("."):
+        raise SpeicherFehler("Unerlaubter Dateiname")
+    pfad = anhang_ordner(buch, abschnitt, seite) / name
+    # Noch einmal nachsehen, dass der Pfad wirklich im Anhangsordner liegt - slug()
+    # soll das schon verhindern, aber hier wird eine Datei ausgeliefert.
+    if not str(pfad.resolve()).startswith(str(anhang_ordner(buch, abschnitt, seite).resolve())):
+        raise SpeicherFehler("Pfad verlaesst den Anhangsordner")
+    if not pfad.is_file():
+        raise SpeicherFehler("Anhang gibt es nicht")
+    return pfad
+
+
+def anhaenge_aufraeumen(buch: str, abschnitt: str, seite: str, elemente: list) -> int:
+    """Dateien wegraeumen, auf die keine Seite mehr zeigt. In den Papierkorb, nicht
+    weg - ein Fehler in der Oberflaeche soll keine Bilder vernichten."""
+    ordner = anhang_ordner(buch, abschnitt, seite)
+    if not ordner.is_dir():
+        return 0
+    benutzt = {e.get("datei") for e in elemente if isinstance(e, dict)}
+    korb = wurzel() / PAPIERKORB
+    weg = 0
+    for datei in ordner.iterdir():
+        if not datei.is_file() or datei.name.startswith(".") or datei.name in benutzt:
+            continue
+        korb.mkdir(exist_ok=True)
+        marke = time.strftime("%Y%m%d-%H%M%S")
+        os.replace(datei, korb / frei(korb, f"{marke} {seite} - {datei.name}"))
+        weg += 1
+    try:
+        ordner.rmdir()              # nur wenn leer
+    except OSError:
+        pass
+    return weg
+
+
 def seite_lesen(buch: str, abschnitt: str, name: str) -> dict:
     datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
     if not datei.is_file():
@@ -218,12 +286,17 @@ def seite_umbenennen(buch: str, abschnitt: str, name: str, titel: str) -> str:
         neuer = frei(datei.parent, neuer, ".json")
         _schreiben(datei.parent / f"{neuer}.json", daten)
         datei.unlink()
+        # Die Anhaenge heissen nach der Seite - sonst findet sie danach niemand mehr.
+        alt_ordner = datei.parent / f"{datei.stem}{ANHANG}"
+        if alt_ordner.is_dir():
+            os.replace(alt_ordner, datei.parent / f"{neuer}{ANHANG}")
         return neuer
     _schreiben(datei, daten)
     return datei.stem
 
 
 def in_papierkorb(teile: list[str]) -> None:
+    """Seiten bringen ihren Anhangsordner mit in den Papierkorb."""
     """Loeschen heisst verschieben. Der Papierkorb liegt im Datenordner, damit der
     Sync ihn mitnimmt und nichts auf einem einzelnen Geraet haengen bleibt."""
     quelle = pfad_von(teile)
@@ -234,6 +307,10 @@ def in_papierkorb(teile: list[str]) -> None:
     marke = time.strftime("%Y%m%d-%H%M%S")
     ziel = korb / frei(korb, f"{marke} {' - '.join(teile)}".replace("/", "-"))
     os.replace(quelle, ziel)
+    if quelle.suffix == ".json":
+        mit = quelle.with_name(f"{quelle.stem}{ANHANG}")
+        if mit.is_dir():
+            os.replace(mit, korb / frei(korb, f"{marke} {quelle.stem}{ANHANG}"))
 
 
 def stand(buch: str, abschnitt: str, name: str) -> dict:
