@@ -232,3 +232,8 @@ body {
   background: var(--leiste); border: 1px solid var(--linie); border-radius: 6px;
   padding: 8px 10px; font-size: 12px; max-height: 140px; overflow: auto; white-space: pre-wrap;
 }
+
+#einstellungen .haken {
+  display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 13px; cursor: pointer;
+}
+#einstellungen .haken input { accent-color: var(--akzent); }

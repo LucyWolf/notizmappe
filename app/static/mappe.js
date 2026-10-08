@@ -692,6 +692,28 @@ function updateVerfolgen(ziel) {
   }, 3000);
 }
 
+/* Beim Start nachsehen - und auf Wunsch gleich einspielen. Erst danach wird die
+ * Seite geöffnet, damit ein Update nicht mitten in eine Bearbeitung platzt. */
+async function updateBeimStart() {
+  let e;
+  try { e = await api('/api/einstellungen'); } catch (f) { return; }
+  const o = e.optionen || {};
+  if (!o.beim_start_pruefen) return;
+
+  const v = await versionPruefen(true);
+  if (!v || !v.neuer || !v.aktualisierbar) return;
+  if (!o.automatisch_einspielen || !e.hier) return;
+
+  melden(`Version ${v.verfuegbar} wird eingespielt …`);
+  try {
+    const r = await api('/api/update', 'POST');
+    updateVerfolgen(r.nach);
+  } catch (f) {
+    melden('Das Update beim Start ging nicht: ' + f.message
+      + ' — über das Zahnrad kann man es von Hand versuchen.');
+  }
+}
+
 /* ----------------------------------------------------------- Einstellungen */
 
 const tafel = $('#einstellungen');
@@ -719,6 +741,9 @@ async function einstellungenLaden() {
                 : 'Installierte Fassung, von einem anderen Rechner geöffnet - Updates gehen nur direkt dort.')
       : 'Läuft aus dem Quellordner - hier wird mit git aktualisiert, nicht über den Knopf.';
     $('#e-zoom').textContent = Math.round(zoom * 100) + ' %';
+    $('#e-start-pruefen').checked = !!(e.optionen && e.optionen.beim_start_pruefen);
+    $('#e-auto').checked = !!(e.optionen && e.optionen.automatisch_einspielen);
+    for (const kasten of [$('#e-start-pruefen'), $('#e-auto')]) kasten.disabled = !e.hier;
   } catch (f) {
     $('#e-lage').textContent = 'Einstellungen ließen sich nicht laden: ' + f.message;
   }
@@ -736,6 +761,17 @@ function updateAnzeigen(v) {
                                   : 'Neuere Fassung da, aber hier nicht einspielbar.')
     : 'Das ist die neueste Fassung.';
 }
+
+async function optionSetzen(feld, wert) {
+  try {
+    await api('/api/einstellungen', 'POST', { [feld]: wert });
+  } catch (f) {
+    melden('Einstellung ließ sich nicht sichern: ' + f.message);
+    einstellungenLaden();
+  }
+}
+$('#e-start-pruefen').addEventListener('change', (ev) => optionSetzen('beim_start_pruefen', ev.target.checked));
+$('#e-auto').addEventListener('change', (ev) => optionSetzen('automatisch_einspielen', ev.target.checked));
 
 $('#e-pruefen').addEventListener('click', async () => {
   $('#e-updatehinweis').textContent = 'wird geprüft …';
@@ -764,7 +800,7 @@ $('#e-zoom-zurueck').addEventListener('click', () => { zoomSetzen(1); $('#e-zoom
     await api('/api/seite', 'POST', { notizbuch: buch, abschnitt: ab, titel: 'Erste Seite' });
     await baumLaden();
   }
-  versionPruefen();
+  await updateBeimStart();
   let z = null;
   try { z = JSON.parse(merker.holen('zuletzt', 'null')); } catch (f) { /* dann die erste */ }
   try {

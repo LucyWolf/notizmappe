@@ -197,6 +197,16 @@ pruefe("Quellordner meldet nicht aktualisierbar", v.json()["aktualisierbar"] is 
 pruefe("Update von fremder Adresse abgelehnt (403)", k.post("/api/update").status_code == 403)
 pruefe("Update-Protokoll von fremder Adresse abgelehnt", k.get("/api/update/stand").status_code == 403)
 
+# --- Einstellungen zum Update ------------------------------------------------
+e = k.get("/api/einstellungen")
+pruefe("Einstellungen abfragbar", e.status_code == 200 and "ordner" in e.json(), e.text)
+pruefe("Optionen dabei", e.json()["optionen"]["beim_start_pruefen"] is True, e.json())
+pruefe("automatisch einspielen ist aus", e.json()["optionen"]["automatisch_einspielen"] is False, e.json())
+pruefe("fremde Adresse darf Optionen nicht setzen",
+       k.post("/api/einstellungen", json={"automatisch_einspielen": True}).status_code == 403)
+pruefe("Optionen danach unveraendert",
+       k.get("/api/einstellungen").json()["optionen"]["automatisch_einspielen"] is False)
+
 # --- Löschen -----------------------------------------------------------------
 r = k.post("/api/loeschen", json={"art": "seite", "pfad": [buch, absch, neu]})
 pruefe("Seite geloescht", r.status_code == 200, r.text)
