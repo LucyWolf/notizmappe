@@ -216,6 +216,20 @@ def zugriff_setzen(buch: str, mitglieder: list[str]) -> list[str]:
     return sauber
 
 
+def mitglied_entfernen(name: str) -> int:
+    """Ein Konto aus allen Projekten nehmen. Bleibt der Name stehen, erbt ein
+    spaeter neu angelegtes Konto mit demselben Namen den alten Zugriff."""
+    n = 0
+    for buch in wurzel().iterdir():
+        if not buch.is_dir() or buch.name.startswith("."):
+            continue
+        drin = zugriff_lesen(buch.name)
+        if name in drin:
+            zugriff_setzen(buch.name, [m for m in drin if m != name])
+            n += 1
+    return n
+
+
 def notizbuch_anlegen(name: str) -> str:
     name = frei(wurzel(), slug(name))
     pfad_von([name]).mkdir()

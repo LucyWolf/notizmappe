@@ -199,6 +199,13 @@ pruefe("Eigenes Konto nicht loeschbar", admin.post("/api/konten/loeschen", json=
 pruefe("Konto loeschen", admin.post("/api/konten/loeschen", json={"name": "Ben"}).status_code == 200)
 pruefe("Geloeschtes Konto kommt nicht rein",
        neu(False).post("/api/anmelden", json={"name": "Ben", "passwort": "neuespass1"}).status_code == 400)
+admin.post("/api/konten", json={"name": "Ben", "passwort": "anderer1"})
+neuer_ben = neu(False)
+neuer_ben.post("/api/anmelden", json={"name": "Ben", "passwort": "anderer1"})
+pruefe("Neues Konto mit altem Namen erbt keine Projekte",
+       [b["name"] for b in neuer_ben.get("/api/baum").json()["notizbuecher"]] == [],
+       neuer_ben.get("/api/baum").json())
+admin.post("/api/konten/loeschen", json={"name": "Ben"})
 
 os.environ.pop("NOTIZMAPPE_SERVER")
 
