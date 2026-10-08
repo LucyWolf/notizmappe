@@ -88,7 +88,8 @@ Also im selben Ordner, den der Sync ohnehin trägt — kein zweiter Ablageort, u
 Dateimanager sieht man sofort, was zu welcher Seite gehört. Benennt man die Seite
 um, zieht der Anhangsordner mit; löscht man sie, geht er mit in den Papierkorb.
 Elemente, die man von der Seite entfernt, nehmen ihre Datei beim nächsten Speichern
-in den Papierkorb mit — gelöscht wird nichts sofort.
+in den Papierkorb mit — gelöscht wird nichts sofort. Frisch hochgeladene Dateien
+bleiben die ersten 10 Minuten in jedem Fall liegen, auch wenn noch nichts auf sie zeigt.
 
 Grenze: 25 MB pro Datei. Ob etwas ein Bild ist, wird an den ersten Bytes entschieden,
 nicht am Dateinamen und nicht am Content-Type des Browsers — beide sagen, was der

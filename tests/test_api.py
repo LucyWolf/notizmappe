@@ -162,6 +162,13 @@ pruefe("Ausbruch beim Abruf abgelehnt",
 pruefe("Leere Datei abgelehnt", hoch("leer.txt", b"").status_code == 400)
 pruefe("Zu grosse Datei abgelehnt (413)", hoch("riesig.bin", b"x" * (26 * 1024 * 1024)).status_code == 413)
 
+def altern():
+    """Anhaenge aelter machen als die Schonfrist - frische raeumt der Server nicht weg."""
+    for d in DATEN.rglob("*.anhang/*"):
+        os.utime(d, (d.stat().st_atime, d.stat().st_mtime - 3600))
+
+
+altern()
 s = k.get("/api/seite", params={"notizbuch": buch, "abschnitt": absch, "name": neu}).json()
 r = k.put("/api/seite", json={
     "notizbuch": buch, "abschnitt": absch, "name": neu, "rev": s["rev"], "titel": s["titel"],
@@ -211,6 +218,13 @@ pruefe("Bild im Text nicht aufgeraeumt", (DATEN / f"Arbeit/Projekte/{neu}.anhang
 # Name eines weggeraeumten Anhangs wird nicht neu vergeben - sonst zeigt die
 # Webansicht unter derselben Adresse das alte Bild aus ihrem Speicher.
 erst = hoch("image.png", PNG).json()["datei"]
+frisch = hoch("frisch.png", PNG).json()["datei"]
+s = k.get("/api/seite", params={"notizbuch": buch, "abschnitt": absch, "name": neu}).json()
+k.put("/api/seite", json={"notizbuch": buch, "abschnitt": absch, "name": neu, "rev": s["rev"],
+                          "titel": s["titel"], "elemente": s["elemente"]})
+pruefe("Frischer Anhang uebersteht ein Speichern ohne ihn",
+       (DATEN / f"Arbeit/Projekte/{neu}.anhang/{frisch}").is_file())
+altern()
 s = k.get("/api/seite", params={"notizbuch": buch, "abschnitt": absch, "name": neu}).json()
 k.put("/api/seite", json={"notizbuch": buch, "abschnitt": absch, "name": neu, "rev": s["rev"],
                           "titel": s["titel"], "elemente": s["elemente"]})

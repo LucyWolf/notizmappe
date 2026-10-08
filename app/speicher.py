@@ -295,9 +295,16 @@ def anhang_lesen(buch: str, abschnitt: str, seite: str, datei: str) -> Path:
     return pfad
 
 
+SCHONFRIST = 600   # Sekunden: so jung wird ein Anhang nicht weggeraeumt
+
+
 def anhaenge_aufraeumen(buch: str, abschnitt: str, seite: str, elemente: list) -> int:
     """Dateien wegraeumen, auf die keine Seite mehr zeigt. In den Papierkorb, nicht
-    weg - ein Fehler in der Oberflaeche soll keine Bilder vernichten."""
+    weg - ein Fehler in der Oberflaeche soll keine Bilder vernichten.
+
+    Frische Dateien bleiben liegen: waehrend ein Bild hochlaedt, kann schon ein
+    Speichern mit dem Stand davor unterwegs sein - das kennt die Datei noch nicht
+    und haette sie sonst sofort in den Papierkorb geschoben."""
     ordner = anhang_ordner(buch, abschnitt, seite)
     if not ordner.is_dir():
         return 0
@@ -310,6 +317,8 @@ def anhaenge_aufraeumen(buch: str, abschnitt: str, seite: str, elemente: list) -
     weg = 0
     for datei in ordner.iterdir():
         if not datei.is_file() or datei.name.startswith(".") or datei.name in benutzt:
+            continue
+        if time.time() - datei.stat().st_mtime < SCHONFRIST:
             continue
         korb.mkdir(exist_ok=True)
         marke = time.strftime("%Y%m%d-%H%M%S")
