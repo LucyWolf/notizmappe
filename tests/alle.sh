@@ -10,7 +10,7 @@ fehler=0
 
 echo "=== Syntax ==="
 "$PY" "$WURZEL/tools/pruefen.py" || fehler=$((fehler+1))
-for t in test_api test_update; do
+for t in test_api test_konten test_update; do
   echo "=== $t ==="
   "$PY" "$WURZEL/tests/$t.py" 2>&1 | grep -v StarletteDeprecation | grep -v "from starlette.testclient" | tail -40
   [ "${PIPESTATUS[0]}" = 0 ] || fehler=$((fehler+1))

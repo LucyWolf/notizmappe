@@ -247,3 +247,46 @@ body {
   display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 13px; cursor: pointer;
 }
 #einstellungen .haken input { accent-color: var(--akzent); }
+
+/* --- Anmelden --- */
+body.anmeldeseite {
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: var(--leiste); overflow: auto;
+}
+.anmeldetafel {
+  width: min(360px, 100%); display: flex; flex-direction: column; gap: 12px;
+  background: var(--papier); border: 1px solid var(--linie); border-radius: 12px;
+  padding: 24px; box-shadow: 0 12px 40px rgba(0, 0, 0, .15);
+}
+.anmeldetafel h1 { margin: 0 0 4px; font-size: 20px; }
+.anmeldetafel label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--matt); }
+.anmeldetafel input {
+  padding: 8px 10px; border: 1px solid var(--linie); border-radius: 6px;
+  background: var(--papier); color: var(--schrift); font: inherit;
+}
+.anmeldetafel input:focus { outline: 2px solid var(--akzent); outline-offset: -1px; }
+.anmeldetafel button {
+  padding: 8px 12px; border: 1px solid var(--akzent); border-radius: 6px; cursor: pointer;
+  background: var(--akzent); color: #fff; font: inherit; font-weight: 600;
+}
+.anmeldetafel button:disabled { opacity: .6; cursor: default; }
+.anmeldetafel .hinweis { margin: 0; color: var(--matt); font-size: 13px; }
+.anmeldetafel .fehler { margin: 0; color: var(--warnung); font-size: 13px; }
+.anmeldetafel .fuss { margin: 0; color: var(--matt); font-size: 11px; text-align: right; }
+
+/* --- Konten in den Einstellungen --- */
+#einstellungen .liste { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 8px; }
+#einstellungen .eintrag {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 6px 8px; border: 1px solid var(--linie); border-radius: 6px; font-size: 13px;
+}
+#einstellungen .eintrag strong { flex: 1; min-width: 6em; }
+#einstellungen .eintrag input[type="password"] { flex: 0 1 11em; }
+#einstellungen .mitglieder { display: flex; gap: 10px; flex-wrap: wrap; width: 100%; }
+#einstellungen .mitglieder label { display: flex; align-items: center; gap: 4px; }
+#einstellungen .zahl { width: 5em; padding: 2px 6px; border: 1px solid var(--linie); border-radius: 6px;
+  background: var(--papier); color: var(--schrift); font: inherit; }
+#einstellungen h3.abstand { margin-top: 14px; }
+#sperren { min-width: 28px; height: 28px; border: 1px solid var(--linie); border-radius: 6px;
+  background: var(--papier); color: var(--schrift); cursor: pointer; font-size: 13px; }
+#sperren:hover { border-color: var(--akzent); }

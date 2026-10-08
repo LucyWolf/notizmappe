@@ -1,0 +1,9 @@
+.venv
+.git
+dist
+output
+tests
+windows
+**/__pycache__
+*.pyc
+.update-stand.json

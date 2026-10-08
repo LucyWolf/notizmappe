@@ -63,6 +63,11 @@ async function api(weg, art = 'GET', rumpf = null) {
   const a = await fetch(weg, o);
   let daten = null;
   try { daten = await a.json(); } catch (e) { /* leere Antwort */ }
+  if (a.status === 401 && daten && daten.anmelden) {
+    // Abgelaufen oder gesperrt: zur Anmeldung. Ungespeichertes kann hier nicht
+    // mehr raus - deshalb sperrt die Oberflaeche selbst erst nach dem Speichern.
+    location.href = '/anmelden';
+  }
   if (!a.ok) { const f = new Error((daten && (daten.fehler || daten.detail)) || a.statusText); f.status = a.status; f.daten = daten; throw f; }
   return daten;
 }
@@ -866,6 +871,7 @@ async function einstellungenLaden() {
   } catch (f) {
     $('#e-lage').textContent = 'Einstellungen ließen sich nicht laden: ' + f.message;
   }
+  await kontoTeileLaden();
   updateAnzeigen(await versionPruefen());
 }
 
@@ -930,3 +936,194 @@ $('#e-zoom-zurueck').addEventListener('click', () => { zoomSetzen(1); $('#e-zoom
     if (erste) await seiteOeffnen(erste[0], erste[1], erste[2]);
   }
 })();
+
+/* ------------------------------------------------------- Anmeldung und Sperre */
+
+let ich = null;
+let ruheUhr = null;
+
+async function ichLaden() {
+  try { ich = await api('/api/ich'); } catch (f) { ich = null; }
+  const knopf = $('#sperren');
+  knopf.hidden = !(ich && ich.anmeldung && ich.name);
+  if (ich && ich.server) { knopf.textContent = '⎋'; knopf.title = `Abmelden (${ich.name})`; }
+  ruheStellen();
+  return ich;
+}
+
+async function sperrenJetzt() {
+  if (schmutzig) { try { await speichernJetzt(); } catch (f) { /* Meldung kommt von dort */ } }
+  if (schmutzig) return;        // nicht wegsperren, solange etwas ungespeichert ist
+  try { await api('/api/abmelden', 'POST'); } catch (f) { /* trotzdem weiter */ }
+  location.href = '/anmelden';
+}
+$('#sperren').addEventListener('click', sperrenJetzt);
+
+/* Sperre nach X Minuten ohne Benutzung - nur auf dem eigenen Rechner. Im Browser
+ * am Server bleibt man angemeldet, bis man sich abmeldet. */
+function ruheStellen() {
+  clearTimeout(ruheUhr);
+  if (!ich || !ich.anmeldung || ich.server || !ich.name || !ich.sperre_minuten) return;
+  ruheUhr = setTimeout(sperrenJetzt, ich.sperre_minuten * 60 * 1000);
+}
+let ruheZuletzt = 0;
+for (const art of ['pointerdown', 'keydown', 'wheel', 'pointermove']) {
+  document.addEventListener(art, () => {
+    const jetzt = Date.now();
+    if (jetzt - ruheZuletzt < 5000) return;     // nicht bei jeder Mausbewegung neu stellen
+    ruheZuletzt = jetzt;
+    ruheStellen();
+  }, { passive: true, capture: true });
+}
+
+function eintrag(...kinder) {
+  const d = document.createElement('div');
+  d.className = 'eintrag';
+  d.append(...kinder);
+  return d;
+}
+function knopf(text, tun) {
+  const b = Object.assign(document.createElement('button'), { type: 'button', textContent: text });
+  b.addEventListener('click', tun);
+  return b;
+}
+
+async function kontoTeileLaden() {
+  await ichLaden();
+  const lokalAdmin = ich && !ich.server && ich.admin && $('#e-ordnerwahl') && !$('#e-ordnerwahl').hidden;
+  // Sperre: nur am eigenen Rechner und solange es hoechstens das eine Konto gibt.
+  $('#e-sperre-teil').hidden = !(ich && !ich.server && ich.admin);
+  $('#e-sperre-aus').hidden = !!(ich && ich.anmeldung);
+  $('#e-sperre-ein').hidden = !(ich && ich.anmeldung);
+  if (ich) $('#e-sperre-min').value = ich.sperre_minuten;
+  if (!lokalAdmin && ich && !ich.anmeldung) {
+    $('#e-sperre-hinweis').textContent = 'Die Sperre lässt sich nur direkt an diesem Rechner einschalten.';
+  }
+
+  $('#e-konto-teil').hidden = !(ich && ich.anmeldung && ich.name);
+  if (ich && ich.name) {
+    $('#e-ich').textContent = ich.name + (ich.admin ? ' (Admin)' : '');
+    const g = $('#e-geraete');
+    g.textContent = '';
+    if (ich.geraete.length) {
+      g.append(Object.assign(document.createElement('p'), { className: 'hinweis', textContent: 'Angemeldete Desktop-Geräte:' }));
+      for (const d of ich.geraete) {
+        g.append(eintrag(
+          Object.assign(document.createElement('strong'), { textContent: d.geraet }),
+          Object.assign(document.createElement('span'), { className: 'hinweis', textContent: 'seit ' + new Date(d.seit * 1000).toLocaleDateString('de-DE') }),
+          knopf('Abmelden', async () => { await api('/api/ich/geraete/entfernen', 'POST', { id: d.id }); kontoTeileLaden(); }),
+        ));
+      }
+    }
+  }
+
+  $('#e-konten-teil').hidden = !(ich && ich.anmeldung && ich.admin);
+  if (ich && ich.anmeldung && ich.admin) await kontenLaden();
+}
+
+async function kontenLaden() {
+  let d;
+  try { d = await api('/api/konten'); } catch (f) { $('#e-konten-hinweis').textContent = f.message; return; }
+  const liste = $('#e-kontenliste');
+  liste.textContent = '';
+  for (const k of d.konten) {
+    const admin = Object.assign(document.createElement('input'), { type: 'checkbox', checked: k.admin });
+    admin.addEventListener('change', () => kontoTun('/api/konten/admin', { name: k.name, admin: admin.checked }));
+    const pw = Object.assign(document.createElement('input'), { type: 'password', placeholder: 'neues Passwort', autocomplete: 'new-password' });
+    const istIch = k.name === ich.name;
+    admin.disabled = istIch;
+    const zeile = eintrag(
+      Object.assign(document.createElement('strong'), { textContent: k.name + (istIch ? ' (du)' : '') }),
+      Object.assign(document.createElement('label'), { className: 'haken' }),
+      pw,
+      knopf('Setzen', () => { if (pw.value) kontoTun('/api/konten/passwort', { name: k.name, passwort: pw.value }, 'Passwort gesetzt'); }),
+    );
+    zeile.children[1].append(admin, ' Admin');
+    if (!istIch) zeile.append(knopf('Löschen', () => kontoTun('/api/konten/loeschen', { name: k.name }, 'Konto gelöscht')));
+    liste.append(zeile);
+  }
+
+  const projekte = $('#e-projekte');
+  projekte.textContent = '';
+  const normale = d.konten.filter((k) => !k.admin);
+  if (!d.projekte.length) projekte.append(Object.assign(document.createElement('p'), { className: 'hinweis', textContent: 'Noch keine Notizbücher.' }));
+  for (const pr of d.projekte) {
+    const haken = document.createElement('div');
+    haken.className = 'mitglieder';
+    if (!normale.length) haken.append(Object.assign(document.createElement('span'), { className: 'hinweis', textContent: 'nur Admins' }));
+    for (const k of normale) {
+      const h = Object.assign(document.createElement('input'), { type: 'checkbox', checked: pr.mitglieder.includes(k.name) });
+      h.addEventListener('change', () => {
+        const drin = [...haken.querySelectorAll('input')].filter((x) => x.checked).map((x) => x.dataset.name);
+        kontoTun('/api/zugriff', { notizbuch: pr.notizbuch, mitglieder: drin }, 'Gespeichert', false);
+      });
+      h.dataset.name = k.name;
+      const l = document.createElement('label');
+      l.append(h, ' ' + k.name);
+      haken.append(l);
+    }
+    projekte.append(eintrag(Object.assign(document.createElement('strong'), { textContent: pr.notizbuch }), haken));
+  }
+}
+
+async function kontoTun(weg, rumpf, erfolg = 'Gespeichert', neuLaden = true) {
+  try {
+    await api(weg, 'POST', rumpf);
+    $('#e-konten-hinweis').textContent = erfolg;
+  } catch (f) {
+    $('#e-konten-hinweis').textContent = f.message;
+  }
+  if (neuLaden) kontenLaden();
+}
+
+$('#e-konto-anlegen').addEventListener('click', async () => {
+  try {
+    await api('/api/konten', 'POST', {
+      name: $('#e-neu-name').value, passwort: $('#e-neu-pw').value, admin: $('#e-neu-admin').checked,
+    });
+    $('#e-neu-name').value = ''; $('#e-neu-pw').value = ''; $('#e-neu-admin').checked = false;
+    $('#e-konten-hinweis').textContent = 'Konto angelegt';
+    kontenLaden();
+  } catch (f) { $('#e-konten-hinweis').textContent = f.message; }
+});
+
+$('#e-pw-aendern').addEventListener('click', async () => {
+  try {
+    await api('/api/ich/passwort', 'POST', { alt: $('#e-pw-alt').value, neu: $('#e-pw-neu').value });
+    $('#e-pw-alt').value = ''; $('#e-pw-neu').value = '';
+    $('#e-konto-hinweis').textContent = 'Passwort geändert. Andere Geräte sind jetzt abgemeldet.';
+    kontoTeileLaden();
+  } catch (f) { $('#e-konto-hinweis').textContent = f.message; }
+});
+$('#e-abmelden').addEventListener('click', sperrenJetzt);
+
+$('#e-sperre-an').addEventListener('click', async () => {
+  const pw = $('#e-sperre-pw').value;
+  if (pw !== $('#e-sperre-pw2').value) { $('#e-sperre-hinweis').textContent = 'Die beiden Passwörter sind nicht gleich.'; return; }
+  try {
+    await api('/api/sperre', 'POST', { passwort: pw });
+    $('#e-sperre-pw').value = ''; $('#e-sperre-pw2').value = '';
+    $('#e-sperre-hinweis').textContent = 'Sperre ist an. Beim nächsten Start fragt die Notizmappe nach dem Passwort.';
+    kontoTeileLaden();
+  } catch (f) { $('#e-sperre-hinweis').textContent = f.message; }
+});
+$('#e-sperre-min').addEventListener('change', async () => {
+  try {
+    const r = await api('/api/sperre/zeit', 'POST', { minuten: Number($('#e-sperre-min').value) });
+    if (ich) ich.sperre_minuten = r.sperre_minuten;
+    ruheStellen();
+    $('#e-sperre-hinweis').textContent = r.sperre_minuten ? `Sperrt nach ${r.sperre_minuten} Minuten ohne Benutzung.` : 'Sperrt nur noch beim Start.';
+  } catch (f) { $('#e-sperre-hinweis').textContent = f.message; }
+});
+$('#e-sperre-jetzt').addEventListener('click', sperrenJetzt);
+$('#e-sperre-weg').addEventListener('click', () => { $('#e-sperre-weg-frage').hidden = false; $('#e-sperre-weg-pw').focus(); });
+$('#e-sperre-weg-ok').addEventListener('click', async () => {
+  try {
+    await api('/api/sperre/aus', 'POST', { passwort: $('#e-sperre-weg-pw').value });
+    $('#e-sperre-weg-pw').value = ''; $('#e-sperre-weg-frage').hidden = true;
+    $('#e-sperre-hinweis').textContent = 'Sperre ist aus.';
+    kontoTeileLaden();
+  } catch (f) { $('#e-sperre-hinweis').textContent = f.message; }
+});
+
+ichLaden();
