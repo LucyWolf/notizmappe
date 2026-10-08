@@ -45,11 +45,16 @@ def freier_port(wunsch: int = 8099) -> int:
 def laeuft_schon(port: int) -> bool:
     """Laeuft dort bereits eine Notizmappe (z.B. als Dienst)? Dann docken wir an,
     statt einen zweiten Server auf dieselben Dateien zu setzen."""
-    try:
-        with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/baum", timeout=1.5) as a:
-            return b"notizbuecher" in a.read(400)
-    except (urllib.error.URLError, OSError, TimeoutError):
-        return False
+    # /api/status antwortet auch, wenn die Notizmappe gesperrt ist; /api/baum fuer
+    # aeltere Fassungen, die es noch nicht kennen.
+    for weg, marke in (("/api/status", b'"notizmappe"'), ("/api/baum", b"notizbuecher")):
+        try:
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}{weg}", timeout=1.5) as a:
+                if marke in a.read(400):
+                    return True
+        except (urllib.error.URLError, OSError, TimeoutError):
+            continue
+    return False
 
 
 def server_starten(port: int) -> threading.Thread:

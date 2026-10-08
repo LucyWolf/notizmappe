@@ -174,6 +174,32 @@ def baum() -> list[dict]:
     return aus
 
 
+ZUGRIFF = ".zugriff.json"
+
+
+def zugriff_lesen(buch: str) -> list[str]:
+    """Wer ausser den Admins dieses Notizbuch sieht. Liegt im Notizbuch selbst,
+    damit es beim Umbenennen und Kopieren mitwandert."""
+    try:
+        roh = json.loads((pfad_von([buch]) / ZUGRIFF).read_text(encoding="utf-8"))
+    except (OSError, ValueError, SpeicherFehler):
+        return []
+    namen = roh.get("mitglieder") if isinstance(roh, dict) else None
+    return [n for n in namen if isinstance(n, str)] if isinstance(namen, list) else []
+
+
+def zugriff_setzen(buch: str, mitglieder: list[str]) -> list[str]:
+    ordner = pfad_von([buch])
+    if not ordner.is_dir():
+        raise SpeicherFehler("Notizbuch gibt es nicht")
+    sauber = sorted({str(n)[:40] for n in mitglieder if str(n).strip()}, key=str.lower)
+    ziel = ordner / ZUGRIFF
+    tmp = ordner / f".{ZUGRIFF}.neu"
+    tmp.write_text(json.dumps({"mitglieder": sauber}, ensure_ascii=False, indent=1), encoding="utf-8")
+    os.replace(tmp, ziel)
+    return sauber
+
+
 def notizbuch_anlegen(name: str) -> str:
     name = frei(wurzel(), slug(name))
     pfad_von([name]).mkdir()
