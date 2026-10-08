@@ -293,6 +293,14 @@ pruefe("Unterordner des alten nicht mitnehmbar",
 datei = ZWEIT / "eine-datei"
 datei.write_text("x")
 pruefe("Datei statt Ordner abgelehnt", hier.post("/api/ordner", json={"ordner": str(datei)}).status_code == 400)
+weg = ZWEIT.parent / "nicht-eingehaengt"
+main.konfig.aendern(ordner=str(weg))
+pruefe("Fehlender gewaehlter Ordner wird nicht angelegt", hier.get("/api/baum").status_code == 400
+       and not weg.exists())
+e = hier.get("/api/einstellungen")
+pruefe("Einstellungen gehen trotzdem auf", e.status_code == 200 and "eingehängt" in e.json()["ordner_fehlt"], e.text)
+r = hier.post("/api/ordner", json={"ordner": str(ZWEIT), "mitnehmen": True})
+pruefe("Von fehlendem Ordner aus umstellbar", r.status_code == 200, r.text)
 os.environ["NOTIZEN_ORDNER"] = str(DATEN)
 shutil.rmtree(ZWEIT.parent, ignore_errors=True)
 
