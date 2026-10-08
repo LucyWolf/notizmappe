@@ -15,7 +15,9 @@ import sys
 import threading
 from pathlib import Path
 
-_sperre = threading.Lock()
+# RLock: aendern() haelt sie ueber Lesen und Schreiben, schreiben() nimmt sie
+# darin noch einmal.
+_sperre = threading.RLock()
 
 
 def ordner() -> Path:
@@ -55,12 +57,15 @@ def schreiben(daten: dict, name: str = "einstellungen.json") -> None:
 
 
 def aendern(name: str = "einstellungen.json", **werte) -> dict:
+    """Lesen, aendern, schreiben - unter einer Sperre. Vorher lag nur das
+    Schreiben darunter: zwei gleichzeitige Aenderungen lasen denselben Stand,
+    und die zweite schrieb die erste wieder weg."""
     with _sperre:
         d = lesen(name)
-    for k, v in werte.items():
-        if v is None:
-            d.pop(k, None)
-        else:
-            d[k] = v
-    schreiben(d, name)
+        for k, v in werte.items():
+            if v is None:
+                d.pop(k, None)
+            else:
+                d[k] = v
+        schreiben(d, name)
     return d

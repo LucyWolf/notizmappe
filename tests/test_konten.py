@@ -37,6 +37,22 @@ def neu(hier=True):
     return TestClient(main.app, client=("127.0.0.1" if hier else "10.0.0.9", 50000))
 
 
+# --- Einstellungsdatei unter gleichzeitigem Schreiben ------------------------------
+import threading
+import konfig
+
+
+def schreiber(i):
+    for j in range(30):
+        konfig.aendern(name="probe.json", **{f"k{i}_{j}": j})
+
+
+faeden = [threading.Thread(target=schreiber, args=(i,)) for i in range(8)]
+[f.start() for f in faeden]
+[f.join() for f in faeden]
+pruefe("Gleichzeitige Aenderungen gehen nicht verloren", len(konfig.lesen("probe.json")) == 240,
+       len(konfig.lesen("probe.json")))
+
 # --- Eigener Rechner, ohne Sperre -------------------------------------------------
 print("--- Eigener Rechner ---")
 a = neu()

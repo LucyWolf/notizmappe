@@ -92,12 +92,14 @@ def verbinden(adresse: str, name: str, passwort: str) -> dict:
     if not token:
         raise VerbindungsFehler("Der Server hat keinen Geräteschlüssel geschickt")
     neu = {"id": secrets.token_hex(4), "adresse": adresse, "name": antwort.get("name") or name, "token": token}
-    alle = [v for v in konfig.lesen().get("verbindungen", [])
-            if not (v.get("adresse") == adresse and v.get("name") == neu["name"])]
-    konfig.aendern(verbindungen=alle + [neu])
+    with konfig._sperre:
+        alle = [v for v in konfig.lesen().get("verbindungen", [])
+                if not (v.get("adresse") == adresse and v.get("name") == neu["name"])]
+        konfig.aendern(verbindungen=alle + [neu])
     return {k: neu[k] for k in ("id", "adresse", "name")}
 
 
 def entfernen(kennung: str) -> None:
-    alle = [v for v in konfig.lesen().get("verbindungen", []) if v.get("id") != kennung]
-    konfig.aendern(verbindungen=alle)
+    with konfig._sperre:
+        alle = [v for v in konfig.lesen().get("verbindungen", []) if v.get("id") != kennung]
+        konfig.aendern(verbindungen=alle)
