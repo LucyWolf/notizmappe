@@ -187,6 +187,24 @@ pruefe("Bild nach dem Umbenennen abrufbar",
                                     "datei": "Bild.png"}).status_code == 200)
 neu = neu2
 
+# --- Bilder mitten im Text ---------------------------------------------------
+r = hoch("ImText.png", PNG)
+imtext = r.json()["datei"]
+s = k.get("/api/seite", params={"notizbuch": buch, "abschnitt": absch, "name": neu}).json()
+r = k.put("/api/seite", json={
+    "notizbuch": buch, "abschnitt": absch, "name": neu, "rev": s["rev"], "titel": s["titel"],
+    "elemente": s["elemente"] + [{
+        "id": "t9", "typ": "text", "x": 0, "y": 0, "b": 400,
+        "html": f'<p>vor <img data-datei="{imtext}" alt="Bild" src="/api/anhang?x=1" onerror="alert(1)"> nach</p>'
+                '<img data-datei="../../etc/passwd"><img src="http://fremd/x.png"><img data-datei=".versteckt">'}]})
+pruefe("Seite mit Bild im Text gespeichert", r.status_code == 200, r.text)
+html_t9 = next(e["html"] for e in k.get("/api/seite", params={"notizbuch": buch, "abschnitt": absch, "name": neu}).json()["elemente"]
+               if e["id"] == "t9")
+pruefe("Bild im Text bleibt", f'<img data-datei="{imtext}" alt="Bild">' in html_t9, html_t9)
+pruefe("src und onerror am Textbild weg", "src=" not in html_t9 and "onerror" not in html_t9, html_t9)
+pruefe("Fremde und Pfad-Bilder im Text verworfen", html_t9.count("<img") == 1, html_t9)
+pruefe("Bild im Text nicht aufgeraeumt", (DATEN / f"Arbeit/Projekte/{neu}.anhang/{imtext}").is_file())
+
 # --- Update-Routen: lesen darf jeder, anstossen nur von diesem Rechner --------
 # Der Testclient meldet sich als "testclient", nicht als 127.0.0.1 - genau wie ein
 # fremder Rechner im Netz. Dass er abgewiesen wird, ist der Sinn der Pruefung.

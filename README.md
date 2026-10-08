@@ -71,6 +71,12 @@ https://github.com/LucyWolf/notizmappe/releases/latest/download/notizmappe-insta
 
 Ziehen, einfügen mit Strg+V oder der Knopf 📎 — alles landet auf der Fläche, wo der
 Zeiger war. Bilder werden angezeigt, alles andere als Kachel zum Herunterladen.
+
+**Bilder im Text:** Steht der Cursor in einem Textkasten, setzt Strg+V das Bild
+genau dort in den Text; genauso, wenn man ein Bild auf einen Textkasten zieht. Im
+HTML steht dann nur `<img data-datei="Urlaub.png">` — die Adresse ergänzt die
+Oberfläche beim Anzeigen, damit der Verweis das Umbenennen der Seite übersteht.
+
 Die Dateien liegen neben der Seite:
 
 ```

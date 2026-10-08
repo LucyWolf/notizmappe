@@ -254,6 +254,7 @@ function kastenBauen(e) {
   text.contentEditable = 'true';
   text.spellcheck = true;
   text.innerHTML = e.html || '';
+  textBilderZeigen(text);
 
   const breite = document.createElement('div');
   breite.className = 'breite';
@@ -270,6 +271,16 @@ function kastenBauen(e) {
   // Eingefuegtes HTML aus fremden Seiten erst beim Speichern gesaeubert - hier
   // nur als Text annehmen, damit nicht gleich fremdes Layout mitkommt.
   text.addEventListener('paste', (ev) => {
+    const dateien = Array.from((ev.clipboardData && ev.clipboardData.files) || []);
+    if (dateien.length) {
+      // Bild aus der Zwischenablage an die Schreibstelle, nicht daneben.
+      ev.preventDefault();
+      ev.stopPropagation();
+      const sel = window.getSelection();
+      const stelle = sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
+      inTextEinsetzen(text, e, dateien, stelle);
+      return;
+    }
     const roh = ev.clipboardData && ev.clipboardData.getData('text/plain');
     if (roh == null) return;
     ev.preventDefault();
@@ -330,8 +341,8 @@ function groesse(bytes) {
 /* Hochladen: die Datei geht zuerst auf die Platte, erst danach entsteht das
  * Element. Andersherum zeigte die Seite kurz auf etwas, das es noch nicht gibt -
  * und bei einem Abbruch für immer. */
-async function anhangHochladen(datei, x, y) {
-  if (!offen) { sagen('Erst eine Seite öffnen', 2000); return; }
+async function hochladen(datei) {
+  if (!offen) { sagen('Erst eine Seite öffnen', 2000); return null; }
   const fd = new FormData();
   fd.append('notizbuch', offen.notizbuch);
   fd.append('abschnitt', offen.abschnitt);
@@ -343,16 +354,24 @@ async function anhangHochladen(datei, x, y) {
     a = await fetch('/api/anhang', { method: 'POST', body: fd });
   } catch (f) {
     melden('Hochladen ging nicht: ' + f.message);
-    return;
+    return null;
   }
   if (!a.ok) {
     let grund = a.statusText;
     try { grund = (await a.json()).fehler || grund; } catch (f) { /* egal */ }
     melden(`"${datei.name}" ging nicht: ${grund}`);
     zustandAnzeige.textContent = '';
-    return;
+    return null;
   }
-  const r = await a.json();
+  return a.json();
+}
+
+async function anhangHochladen(datei, x, y) {
+  const r = await hochladen(datei);
+  if (r) anhangHochladenFertig(r, datei, x, y);
+}
+
+function anhangHochladenFertig(r, datei, x, y) {
   const e = {
     id: Math.random().toString(36).slice(2, 12),
     typ: r.art, x, y,
@@ -363,6 +382,42 @@ async function anhangHochladen(datei, x, y) {
   flaeche.append(kastenBauen(e));
   $('#leerhinweis').hidden = true;
   flaecheMessen();
+  angefasst();
+}
+
+/* Bilder im Text: im HTML steht nur data-datei, die Adresse kommt beim Anzeigen
+ * dazu. So bleibt der Verweis gueltig, wenn die Seite umbenannt wird. */
+function textBilderZeigen(text) {
+  for (const b of text.querySelectorAll('img[data-datei]')) {
+    b.src = anhangWeg(b.dataset.datei);
+    b.addEventListener('load', flaecheMessen, { once: true });
+  }
+}
+
+async function inTextEinsetzen(text, e, dateien, stelle) {
+  for (const d of dateien) {
+    const r = await hochladen(d);
+    if (!r) continue;
+    if (r.art !== 'bild') {
+      // Keine Bilder (PDF, Zip ...) bleiben Kacheln auf der Flaeche.
+      anhangHochladenFertig(r, d, e.x, e.y + text.offsetHeight + 40);
+      continue;
+    }
+    const bild = document.createElement('img');
+    bild.dataset.datei = r.datei;
+    bild.alt = d.name;
+    if (stelle && text.contains(stelle.startContainer)) {
+      stelle.deleteContents();
+      stelle.insertNode(bild);
+      stelle.setStartAfter(bild);
+      stelle.collapse(true);
+    } else {
+      text.append(bild);
+    }
+    textBilderZeigen(text);
+  }
+  e.html = text.innerHTML;
+  zustandAnzeige.textContent = '';
   angefasst();
 }
 
@@ -523,6 +578,24 @@ buehne.addEventListener('drop', (ev) => {
   if (!ev.dataTransfer || !ev.dataTransfer.files.length) return;
   ev.preventDefault();
   buehne.classList.remove('zieltafel');
+  // Auf einen Textkasten gezogen: Bilder dorthin, wo der Zeiger im Text steht.
+  const text = ev.target.closest && ev.target.closest('.kasten .text');
+  const k = text && text.closest('.kasten');
+  const e = k && elemente.find((x) => x.id === k.dataset.id);
+  if (e) {
+    let stelle = null;
+    if (document.caretRangeFromPoint) {
+      stelle = document.caretRangeFromPoint(ev.clientX, ev.clientY);
+    } else if (document.caretPositionFromPoint) {
+      const pos = document.caretPositionFromPoint(ev.clientX, ev.clientY);
+      if (pos) {
+        stelle = document.createRange();
+        stelle.setStart(pos.offsetNode, pos.offset);
+      }
+    }
+    inTextEinsetzen(text, e, Array.from(ev.dataTransfer.files), stelle);
+    return;
+  }
   const r = flaeche.getBoundingClientRect();
   dateienAnnehmen(ev.dataTransfer.files,
     Math.max(0, Math.round((ev.clientX - r.left) / zoom / RASTER) * RASTER),

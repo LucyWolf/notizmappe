@@ -7,16 +7,20 @@ Datei und jeder spaetere Weg (Export, Suche, zweite Oberflaeche) sieht ihn wiede
 """
 from __future__ import annotations
 
-from html import escape
+import re
+from html import escape, unescape
 from html.parser import HTMLParser
 
 ERLAUBT = {
     "p", "br", "div", "span", "b", "strong", "i", "em", "u", "s", "strike",
     "ul", "ol", "li", "h1", "h2", "h3", "h4", "blockquote", "code", "pre", "a",
+    "img",
 }
-LEER = {"br"}
+LEER = {"br", "img"}
 # Nur das, was der Editor selbst setzt. Kein style, kein class, kein on*.
-ATTRIBUTE = {"a": {"href"}}
+# Bilder im Text zeigen nur auf einen eigenen Anhang (data-datei), nie per src
+# irgendwohin - die Adresse setzt die Oberflaeche beim Anzeigen.
+ATTRIBUTE = {"a": {"href"}, "img": {"data-datei", "alt"}}
 SCHEMA_OK = ("http://", "https://", "mailto:", "notiz:")
 
 
@@ -39,16 +43,20 @@ class _Reiniger(HTMLParser):
                 continue
             if name == "href" and not wert.lower().startswith(SCHEMA_OK):
                 continue
+            if name == "data-datei" and not anhangname_ok(wert):
+                continue
             gut.append(f' {name}="{escape(wert, quote=True)}"')
+        if tag == "img" and not any(g.startswith(" data-datei=") for g in gut):
+            return
         if tag in LEER:
-            self.teile.append(f"<{tag}>")
+            self.teile.append(f"<{tag}{''.join(gut)}>")
         else:
             self.teile.append(f"<{tag}{''.join(gut)}>")
             self.offen.append(tag)
 
     def handle_startendtag(self, tag, attrs):
-        if not self.weg and tag in LEER:
-            self.teile.append(f"<{tag}>")
+        if tag in LEER:
+            self.handle_starttag(tag, attrs)
 
     def handle_endtag(self, tag):
         if tag in {"script", "style", "iframe", "object", "embed", "svg", "math"}:
@@ -73,6 +81,20 @@ class _Reiniger(HTMLParser):
         while self.offen:
             self.teile.append(f"</{self.offen.pop()}>")
         return "".join(self.teile)
+
+
+def anhangname_ok(name: str) -> bool:
+    """Ein blosser Dateiname im Anhangsordner - kein Pfad, nichts Verstecktes."""
+    return (0 < len(name) <= 120 and not name.startswith(".")
+            and not any(z in name for z in "/\\\x00"))
+
+
+_BILD_IM_TEXT = re.compile(r'<img [^>]*data-datei="([^"]*)"')
+
+
+def bilder_im_text(sauber: str) -> set[str]:
+    """Dateinamen der Bilder, die in gereinigtem Text-HTML stecken."""
+    return {unescape(n) for n in _BILD_IM_TEXT.findall(sauber)}
 
 
 def html(roh: str, grenze: int = 200_000) -> str:

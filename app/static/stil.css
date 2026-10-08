@@ -141,6 +141,7 @@ body {
 .kasten:hover .text { border-color: var(--kasten-rand); }
 .kasten.aktiv .text { border-color: var(--akzent); background: var(--papier); }
 .kasten .text p { margin: 0 0 .4em; }
+.kasten .text img { max-width: 100%; height: auto; vertical-align: bottom; border-radius: 4px; }
 .kasten .text h1, .kasten .text h2, .kasten .text h3 { margin: .2em 0 .3em; }
 .kasten .text ul, .kasten .text ol { margin: .2em 0; padding-left: 1.4em; }
 
