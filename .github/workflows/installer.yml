@@ -12,6 +12,16 @@ on:
       tag:
         description: "Release tag, e.g. v1.0.1"
         required: true
+  # Aufruf aus release.yml. Noetig, weil ein Release, das eine Action mit dem
+  # GITHUB_TOKEN anlegt, keine weiteren Workflows ausloest - sonst koennten sich
+  # Workflows endlos selbst starten. Der Ausloeser "release: published" oben
+  # greift also nur, wenn ein Mensch das Release anlegt.
+  workflow_call:
+    inputs:
+      tag:
+        description: "Release tag, e.g. v1.0.1"
+        required: true
+        type: string
 
 permissions:
   contents: write
