@@ -101,7 +101,13 @@ def fenster_zeigen(adresse: str) -> None:
     webkit_zurechtruecken()
     import webview
     webview.create_window(TITEL, adresse, width=1280, height=840, min_size=(640, 480))
-    webview.start()
+    # private_mode=False: im Privatmodus stellt WebKitGTK gar kein localStorage
+    # bereit - die Variable fehlt dann komplett. Die Oberflaeche kommt inzwischen
+    # auch ohne aus, aber so bleiben Zoom, aufgeklappte Abschnitte und die zuletzt
+    # offene Seite ueber einen Neustart hinweg erhalten.
+    speicher = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / "notizmappe/webansicht"
+    speicher.mkdir(parents=True, exist_ok=True)
+    webview.start(private_mode=False, storage_path=str(speicher))
 
 
 def mit_pywebview(adresse: str) -> bool:

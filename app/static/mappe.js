@@ -9,9 +9,36 @@ const WARTEN = 900;        // ms Ruhe nach der letzten Eingabe, bevor gespeicher
 const POLL = 15000;        // ms zwischen "hat jemand von aussen geschrieben?"
 const RASTER = 8;          // Positionen auf 8px runden, sonst zappelt alles
 
+/* Kleiner Merker statt localStorage direkt.
+ *
+ * In WebKitGTK unter pywebview gibt es localStorage schlicht nicht - die Variable
+ * ist nicht definiert, der Zugriff wirft einen ReferenceError, und das riss beim
+ * ersten Aufruf das ganze Skript mit: kein Baum, keine Kästen, kein Tippen. Auch
+ * im Browser kann der Zugriff fehlschlagen (privates Fenster, gesperrte
+ * Seitendaten). Nichts hier drin ist wichtig genug, um daran zu scheitern - es
+ * sind Bequemlichkeiten. Also: versuchen, und sonst nur für diese Sitzung merken.
+ */
+const merker = (() => {
+  const ersatz = {};
+  let laden, sichern;
+  try {
+    window.localStorage.setItem('probe', '1');
+    window.localStorage.removeItem('probe');
+    laden = (k) => window.localStorage.getItem(k);
+    sichern = (k, w) => window.localStorage.setItem(k, w);
+  } catch (f) {
+    laden = (k) => (k in ersatz ? ersatz[k] : null);
+    sichern = (k, w) => { ersatz[k] = String(w); };
+  }
+  return {
+    holen(k, standard = null) { try { const w = laden(k); return w === null ? standard : w; } catch (f) { return standard; } },
+    legen(k, w) { try { sichern(k, String(w)); } catch (f) { /* dann eben nicht */ } },
+  };
+})();
+
 const geraet = (() => {
-  let g = localStorage.getItem('geraet');
-  if (!g) { g = Math.random().toString(36).slice(2, 10); localStorage.setItem('geraet', g); }
+  let g = merker.holen('geraet');
+  if (!g) { g = Math.random().toString(36).slice(2, 10); merker.legen('geraet', g); }
   return g;
 })();
 
@@ -26,7 +53,7 @@ let schmutzig = false;
 let speicherUhr = null;
 let zoom = 1;
 let baumDaten = [];
-const zugeklappt = new Set(JSON.parse(localStorage.getItem('zugeklappt') || '[]'));
+const zugeklappt = new Set(JSON.parse(merker.holen('zugeklappt', '[]')));
 
 /* ------------------------------------------------------------------ Hilfen */
 
@@ -126,7 +153,7 @@ function zeile(text, aktionen = [], aufKlick = null) {
 function klappen(knoten, schluessel) {
   knoten.classList.toggle('eingeklappt');
   if (knoten.classList.contains('eingeklappt')) zugeklappt.add(schluessel); else zugeklappt.delete(schluessel);
-  localStorage.setItem('zugeklappt', JSON.stringify([...zugeklappt]));
+  merker.legen('zugeklappt', JSON.stringify([...zugeklappt]));
   knoten.querySelector('.pfeil').textContent = knoten.classList.contains('eingeklappt') ? '▸' : '▾';
 }
 
@@ -135,6 +162,16 @@ async function loeschen(art, pfad, wie) {
   await api('/api/loeschen', 'POST', { art, pfad });
   if (art === 'seite' && offen && offen.name === pfad[2]) { offen = null; flaecheLeeren(); }
   await baumLaden();
+}
+
+/* Erste vorhandene Seite im ganzen Baum, oder null. */
+function erstesSeitchen() {
+  for (const b of baumDaten) {
+    for (const a of b.abschnitte) {
+      if (a.seiten.length) return [b.name, a.name, a.seiten[0].name];
+    }
+  }
+  return null;
 }
 
 async function baumLaden() {
@@ -168,7 +205,7 @@ async function seiteOeffnen(buch, abschnitt, name) {
   schmutzig = false;
   flaecheMessen();
   baumZeichnen();
-  localStorage.setItem('zuletzt', JSON.stringify({ buch, abschnitt, name: s.name }));
+  merker.legen('zuletzt', JSON.stringify({ buch, abschnitt, name: s.name }));
 }
 
 /* ------------------------------------------------------------------ Kaesten */
@@ -554,6 +591,7 @@ function zoomSetzen(z) {
   zoom = Math.min(2.5, Math.max(0.4, Math.round(z * 10) / 10));
   flaeche.style.transform = `scale(${zoom})`;
   $('#zoomwert').textContent = Math.round(zoom * 100) + '%';
+  merker.legen('zoom', zoom);
   flaecheMessen();
 }
 $('#rein').addEventListener('click', () => zoomen(0.1));
@@ -654,24 +692,86 @@ function updateVerfolgen(ziel) {
   }, 3000);
 }
 
+/* ----------------------------------------------------------- Einstellungen */
+
+const tafel = $('#einstellungen');
+
+function tafelZeigen(an) {
+  tafel.hidden = !an;
+  if (an) einstellungenLaden();
+}
+
+$('#zahnrad').addEventListener('click', () => tafelZeigen(true));
+$('#zu').addEventListener('click', () => tafelZeigen(false));
+tafel.addEventListener('click', (ev) => { if (ev.target === tafel) tafelZeigen(false); });
+document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !tafel.hidden) tafelZeigen(false); });
+
+async function einstellungenLaden() {
+  try {
+    const e = await api('/api/einstellungen');
+    $('#e-version').textContent = e.version;
+    $('#e-ordner').textContent = e.ordner;
+    $('#e-seiten').textContent = e.seiten;
+    $('#e-papierkorb').textContent = e.papierkorb;
+    $('#e-frei').textContent = groesse(e.frei);
+    $('#e-lage').textContent = e.aus_installation
+      ? (e.hier ? 'Installierte Fassung, läuft auf diesem Rechner.'
+                : 'Installierte Fassung, von einem anderen Rechner geöffnet - Updates gehen nur direkt dort.')
+      : 'Läuft aus dem Quellordner - hier wird mit git aktualisiert, nicht über den Knopf.';
+    $('#e-zoom').textContent = Math.round(zoom * 100) + ' %';
+  } catch (f) {
+    $('#e-lage').textContent = 'Einstellungen ließen sich nicht laden: ' + f.message;
+  }
+  updateAnzeigen(await versionPruefen());
+}
+
+function updateAnzeigen(v) {
+  if (!v) return;
+  $('#e-verfuegbar').textContent = v.fehler ? '—' : (v.verfuegbar || 'unbekannt');
+  $('#e-notizen').hidden = !v.notizen || !v.neuer;
+  if (v.notizen) $('#e-notizen').textContent = v.notizen;
+  $('#e-einspielen').hidden = !(v.neuer && v.aktualisierbar);
+  $('#e-updatehinweis').textContent = v.fehler ? v.fehler
+    : v.neuer ? (v.aktualisierbar ? `Version ${v.verfuegbar} kann eingespielt werden.`
+                                  : 'Neuere Fassung da, aber hier nicht einspielbar.')
+    : 'Das ist die neueste Fassung.';
+}
+
+$('#e-pruefen').addEventListener('click', async () => {
+  $('#e-updatehinweis').textContent = 'wird geprüft …';
+  updateAnzeigen(await versionPruefen(true));
+});
+
+$('#e-einspielen').addEventListener('click', () => $('#update').click());
+
+$('#e-zoom-rein').addEventListener('click', () => { zoomen(0.1); $('#e-zoom').textContent = Math.round(zoom * 100) + ' %'; });
+$('#e-zoom-raus').addEventListener('click', () => { zoomen(-0.1); $('#e-zoom').textContent = Math.round(zoom * 100) + ' %'; });
+$('#e-zoom-zurueck').addEventListener('click', () => { zoomSetzen(1); $('#e-zoom').textContent = '100 %'; });
+
 /* ------------------------------------------------------------------ Anlauf */
 
 (async () => {
-  zoomSetzen(parseFloat(localStorage.getItem('zoom') || '1'));
+  zoomSetzen(parseFloat(merker.holen('zoom', '1')));
   await baumLaden();
-  if (!baumDaten.length) {
-    // Beim allerersten Start etwas zum Draufklicken hinstellen.
-    await api('/api/notizbuch', 'POST', { name: 'Notizbuch' });
-    await api('/api/abschnitt', 'POST', { notizbuch: 'Notizbuch', name: 'Allgemein' });
-    await api('/api/seite', 'POST', { notizbuch: 'Notizbuch', abschnitt: 'Allgemein', titel: 'Erste Seite' });
+  // Nicht nur beim ganz leeren Datenordner: auch ein Notizbuch ohne Abschnitte oder
+  // ein Abschnitt ohne Seiten lässt einen vor einer Fläche sitzen, auf der sich
+  // nichts schreiben lässt - und nichts sagt einem, warum.
+  if (!erstesSeitchen()) {
+    const buch = baumDaten[0] ? baumDaten[0].name
+      : (await api('/api/notizbuch', 'POST', { name: 'Notizbuch' })).name;
+    const ab = (baumDaten[0] && baumDaten[0].abschnitte[0]) ? baumDaten[0].abschnitte[0].name
+      : (await api('/api/abschnitt', 'POST', { notizbuch: buch, name: 'Allgemein' })).name;
+    await api('/api/seite', 'POST', { notizbuch: buch, abschnitt: ab, titel: 'Erste Seite' });
     await baumLaden();
   }
   versionPruefen();
+  let z = null;
+  try { z = JSON.parse(merker.holen('zuletzt', 'null')); } catch (f) { /* dann die erste */ }
   try {
-    const z = JSON.parse(localStorage.getItem('zuletzt') || 'null');
     if (z) await seiteOeffnen(z.buch, z.abschnitt, z.name);
+    else throw new Error('nichts gemerkt');
   } catch (f) {
-    const b = baumDaten[0], a = b && b.abschnitte[0], s = a && a.seiten[0];
-    if (s) await seiteOeffnen(b.name, a.name, s.name);
+    const erste = erstesSeitchen();
+    if (erste) await seiteOeffnen(erste[0], erste[1], erste[2]);
   }
 })();

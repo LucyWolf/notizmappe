@@ -5,6 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Notizmappe</title>
 <link rel="stylesheet" href="/static/stil.css">
+<script>
+/* Ganz oben und ohne Abhaengigkeiten: faengt Fehler, die beim Laden von mappe.js
+ * auftreten. Ohne das bleibt die Oberflaeche einfach stumm - man klickt, tippt,
+ * und nichts passiert, ohne jeden Hinweis worauf. */
+window.__fehler = [];
+window.addEventListener('error', function (ev) {
+  window.__fehler.push({
+    was: ev.message || String(ev.error || ''),
+    wo: (ev.filename || '?') + ':' + (ev.lineno || '?'),
+    stapel: ev.error && ev.error.stack ? String(ev.error.stack).slice(0, 600) : '',
+  });
+  var m = document.getElementById('meldung');
+  if (m) {
+    m.textContent = 'Fehler in der Oberfläche: ' + (ev.message || ev.error)
+      + '  (' + (ev.filename || '?').replace(/^.*\//, '') + ':' + (ev.lineno || '?') + ')';
+    m.hidden = false;
+  }
+});
+window.addEventListener('unhandledrejection', function (ev) {
+  window.__fehler.push({ was: 'offenes Versprechen: ' + (ev.reason && ev.reason.message || ev.reason), wo: '', stapel: '' });
+});
+</script>
 </head>
 <body>
 <div id="rahmen">
@@ -38,6 +60,7 @@
         <button type="button" id="rein" title="Größer (Strg++)">+</button>
       </div>
       <button type="button" id="update" hidden></button>
+      <button type="button" id="zahnrad" title="Einstellungen">⚙</button>
       <span id="zustand"></span>
     </div>
 
@@ -48,6 +71,49 @@
       <p id="leerhinweis">Doppelklick irgendwohin, um zu schreiben.</p>
     </div>
   </main>
+
+  <div id="einstellungen" hidden>
+    <div class="tafel" role="dialog" aria-label="Einstellungen">
+      <header>
+        <strong>Einstellungen</strong>
+        <button type="button" id="zu" title="Schließen">✕</button>
+      </header>
+
+      <section>
+        <h3>Version</h3>
+        <p class="zeile2"><span>Installiert</span><code id="e-version">…</code></p>
+        <p class="zeile2"><span>Im neuesten Release</span><code id="e-verfuegbar">wird geprüft …</code></p>
+        <p id="e-notizen" class="notizen" hidden></p>
+        <p class="knoepfe">
+          <button type="button" id="e-pruefen">Nach Updates sehen</button>
+          <button type="button" id="e-einspielen" hidden>Jetzt einspielen</button>
+        </p>
+        <p id="e-updatehinweis" class="hinweis"></p>
+      </section>
+
+      <section>
+        <h3>Daten</h3>
+        <p class="zeile2"><span>Ordner</span><code id="e-ordner">…</code></p>
+        <p class="zeile2"><span>Seiten</span><span id="e-seiten">…</span></p>
+        <p class="zeile2"><span>Im Papierkorb</span><span id="e-papierkorb">…</span></p>
+        <p class="zeile2"><span>Frei auf dem Laufwerk</span><span id="e-frei">…</span></p>
+        <p class="hinweis">Der Ordner wird nicht hier umgestellt, sondern beim Start:
+          <code>NOTIZEN_ORDNER</code>. So bleibt klar, welche Dateien ein laufendes
+          Programm gerade in der Hand hat.</p>
+      </section>
+
+      <section>
+        <h3>Fenster</h3>
+        <p class="zeile2"><span>Darstellung</span><span id="e-zoom">100 %</span></p>
+        <p class="knoepfe">
+          <button type="button" id="e-zoom-raus">kleiner</button>
+          <button type="button" id="e-zoom-zurueck">100 %</button>
+          <button type="button" id="e-zoom-rein">größer</button>
+        </p>
+        <p class="hinweis" id="e-lage"></p>
+      </section>
+    </div>
+  </div>
 
 </div>
 <script src="/static/mappe.js"></script>

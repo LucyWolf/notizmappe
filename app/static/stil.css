@@ -185,3 +185,50 @@ body {
   border: 2px dashed var(--akzent); color: var(--schrift);
   font-size: 15px; pointer-events: none; z-index: 3;
 }
+
+/* --- Einstellungen --- */
+#zahnrad {
+  min-width: 28px; height: 28px; border: 1px solid var(--linie); border-radius: 6px;
+  background: var(--papier); color: var(--schrift); cursor: pointer; font-size: 14px;
+}
+#zahnrad:hover { border-color: var(--akzent); }
+#einstellungen {
+  position: fixed; inset: 0; z-index: 20; display: flex;
+  align-items: flex-start; justify-content: center; padding: 40px 16px;
+  background: color-mix(in srgb, #000 45%, transparent);
+  overflow: auto;
+}
+#einstellungen .tafel {
+  width: min(560px, 100%); background: var(--papier); color: var(--schrift);
+  border: 1px solid var(--linie); border-radius: 10px; padding: 0 0 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .35);
+}
+#einstellungen header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-bottom: 1px solid var(--linie);
+}
+#einstellungen #zu {
+  border: 0; background: transparent; color: var(--matt); cursor: pointer; font-size: 15px;
+}
+#einstellungen #zu:hover { color: var(--schrift); }
+#einstellungen section { padding: 12px 16px; border-bottom: 1px solid var(--linie); }
+#einstellungen section:last-child { border-bottom: 0; }
+#einstellungen h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--matt); }
+#einstellungen .zeile2 {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 4px 0;
+}
+#einstellungen .zeile2 code, #einstellungen .zeile2 span:last-child {
+  text-align: right; word-break: break-all; font-size: 13px;
+}
+#einstellungen .knoepfe { display: flex; gap: 8px; margin: 10px 0 2px; flex-wrap: wrap; }
+#einstellungen button:not(#zu) {
+  border: 1px solid var(--linie); background: var(--leiste); color: var(--schrift);
+  border-radius: 6px; padding: 5px 10px; cursor: pointer; font-size: 13px;
+}
+#einstellungen button:not(#zu):hover { border-color: var(--akzent); }
+#einstellungen #e-einspielen { border-color: var(--akzent); background: color-mix(in srgb, var(--akzent) 18%, var(--papier)); }
+#einstellungen .hinweis { color: var(--matt); font-size: 12px; margin: 8px 0 0; }
+#einstellungen .notizen {
+  background: var(--leiste); border: 1px solid var(--linie); border-radius: 6px;
+  padding: 8px 10px; font-size: 12px; max-height: 140px; overflow: auto; white-space: pre-wrap;
+}
