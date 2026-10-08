@@ -320,6 +320,11 @@ sperrt sofort. Vor dem Sperren wird gespeichert.
 Die Dateien bleiben unverschlüsselt und lesbar — die Sperre schützt die Oberfläche,
 nicht die Platte. Nextcloud synchronisiert weiter wie bisher.
 
+Auch ohne Sperre antwortet der lokale Server nur auf `127.0.0.1`, `localhost` oder
+eine IP als Host — sonst könnte eine fremde Webseite ihren Namen per DNS-Rebinding
+auf diesen Rechner umbiegen und die Notizen lesen. Wer die Mappe unter einem Namen
+im eigenen Netz erreichen will: `NOTIZMAPPE_HOSTS=rechner.local`.
+
 ## Server für ein Team (Docker)
 
 Damit mehrere Leute an denselben Notizbüchern arbeiten, läuft die Notizmappe als

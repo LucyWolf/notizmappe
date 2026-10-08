@@ -6,6 +6,7 @@ als Server (Docker) immer an, mit Konten und Notizbuechern als Projekten.
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -73,16 +74,36 @@ def _gast(request: Request) -> str:
     return request.client.host if request.client else ""
 
 
+def _host_ok(host: str) -> bool:
+    """Auf dem eigenen Rechner nur IP-Adressen und localhost als Host. Sonst kann
+    eine fremde Webseite ihren Namen auf 127.0.0.1 umbiegen (DNS-Rebinding) und
+    gilt dann als "gleiche Herkunft" - ohne Sperre heisst das: alle Notizen lesen
+    und schreiben. Ein Rebinding braucht immer einen Namen, eine IP nie."""
+    import ipaddress
+    name = (host or "").rsplit(":", 1)[0] if not (host or "").endswith("]") else host
+    name = name.strip("[]").lower()
+    if name in {"localhost"} | {h.strip().lower() for h in os.environ.get("NOTIZMAPPE_HOSTS", "").split(",") if h.strip()}:
+        return True
+    try:
+        ipaddress.ip_address(name)
+        return True
+    except ValueError:
+        return False
+
+
 @app.middleware("http")
 async def _waechter(request: Request, call_next):
     pfad = request.url.path
+    if not konten.server_modus() and not _host_ok(request.headers.get("host", "")):
+        return JSONResponse({"fehler": "Unbekannter Host - die Notizmappe antwortet hier nur auf "
+                                       "127.0.0.1/localhost (weitere über NOTIZMAPPE_HOSTS)"}, status_code=421)
     # Fremde Seiten duerfen nichts aendern: der Browser schickt bei solchen
     # Anfragen seine Herkunft mit. Zusammen mit SameSite=Strict am Keks reicht das
-    # gegen untergeschobene Formulare.
+    # gegen untergeschobene Formulare. "null" (Sandbox-iframe, file://) ist fremd.
     if request.method not in ("GET", "HEAD", "OPTIONS") and pfad != "/geraet/anmelden":
         herkunft = request.headers.get("origin")
         erlaubt = {request.headers.get("host"), request.headers.get("x-forwarded-host")}
-        if herkunft and herkunft != "null" and urlparse(herkunft).netloc not in erlaubt:
+        if herkunft and (herkunft == "null" or urlparse(herkunft).netloc not in erlaubt):
             return JSONResponse({"fehler": "Anfrage von fremder Seite abgelehnt"}, status_code=403)
     request.state.konto = None
     if pfad.startswith("/static/") or pfad in OFFEN or not konten.aktiv():

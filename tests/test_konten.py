@@ -15,6 +15,7 @@ DATEN = Path(tempfile.mkdtemp(prefix="notizen-konten-"))
 KONFIG = Path(tempfile.mkdtemp(prefix="notizen-konfig-"))
 os.environ["NOTIZEN_ORDNER"] = str(DATEN)
 os.environ["NOTIZMAPPE_KONFIG"] = str(KONFIG)
+os.environ["NOTIZMAPPE_HOSTS"] = "testserver"                # Host des TestClient
 os.environ["NOTIZMAPPE_OPTIONEN"] = str(KONFIG / "optionen.json")
 os.environ["NOTIZMAPPE_QUELLE"] = "http://127.0.0.1:1"
 os.environ.pop("NOTIZMAPPE_SERVER", None)
@@ -100,6 +101,13 @@ pruefe("Sperrzeit einstellbar", a.post("/api/sperre/zeit", json={"minuten": 5}).
 pruefe("Ich-Abfrage kennt die Sperrzeit", a.get("/api/ich").json()["sperre_minuten"] == 5)
 pruefe("Fremde Seite kann nichts aendern (Origin)",
        a.post("/api/notizbuch", json={"name": "X"}, headers={"origin": "https://boese.example"}).status_code == 403)
+pruefe("Herkunft null (Sandbox-iframe) gilt als fremd",
+       a.post("/api/notizbuch", json={"name": "X"}, headers={"origin": "null"}).status_code == 403)
+rebind = TestClient(main.app, base_url="http://boese.example:8099", client=("127.0.0.1", 1))
+pruefe("DNS-Rebinding-Host abgewiesen", rebind.get("/api/baum").status_code == 421)
+pruefe("IP als Host geht", TestClient(main.app, base_url="http://127.0.0.1:8099").get("/api/status").status_code == 200)
+pruefe("localhost als Host geht", TestClient(main.app, base_url="http://localhost:8099").get("/api/status").status_code == 200)
+pruefe("IPv6 als Host geht", TestClient(main.app, base_url="http://[::1]:8099").get("/api/status").status_code == 200)
 pruefe("Eigene Herkunft darf", a.post("/api/notizbuch", json={"name": "Privat"},
                                       headers={"origin": "http://testserver"}).status_code == 200)
 pruefe("Konten liegen nicht im Datenordner", not list(DATEN.rglob("konten.json")))
