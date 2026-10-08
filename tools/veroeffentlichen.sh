@@ -49,9 +49,14 @@ if neu[:-1] != alt[:-1]:
                  f"obwohl die letzte erst bei {alt[-1]} steht.\n"
                  f"       Die letzte Stelle zaehlt bis 99. Gemeint war vermutlich "
                  + ".".join(str(t) for t in alt[:-1] + [alt[-1] + 1]) + ".")
-    erwartet = alt[:-1] + [99]
-    # bei vollem Hunderter: genau eine Stelle weiter, Rest auf 0
-    soll = alt[:-2] + [alt[-2] + 1, 0] if len(alt) > 1 else alt
+    # bei vollem Hunderter: weiterzaehlen mit Uebertrag, jede Stelle hoechstens 99
+    soll = alt[:]
+    soll[-1] += 1
+    i = len(soll) - 1
+    while i > 0 and soll[i] > 99:
+        soll[i] = 0
+        soll[i - 1] += 1
+        i -= 1
     if neu != soll:
         sys.exit(f"Fehler: nach {sys.argv[1]} kommt " + ".".join(str(t) for t in soll) + f", nicht {sys.argv[2]}.")
 PRUEF
