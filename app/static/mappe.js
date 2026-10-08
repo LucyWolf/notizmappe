@@ -105,7 +105,7 @@ function baumZeichnen() {
         zugeklappt.delete(buch.name); await baumLaden();
       }],
       ['Notizbuch loeschen', '🗑', () => loeschen('notizbuch', [buch.name], buch.name)],
-    ], () => klappen(bd, buch.name)));
+    ], () => klappen(bd, buch.name), zugeklappt.has(buch.name)));
 
     for (const ab of buch.abschnitte) {
       const schluessel = buch.name + '/' + ab.name;
@@ -119,7 +119,7 @@ function baumZeichnen() {
           $('#titel').select();
         }],
         ['Abschnitt loeschen', '🗑', () => loeschen('abschnitt', [buch.name, ab.name], ab.name)],
-      ], () => klappen(ad, schluessel)));
+      ], () => klappen(ad, schluessel), zugeklappt.has(schluessel)));
 
       for (const s of ab.seiten) {
         const sd = zeile(s.titel, [
@@ -138,11 +138,13 @@ function baumZeichnen() {
   }
 }
 
-function zeile(text, aktionen = [], aufKlick = null) {
+function zeile(text, aktionen = [], aufKlick = null, zu = false) {
   const z = document.createElement('div');
   z.className = 'zeile';
   if (aufKlick) {
-    const pfeil = Object.assign(document.createElement('span'), { className: 'pfeil', textContent: '▾' });
+    // Pfeil nach dem gemerkten Zustand - vorher stand nach jedem Neuzeichnen ▾,
+    // auch bei eingeklappten Notizbuechern.
+    const pfeil = Object.assign(document.createElement('span'), { className: 'pfeil', textContent: zu ? '▸' : '▾' });
     pfeil.addEventListener('click', aufKlick);
     z.append(pfeil);
   }
@@ -704,13 +706,20 @@ for (const e of ['pointerup', 'pointercancel']) {
 
 let leertaste = false;
 document.addEventListener('keydown', (ev) => {
-  if (ev.code === 'Space' && !ev.target.closest('[contenteditable], input')) { leertaste = true; ev.preventDefault(); }
+  // Leertaste = Flaeche schieben, aber nicht dort, wo sie etwas tut: Text, Felder,
+  // Knoepfe (die loest man mit Leertaste aus).
+  if (ev.code === 'Space' && !ev.target.closest('[contenteditable], input, textarea, select, button, a')) {
+    leertaste = true; ev.preventDefault();
+  }
   if ((ev.ctrlKey || ev.metaKey) && ev.key === 's') { ev.preventDefault(); speichernJetzt(); }
   if ((ev.ctrlKey || ev.metaKey) && (ev.key === '+' || ev.key === '=')) { ev.preventDefault(); zoomen(0.1); }
   if ((ev.ctrlKey || ev.metaKey) && ev.key === '-') { ev.preventDefault(); zoomen(-0.1); }
   if ((ev.ctrlKey || ev.metaKey) && ev.key === '0') { ev.preventDefault(); zoomSetzen(1); }
 });
 document.addEventListener('keyup', (ev) => { if (ev.code === 'Space') leertaste = false; });
+// Leertaste gedrueckt, Fenster gewechselt: das keyup kommt nie an, und jeder
+// Klick schob danach die Flaeche statt etwas auszuwaehlen.
+window.addEventListener('blur', () => { leertaste = false; });
 
 for (const b of document.querySelectorAll('#werkzeuge [data-befehl]')) {
   b.addEventListener('mousedown', (ev) => ev.preventDefault());  // Fokus im Text behalten
