@@ -58,6 +58,9 @@ async def _kontofehler(request: Request, exc: konten.KontoFehler):
 
 
 # --- Anmeldung -----------------------------------------------------------------
+# Alles, was ein Passwort prueft oder hasht (scrypt, ~30 ms), ist eine normale
+# def-Route: FastAPI laesst sie im Threadpool laufen. Als async def stuende
+# waehrenddessen der ganze Server - ein paar Rateversuche, und alle warten.
 
 KEKS = "notizmappe"
 # Ohne Anmeldung erreichbar. /geraet/anmelden kommt von der Desktop-Fassung, also
@@ -151,7 +154,7 @@ async def api_status():
 
 
 @app.post("/api/anmelden")
-async def api_anmelden(request: Request, rumpf: dict):
+def api_anmelden(request: Request, rumpf: dict):
     k = konten.pruefen(str(rumpf.get("name") or "").strip(), str(rumpf.get("passwort") or ""), _gast(request))
     antwort = JSONResponse({"ok": True, "name": k["name"]})
     _keks_setzen(antwort, request, konten.sitzung_anlegen(k["name"]))
@@ -167,7 +170,7 @@ async def api_abmelden(request: Request):
 
 
 @app.post("/api/einrichten")
-async def api_einrichten(request: Request, rumpf: dict):
+def api_einrichten(request: Request, rumpf: dict):
     if not konten.server_modus():
         raise HTTPException(404, "Nur im Server-Betrieb")
     k = konten.einrichten(str(rumpf.get("code") or ""), str(rumpf.get("name") or ""),
@@ -178,7 +181,7 @@ async def api_einrichten(request: Request, rumpf: dict):
 
 
 @app.post("/api/geraet")
-async def api_geraet(request: Request, rumpf: dict):
+def api_geraet(request: Request, rumpf: dict):
     """Die Desktop-Fassung meldet sich einmal mit Name und Passwort an und bekommt
     einen Geraeteschluessel. Das Passwort wird dort nicht gespeichert."""
     k = konten.pruefen(str(rumpf.get("name") or "").strip(), str(rumpf.get("passwort") or ""), _gast(request))
@@ -216,7 +219,7 @@ async def api_ich(request: Request):
 
 
 @app.post("/api/ich/passwort")
-async def api_ich_passwort(request: Request, rumpf: dict):
+def api_ich_passwort(request: Request, rumpf: dict):
     k = _konto(request)
     if not k["name"]:
         raise HTTPException(400, "Kein Konto angemeldet")
@@ -236,7 +239,7 @@ async def api_ich_geraet_weg(request: Request, rumpf: dict):
 
 
 @app.post("/api/sperre")
-async def api_sperre(request: Request, rumpf: dict):
+def api_sperre(request: Request, rumpf: dict):
     """Sperre auf dem eigenen Rechner einschalten: legt das eine Konto an."""
     _nur_hier(request)
     if konten.aktiv():
@@ -262,7 +265,7 @@ async def api_sperre_zeit(request: Request, rumpf: dict):
 
 
 @app.post("/api/sperre/aus")
-async def api_sperre_aus(request: Request, rumpf: dict):
+def api_sperre_aus(request: Request, rumpf: dict):
     _nur_hier(request)
     k = _konto(request)
     liste = konten.konten()
@@ -286,7 +289,7 @@ async def api_konten(request: Request):
 
 
 @app.post("/api/konten")
-async def api_konto_neu(request: Request, rumpf: dict):
+def api_konto_neu(request: Request, rumpf: dict):
     _admin(request)
     return konten.anlegen(str(rumpf.get("name") or ""), str(rumpf.get("passwort") or ""),
                           bool(rumpf.get("admin")))
@@ -303,7 +306,7 @@ async def api_konto_weg(request: Request, rumpf: dict):
 
 
 @app.post("/api/konten/passwort")
-async def api_konto_passwort(request: Request, rumpf: dict):
+def api_konto_passwort(request: Request, rumpf: dict):
     _admin(request)
     konten.passwort_setzen(str(rumpf.get("name") or ""), str(rumpf.get("passwort") or ""))
     return {"ok": True}
