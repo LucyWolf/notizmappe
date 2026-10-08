@@ -93,7 +93,8 @@ jobs:
           --paths app
           --add-data "app;app"
           --collect-all uvicorn --collect-all fastapi --collect-all starlette
-          --collect-all jinja2 --collect-all pydantic
+          --collect-all jinja2 --collect-all pydantic --collect-all webview
+          --noconsole
           windows/notizmappe_start.py
 
       # Die Ausgabe der exe in Dateien umleiten und hinterher zeigen - sonst
@@ -102,6 +103,8 @@ jobs:
         shell: pwsh
         run: |
           $env:PORT = "8112"
+          # Der Buildlauf hat keinen Desktop - also Server ohne Fenster pruefen.
+          $env:NOTIZMAPPE_NUR_SERVER = "1"
           $p = Start-Process -FilePath dist\Notizmappe.exe -PassThru -NoNewWindow `
                  -RedirectStandardOutput out.txt -RedirectStandardError err.txt
           $ok = $false

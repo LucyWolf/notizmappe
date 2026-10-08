@@ -27,10 +27,50 @@ cp "$WURZEL/requirements.txt" "$WURZEL/README.md" "$PAKET/"
 cp "$WURZEL/tools/install.sh" "$PAKET/install.sh"
 chmod +x "$PAKET/install.sh"
 
+PYBAU=${PY:-$WURZEL/.venv/bin/python}
+
 echo "  Python-Pakete holen …"
-"${PY:-$WURZEL/.venv/bin/python}" -m pip download -q --no-input \
-  -r "$WURZEL/requirements.txt" -d "$PAKET/vendor" \
-  || { echo "  (kein Netz - Paket wird ohne vendor gebaut, der Installer holt sie dann selbst)"; rm -rf "$PAKET/vendor"; }
+# pip wheel statt pip download: manche Pakete (proxy_tools, eine Abhaengigkeit von
+# pywebview) gibt es nur als Quellarchiv. Beim Einrichten ohne Netz koennte pip die
+# nicht bauen, weil ihm dafuer die Bauwerkzeuge fehlen. pip wheel erledigt das hier,
+# wo noch Netz ist, und legt fertige Rad-Dateien ab.
+if "$PYBAU" -m pip wheel -q --no-input -r "$WURZEL/requirements.txt" -w "$PAKET/vendor"; then
+  # markupsafe und pydantic_core sind uebersetzt und haengen an der Python-Version.
+  # Gebaut wird hier mit einer, installiert wird dort vielleicht mit einer anderen -
+  # deshalb die gaengigen Fassungen gleich mitnehmen. Das kostet ein paar MB und
+  # erspart dem Anwender, dass der Installer doch wieder ins Netz muss.
+  for paket in markupsafe pydantic_core; do
+    fassung=$(ls "$PAKET/vendor" | sed -n "s/^${paket}-\([0-9][^-]*\)-.*/\1/p" | head -1)
+    [ -n "$fassung" ] || continue
+    name=$(echo "$paket" | tr '_' '-')
+    for abi in 311 312 313 314; do
+      "$PYBAU" -m pip download -q --no-input --no-deps --only-binary=:all: \
+        --python-version "$abi" --implementation cp \
+        --platform manylinux2014_x86_64 --platform manylinux_2_17_x86_64 \
+        -d "$PAKET/vendor" "$name==$fassung" 2>/dev/null || true
+    done
+  done
+  echo "  $(ls "$PAKET/vendor" | wc -l) Rad-Dateien"
+
+  # Nachsehen, ob sich daraus wirklich ohne Netz einrichten laesst. Sonst faellt der
+  # Installer beim Anwender stillschweigend auf den Netzweg zurueck - und ein
+  # Offline-Paket, das Netz braucht, ist keines.
+  PROBE=$(mktemp -d)
+  "$PYBAU" -m venv --system-site-packages "$PROBE/venv" >/dev/null 2>&1
+  if "$PROBE/venv/bin/pip" install -q --no-index --find-links "$PAKET/vendor" \
+       -r "$WURZEL/requirements.txt" >/dev/null 2>&1; then
+    echo "  Einrichtung ohne Netz: geht"
+  else
+    rm -rf "$PROBE"
+    echo "  FEHLER: aus den mitgelieferten Paketen laesst sich nicht ohne Netz einrichten." >&2
+    "$PROBE/venv/bin/pip" install --no-index --find-links "$PAKET/vendor" -r "$WURZEL/requirements.txt" 2>&1 | tail -15 >&2
+    exit 1
+  fi
+  rm -rf "$PROBE"
+else
+  echo "  (kein Netz - Paket wird ohne vendor gebaut, der Installer holt sie dann selbst)"
+  rm -rf "$PAKET/vendor"
+fi
 
 tar czf "$BAU/nutzlast.tgz" -C "$BAU" notizmappe
 base64 "$BAU/nutzlast.tgz" > "$BAU/nutzlast.b64"

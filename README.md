@@ -3,6 +3,11 @@
 Freie Notizfläche wie OneNote, aber die Daten liegen als Dateien in **deinem**
 Ordner — Nextcloud, NAS-Freigabe oder einfach lokal. Kein Konto, kein Microsoft.
 
+Ein normales Programm: eigenes Fenster, eigener Eintrag im Menü und in der
+Fensterleiste, Schließen beendet es. Dass die Oberfläche innen aus HTML besteht
+und ein kleiner Server dahinter läuft, merkt man nur, wenn man es wissen will —
+der Server hört nur auf `127.0.0.1` und geht mit dem Fenster.
+
 Stand: 08.10.2026 — Stufe 1 (Baum, Textkästen, Autosave, Konflikterkennung).
 
 ## Warum Dateien und keine Datenbank
@@ -156,10 +161,35 @@ NOTIZMAPPE_ZIEL=/opt/nm NOTIZEN_ORDNER=/mnt/nas/Notizen PORT=9000 \
 ```
 
 Ohne Root. Es entstehen: `~/.local/share/notizmappe` (Programm und venv),
-`~/Notizen` (Daten), ein Menüeintrag und — wenn systemd im Benutzerkontext
-erreichbar ist — der Dienst `notizmappe.service`, sonst ein Autostart-Eintrag der
-Sitzung. Läuft schon eine Fassung, fragt der Installer: aktualisieren,
-deinstallieren oder abbrechen.
+`~/Notizen` (Daten) und ein Menüeintrag **Notizmappe**. Läuft schon eine Fassung,
+fragt der Installer: aktualisieren, deinstallieren oder abbrechen.
+
+Standardmäßig läuft **nichts** im Hintergrund. Wer die Notizen auch vom Handy oder
+vom zweiten Rechner aus erreichen will, nimmt `--mit-dienst` — dann läuft zusätzlich
+ein Benutzerdienst auf Port 8099, und das Fenster dockt daran an, statt einen
+zweiten Server zu starten.
+
+## Das Fenster
+
+Das Fenster kommt von der Webansicht des Systems, in dieser Reihenfolge:
+
+1. **pywebview** über WebKit2GTK oder Qt — ein echtes Fenster, eigener Prozess.
+   Die Webansicht ist ein Distributionspaket (`python-gobject` + `webkit2gtk-4.1`
+   bzw. `python3-gi` + `gir1.2-webkit2-4.1`); der Doppelklick-Installer bringt sie
+   mit, deshalb steht sie in `installer.conf`.
+2. **Chromium-artiger Browser mit `--app=`** — sieht genauso aus (eigenes Fenster,
+   keine Adresszeile), mit eigenem Profil, damit es nicht in einer laufenden
+   Browsersitzung aufgeht. Firefox kann das nicht.
+3. Normaler Browser — der Notnagel, mit Hinweis.
+
+Was davon auf deinem Rechner da ist:
+
+```bash
+~/.local/share/notizmappe/.venv/bin/python ~/.local/share/notizmappe/app/fenster.py --pruefen
+```
+
+Das venv wird mit `--system-site-packages` angelegt, sonst sieht es die Webansicht
+der Distribution nicht — die gibt es nicht über pip.
 
 Vor dem Entpacken prüft die Datei ihre eigene SHA256-Summe, damit ein halber
 Download nicht halb installiert.
@@ -181,7 +211,8 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 NOTIZEN_ORDNER=~/Nextcloud/Notizen ./starten.sh      # Standard: ~/Notizen
 ```
 
-Dann http://127.0.0.1:8099 öffnen. Umgebungsvariablen: `NOTIZEN_ORDNER`, `HOST`, `PORT`.
+`starten.sh` ist nur der nackte Server. Das Programm mit Fenster ist
+`python3 app/fenster.py`. Umgebungsvariablen: `NOTIZEN_ORDNER`, `HOST`, `PORT`.
 
 ## Bedienung
 
