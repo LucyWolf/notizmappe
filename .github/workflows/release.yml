@@ -91,17 +91,29 @@ jobs:
           --collect-all jinja2 --collect-all pydantic
           windows/notizmappe_start.py
 
+      # Die Ausgabe der exe in Dateien umleiten und hinterher zeigen - sonst
+      # verschluckt Start-Process den Grund, warum sie nicht hochkommt.
       - name: Buendel wirklich starten
         shell: pwsh
         run: |
           $env:PORT = "8112"
-          $p = Start-Process -FilePath dist\Notizmappe.exe -PassThru
+          $p = Start-Process -FilePath dist\Notizmappe.exe -PassThru -NoNewWindow `
+                 -RedirectStandardOutput out.txt -RedirectStandardError err.txt
           $ok = $false
           foreach ($i in 1..30) {
             Start-Sleep -Seconds 2
+            if ($p.HasExited) { break }
             try { if ((Invoke-WebRequest "http://127.0.0.1:8112/" -UseBasicParsing).StatusCode -eq 200) { $ok = $true; break } } catch {}
           }
-          if (-not $ok) { Stop-Process -Id $p.Id -Force; throw "Notizmappe.exe antwortet nicht auf 8112" }
+          Write-Host "--- Ausgabe der exe ---"
+          if (Test-Path out.txt) { Get-Content out.txt }
+          Write-Host "--- Fehlerausgabe ---"
+          if (Test-Path err.txt) { Get-Content err.txt }
+          Write-Host "-----------------------"
+          if (-not $ok) {
+            if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
+            throw "Notizmappe.exe antwortet nicht auf 8112 (beendet: $($p.HasExited))"
+          }
           $baum = Invoke-WebRequest "http://127.0.0.1:8112/api/baum" -UseBasicParsing
           if ($baum.Content -notmatch "notizbuecher") { throw "API antwortet nicht wie erwartet" }
           Stop-Process -Id $p.Id -Force
@@ -114,6 +126,9 @@ jobs:
 
   release:
     needs: [linux, windows]
+    # Nur bei einem Tag. So kann man den Bau per workflow_dispatch probieren, ohne
+    # ein Release anzulegen und ohne eine Versionsnummer zu verbrennen.
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4

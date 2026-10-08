@@ -60,9 +60,14 @@ if __name__ == "__main__":
     try:
         sys.exit(main())
     except Exception as fehler:        # Fenster nicht einfach zuklappen lassen
-        print(f"\nFehler: {fehler}")
-        try:
-            input("Enter zum Schliessen ")
-        except EOFError:
-            pass
+        import traceback
+        traceback.print_exc()
+        print(f"\nFehler: {fehler}", flush=True)
+        # Nur warten, wenn ueberhaupt jemand Enter druecken kann - im Buildlauf
+        # haengt das Fenster sonst hier und der Fehler faellt als Zeitueberschreitung auf.
+        if sys.stdin is not None and sys.stdin.isatty():
+            try:
+                input("Enter zum Schliessen ")
+            except EOFError:
+                pass
         sys.exit(1)
