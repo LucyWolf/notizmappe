@@ -65,9 +65,18 @@ Wenn du das wirklich willst: erst deinstallieren (--deinstallieren)."
   cp -r "$HIER/app" "$ZIEL/app"
   cp "$HIER/requirements.txt" "$ZIEL/"
 
+  # --system-site-packages: die Webansicht fuers Fenster (PyGObject/WebKit2 oder Qt)
+  # kommt als Distributionspaket und ist per pip nicht zu bekommen. Ohne das Flag
+  # sieht das venv sie nicht.
+  if [ -x "$ZIEL/.venv/bin/python" ] \
+     && ! grep -q "include-system-site-packages = true" "$ZIEL/.venv/pyvenv.cfg" 2>/dev/null; then
+    sagen "  Umgebung war ohne Zugriff auf die Systempakete - wird neu angelegt."
+    rm -rf "$ZIEL/.venv"
+  fi
   if [ ! -x "$ZIEL/.venv/bin/python" ]; then
     sagen "  Umgebung anlegen …"
-    "$py" -m venv "$ZIEL/.venv" || fehler "venv liess sich nicht anlegen (Paket python3-venv fehlt?)"
+    "$py" -m venv --system-site-packages "$ZIEL/.venv" \
+      || fehler "venv liess sich nicht anlegen (Paket python3-venv fehlt?)"
   fi
 
   sagen "  Pakete einrichten …"
@@ -92,27 +101,17 @@ exec env PYTHONPATH="$ZIEL/app" NOTIZEN_ORDNER="\${NOTIZEN_ORDNER:-$DATEN}" \\
 EOF
   chmod +x "$ZIEL/starten.sh"
 
-  # Oeffnen heisst: Dienst sicherstellen, dann Browser. Als eigene Datei, damit der
-  # Menueintrag per TryExec daran haengt - wird das Programm entfernt, verschwindet
-  # der Eintrag von selbst statt ins Leere zu zeigen.
-  cat > "$ZIEL/oeffnen.sh" <<EOF
+  # Das eigentliche Programm: ein Fenster. Laeuft nebenher schon ein Dienst, dockt
+  # es daran an; sonst bringt es seinen Server selbst mit und nimmt ihn beim
+  # Schliessen wieder mit. Eigene Datei, damit der Menueintrag per TryExec daran
+  # haengt - wird das Programm entfernt, verschwindet der Eintrag von selbst.
+  cat > "$ZIEL/notizmappe" <<EOF
 #!/usr/bin/env bash
 set -uo pipefail
-if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
-  systemctl --user start notizmappe.service 2>/dev/null
-elif ! curl -sf -o /dev/null "http://127.0.0.1:$PORT/" 2>/dev/null; then
-  # Ohne systemd selbst starten und die Prozessnummer hinterlassen, damit man den
-  # Server wieder findet - sonst bleibt er unerreichbar im Hintergrund haengen.
-  setsid "$ZIEL/starten.sh" >> "$ZIEL/.lauf.log" 2>&1 &
-  echo \$! > "$ZIEL/.pid"
-fi
-for i in \$(seq 20); do
-  curl -sf -o /dev/null "http://127.0.0.1:$PORT/" 2>/dev/null && break
-  sleep 0.3
-done
-exec xdg-open "http://127.0.0.1:$PORT/"
+exec env PYTHONPATH="$ZIEL/app" NOTIZEN_ORDNER="\${NOTIZEN_ORDNER:-$DATEN}" \
+  PORT="\${PORT:-$PORT}" "$ZIEL/.venv/bin/python" "$ZIEL/app/fenster.py" "\$@"
 EOF
-  chmod +x "$ZIEL/oeffnen.sh"
+  chmod +x "$ZIEL/notizmappe"
 
   printf '%s\n' "$NEU" > "$ZIEL/.version"
   printf 'ZIEL=%s\nDATEN=%s\nPORT=%s\n' "$ZIEL" "$DATEN" "$PORT" > "$ZIEL/.einrichtung"
@@ -127,9 +126,9 @@ Type=Application
 Version=1.0
 Name=Notizmappe
 GenericName=Notizen
-Comment=Freie Notizflaeche, Daten im eigenen Ordner ($NEU)
-Exec=$ZIEL/oeffnen.sh
-TryExec=$ZIEL/oeffnen.sh
+Comment=Freie Notizflaeche, Daten im eigenen Ordner ($NEU)\nStartupWMClass=Notizmappe
+Exec=$ZIEL/notizmappe
+TryExec=$ZIEL/notizmappe
 Icon=accessories-text-editor
 Terminal=false
 Categories=Office;Utility;TextEditor;
@@ -137,7 +136,18 @@ StartupNotify=false
 EOF
   update-desktop-database "$(dirname "$MENUE")" >/dev/null 2>&1 || true
 
-  if dienst_moeglich; then
+  # Standard: kein Hintergrunddienst. Die Notizmappe ist ein Programm - startet man
+  # es, laeuft es; schliesst man das Fenster, ist es weg. Wer sie auch vom Handy
+  # oder vom zweiten Rechner aus erreichen will, nimmt --mit-dienst.
+  if [ "${MIT_DIENST:-0}" != "1" ]; then
+    if dienst_moeglich && systemctl --user is-enabled notizmappe.service >/dev/null 2>&1; then
+      sagen "  Hintergrunddienst wird abgeschaltet (--mit-dienst behält ihn)."
+      systemctl --user disable --now notizmappe.service >/dev/null 2>&1 || true
+      rm -f "$UNIT"
+      systemctl --user daemon-reload || true
+    fi
+    rm -f "$AUTOSTART"
+  elif dienst_moeglich; then
     mkdir -p "$(dirname "$UNIT")"
     cat > "$UNIT" <<EOF
 [Unit]
@@ -178,7 +188,11 @@ EOF
   fi
 
   sagen ""
-  sagen "Fertig. http://127.0.0.1:$PORT"
+  if [ "${MIT_DIENST:-0}" = "1" ]; then
+    sagen "Fertig. Im Menü: Notizmappe - und im Netz unter http://127.0.0.1:$PORT"
+  else
+    sagen "Fertig. Im Menü: Notizmappe   (oder direkt: $ZIEL/notizmappe)"
+  fi
 }
 
 # ------------------------------------------------------------ Deinstallieren
@@ -218,12 +232,17 @@ starten() {
     hinweis "Notizmappe wird eingerichtet, das dauert einen Moment …"
     einrichten
   fi
-  [ -x "$ZIEL/oeffnen.sh" ] && exec "$ZIEL/oeffnen.sh"
-  command -v xdg-open >/dev/null 2>&1 && exec xdg-open "http://127.0.0.1:$PORT/"
-  sagen "http://127.0.0.1:$PORT"
+  [ -x "$ZIEL/notizmappe" ] && exec "$ZIEL/notizmappe"
+  sagen "Programm nicht gefunden: $ZIEL/notizmappe"
 }
 
 # --------------------------------------------------------------------- Menue
+
+# --mit-dienst darf vor oder hinter dem Befehl stehen
+for arg in "$@"; do
+  [ "$arg" = "--mit-dienst" ] && MIT_DIENST=1
+done
+set -- $(printf '%s\n' "$@" | grep -v -- '--mit-dienst' || true)
 
 case "${1:-}" in
   --starten|--open) starten; exit 0 ;;
@@ -234,6 +253,8 @@ case "${1:-}" in
     sagen "Notizmappe $NEU"
     sagen "  --install / --update   einrichten oder aktualisieren"
     sagen "  --deinstallieren       Programm entfernen (Notizen bleiben)"
+    sagen "  --mit-dienst           zusaetzlich im Hintergrund laufen lassen,"
+    sagen "                         damit Handy und andere Rechner drankommen"
     sagen "Variablen: NOTIZMAPPE_ZIEL, NOTIZEN_ORDNER, PORT"
     exit 0 ;;
 esac
