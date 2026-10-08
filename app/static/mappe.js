@@ -377,6 +377,9 @@ async function dateienAnnehmen(dateien, x, y) {
 function ziehen(handgriff, bewegen, startWerte) {
   handgriff.addEventListener('pointerdown', (ev) => {
     if (ev.button !== 0) return;
+    // Knoepfe im Griff (das ✕) nicht zum Ziehen nehmen: mit gefangenem Zeiger
+    // ginge der Klick an den Griff statt an den Knopf.
+    if (ev.target.closest('button')) return;
     ev.preventDefault();
     handgriff.setPointerCapture(ev.pointerId);
     const x0 = ev.clientX, y0 = ev.clientY, start = startWerte();
