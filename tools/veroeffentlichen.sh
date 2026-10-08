@@ -33,6 +33,28 @@ if ! kleiner "$NEU" "$ALT"; then
   echo "Fehler: $NEU ist nicht groesser als $ALT. Eine Nummer wird nie wiederverwendet." >&2
   exit 1
 fi
+
+# Die letzte Stelle zaehlt bis 99. Eine Stelle davor darf nur hochgehen, wenn die
+# letzte wirklich voll war - sonst verbrennt ein Sprung wie 1.0.3 -> 1.1.0 den
+# ganzen Rest des Hunderters. Das ist mir schon passiert.
+python3 - "$ALT" "$NEU" <<'PRUEF' || exit 1
+import sys
+alt = [int(t) for t in sys.argv[1].split(".")]
+neu = [int(t) for t in sys.argv[2].split(".")]
+if len(alt) != len(neu):
+    sys.exit(f"Fehler: {sys.argv[2]} hat andere Stellen als {sys.argv[1]}.")
+if neu[:-1] != alt[:-1]:
+    if alt[-1] < 99:
+        sys.exit(f"Fehler: {sys.argv[1]} -> {sys.argv[2]} springt eine Stelle weiter, "
+                 f"obwohl die letzte erst bei {alt[-1]} steht.\n"
+                 f"       Die letzte Stelle zaehlt bis 99. Gemeint war vermutlich "
+                 + ".".join(str(t) for t in alt[:-1] + [alt[-1] + 1]) + ".")
+    erwartet = alt[:-1] + [99]
+    # bei vollem Hunderter: genau eine Stelle weiter, Rest auf 0
+    soll = alt[:-2] + [alt[-2] + 1, 0] if len(alt) > 1 else alt
+    if neu != soll:
+        sys.exit(f"Fehler: nach {sys.argv[1]} kommt " + ".".join(str(t) for t in soll) + f", nicht {sys.argv[2]}.")
+PRUEF
 if git rev-parse -q --verify "refs/tags/v$NEU" >/dev/null; then
   echo "Fehler: Tag v$NEU gibt es schon." >&2
   exit 1
