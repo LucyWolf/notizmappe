@@ -362,6 +362,14 @@ Selbstupdate und Ordnerwahl abgeschaltet — aktualisiert wird mit
 Release; beim allerersten Mal muss das Paket auf GitHub einmal auf „Public“
 gestellt werden.
 
+**Vom Desktop aus** — in der installierten Notizmappe unter **Einstellungen → Server**
+Adresse, Name und Passwort eintragen und „Verbinden“. Der Server öffnet sich in einem
+eigenen Fenster neben der lokalen Mappe, mit seinen Konten und Projekten. Gespeichert
+wird nicht das Passwort, sondern ein Geräteschlüssel (in
+`~/.config/notizmappe/einstellungen.json`, nur für den eigenen Benutzer lesbar). Am
+Server lässt er sich unter „Mein Konto“ einzeln abmelden; ein neues Passwort macht
+alle Geräteschlüssel ungültig.
+
 **Sicherheit** — Anmeldung mit Bremse gegen Passwortraten (pro Absender und pro
 Name), Keks `HttpOnly` + `SameSite=Strict`, Änderungen von fremden Seiten werden an
 der Herkunft erkannt und abgelehnt. Ein neues Passwort meldet alle anderen

@@ -176,6 +176,69 @@ pruefe("Geloeschtes Konto kommt nicht rein",
        neu(False).post("/api/anmelden", json={"name": "Ben", "passwort": "neuespass1"}).status_code == 400)
 
 os.environ.pop("NOTIZMAPPE_SERVER")
+
+# --- Desktop verbindet sich mit einem echten Server-Prozess -------------------------
+print("--- Desktop -> Server ---")
+import socket
+import subprocess
+import time
+import urllib.request
+
+with socket.socket() as so:
+    so.bind(("127.0.0.1", 0))
+    PORT = so.getsockname()[1]
+FERN = Path(tempfile.mkdtemp(prefix="notizen-fern-"))
+(FERN / "n").mkdir()
+(FERN / "k").mkdir()
+umgebung = dict(os.environ, PYTHONPATH=str(WURZEL / "app"), NOTIZEN_ORDNER=str(FERN / "n"),
+                NOTIZMAPPE_KONFIG=str(FERN / "k"), NOTIZMAPPE_SERVER="1",
+                NOTIZMAPPE_EINRICHTUNGSCODE="test-code-123")
+fern = subprocess.Popen([sys.executable, "-m", "uvicorn", "main:app", "--app-dir", str(WURZEL / "app"),
+                         "--host", "127.0.0.1", "--port", str(PORT)], env=umgebung,
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+try:
+    ADR = f"http://127.0.0.1:{PORT}"
+    for _ in range(100):
+        try:
+            urllib.request.urlopen(ADR + "/api/status", timeout=1)
+            break
+        except OSError:
+            time.sleep(0.1)
+    import httpx
+    fk = httpx.Client(base_url=ADR)
+    pruefe("Fernserver: Einrichtung mit festem Code", fk.post("/api/einrichten", json={
+        "code": "test-code-123", "name": "Chef", "passwort": "chefpass1"}).status_code == 200)
+
+    lokal = neu()      # vom Server-Teil oben gibt es hier noch Konten - also anmelden
+    lokal.post("/api/anmelden", json={"name": "Lucy", "passwort": "adminpass1"})
+    pruefe("Adresse ohne Server abgelehnt",
+           lokal.post("/api/verbindungen", json={"adresse": "", "name": "x", "passwort": "y"}).status_code == 400)
+    r = lokal.post("/api/verbindungen", json={"adresse": ADR, "name": "Chef", "passwort": "falsch!!"})
+    pruefe("Falsches Passwort: Meldung vom Server", r.status_code == 400 and "stimmt nicht" in r.text, r.text)
+    fremd = neu(False)
+    fremd.post("/api/anmelden", json={"name": "Lucy", "passwort": "adminpass1"})
+    pruefe("Von fremder Adresse nicht verbindbar",
+           fremd.post("/api/verbindungen", json={"adresse": ADR, "name": "Chef", "passwort": "chefpass1"}).status_code == 403)
+    r = lokal.post("/api/verbindungen", json={"adresse": ADR + "/", "name": "Chef", "passwort": "chefpass1"})
+    pruefe("Verbunden", r.status_code == 200 and r.json()["adresse"] == ADR, r.text)
+    vid = r.json()["id"]
+    pruefe("Passwort nicht gespeichert", "chefpass1" not in (KONFIG / "einstellungen.json").read_text())
+    pruefe("Liste ohne Schluessel", "token" not in str(lokal.get("/api/verbindungen").json()))
+    seite = lokal.get(f"/verbinden/{vid}").text
+    pruefe("Verbinden-Seite schickt an den Server", f'action="{ADR}/geraet/anmelden"' in seite, seite[:300])
+    pruefe("Verbinden-Seite nur am eigenen Rechner", fremd.get(f"/verbinden/{vid}").status_code == 403)
+    token = seite.split('name="token" value="')[1].split('"')[0]
+    fenster = httpx.Client(base_url=ADR)
+    r = fenster.post("/geraet/anmelden", data={"token": token}, headers={"origin": "http://127.0.0.1:8099"})
+    pruefe("Fenster ist am Server angemeldet", r.status_code == 200 and fenster.get("/api/ich").json()["name"] == "Chef")
+    pruefe("Server kennt das Geraet", len(fk.get("/api/ich").json()["geraete"]) == 1)
+    lokal.post("/api/verbindungen/entfernen", json={"id": vid})
+    pruefe("Verbindung entfernt", lokal.get("/api/verbindungen").json()["verbindungen"] == [])
+finally:
+    fern.terminate()
+    fern.wait(timeout=10)
+    shutil.rmtree(FERN, ignore_errors=True)
+
 print()
 print("alles gruen" if not fehler else f"{len(fehler)} FEHLER:\n - " + "\n - ".join(fehler))
 shutil.rmtree(DATEN, ignore_errors=True)

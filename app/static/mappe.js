@@ -851,6 +851,7 @@ async function einstellungenLaden() {
     const e = await api('/api/einstellungen');
     $('#e-version').textContent = e.version;
     $('#e-ordner').textContent = e.ordner;
+    amRechner = !!e.hier;
     const fest = e.ordner_quelle === 'umgebung';
     $('#e-ordnerwahl').hidden = fest || !e.hier;
     $('#e-ordner-waehlen').hidden = !e.ordner_waehlbar;
@@ -940,6 +941,7 @@ $('#e-zoom-zurueck').addEventListener('click', () => { zoomSetzen(1); $('#e-zoom
 /* ------------------------------------------------------- Anmeldung und Sperre */
 
 let ich = null;
+let amRechner = false;     // Einstellungen direkt am Rechner geoeffnet, auf dem die Mappe laeuft
 let ruheUhr = null;
 
 async function ichLaden() {
@@ -990,7 +992,7 @@ function knopf(text, tun) {
 
 async function kontoTeileLaden() {
   await ichLaden();
-  const lokalAdmin = ich && !ich.server && ich.admin && $('#e-ordnerwahl') && !$('#e-ordnerwahl').hidden;
+  const lokalAdmin = !!(ich && !ich.server && ich.admin && amRechner);
   // Sperre: nur am eigenen Rechner und solange es hoechstens das eine Konto gibt.
   $('#e-sperre-teil').hidden = !(ich && !ich.server && ich.admin);
   $('#e-sperre-aus').hidden = !!(ich && ich.anmeldung);
@@ -1019,7 +1021,52 @@ async function kontoTeileLaden() {
 
   $('#e-konten-teil').hidden = !(ich && ich.anmeldung && ich.admin);
   if (ich && ich.anmeldung && ich.admin) await kontenLaden();
+
+  // Verbindungen zu Servern: nur in der Desktop-Fassung am eigenen Rechner.
+  $('#e-server-teil').hidden = !lokalAdmin;
+  if (lokalAdmin) await verbindungenLaden();
 }
+
+async function verbindungenLaden() {
+  let d;
+  try { d = await api('/api/verbindungen'); } catch (f) { $('#e-srv-hinweis').textContent = f.message; return; }
+  const liste = $('#e-verbindungen');
+  liste.textContent = '';
+  for (const v of d.verbindungen) {
+    liste.append(eintrag(
+      Object.assign(document.createElement('strong'), { textContent: v.adresse.replace(/^https?:\/\//, '') }),
+      Object.assign(document.createElement('span'), { className: 'hinweis', textContent: v.name }),
+      knopf('Öffnen', () => verbindungOeffnen(v.id)),
+      knopf('Entfernen', async () => { await api('/api/verbindungen/entfernen', 'POST', { id: v.id }); verbindungenLaden(); }),
+    ));
+  }
+}
+
+async function verbindungOeffnen(id) {
+  try {
+    const r = await api('/api/verbindungen/oeffnen', 'POST', { id });
+    if (!r.fenster) window.open(r.weg, '_blank', 'noopener');
+    else sagen('Fenster geht auf …');
+  } catch (f) { $('#e-srv-hinweis').textContent = f.message; }
+}
+
+$('#e-srv-verbinden').addEventListener('click', async () => {
+  const knopfV = $('#e-srv-verbinden');
+  knopfV.disabled = true;
+  $('#e-srv-hinweis').textContent = 'Verbinde …';
+  try {
+    const v = await api('/api/verbindungen', 'POST', {
+      adresse: $('#e-srv-adresse').value, name: $('#e-srv-name').value, passwort: $('#e-srv-pw').value,
+    });
+    $('#e-srv-pw').value = '';
+    $('#e-srv-hinweis').textContent = `Verbunden mit ${v.adresse} als ${v.name}.`;
+    await verbindungenLaden();
+    verbindungOeffnen(v.id);
+  } catch (f) {
+    $('#e-srv-hinweis').textContent = f.message;
+  }
+  knopfV.disabled = false;
+});
 
 async function kontenLaden() {
   let d;
