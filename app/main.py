@@ -323,6 +323,7 @@ async def api_konto_weg(request: Request, rumpf: dict):
     if name == _konto(request)["name"]:
         raise HTTPException(400, "Das eigene Konto kann man hier nicht löschen")
     konten.loeschen(name)
+    speicher.mitglied_entfernen(name)
     return {"ok": True}
 
 
