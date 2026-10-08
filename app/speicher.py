@@ -15,6 +15,8 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
+import reinigen
+
 FORMAT = 1
 PAPIERKORB = ".papierkorb"
 # Namen, die Nextcloud/Dropbox/Synology an Konfliktkopien haengen.
@@ -207,6 +209,10 @@ def anhaenge_aufraeumen(buch: str, abschnitt: str, seite: str, elemente: list) -
     if not ordner.is_dir():
         return 0
     benutzt = {e.get("datei") for e in elemente if isinstance(e, dict)}
+    # Bilder, die mitten in einem Text stehen, zaehlen genauso als benutzt.
+    for e in elemente:
+        if isinstance(e, dict) and e.get("typ") == "text":
+            benutzt |= reinigen.bilder_im_text(e.get("html") or "")
     korb = wurzel() / PAPIERKORB
     weg = 0
     for datei in ordner.iterdir():
