@@ -752,13 +752,21 @@ buehne.addEventListener('wheel', (ev) => {
 $('#titel').addEventListener('input', angefasst);
 $('#titel').addEventListener('change', async () => {
   if (!offen) return;
+  // Seite und Titel jetzt festhalten: "change" kommt beim Verlassen des Feldes -
+  // oft durch den Klick auf eine andere Seite im Baum. Las man offen erst nach
+  // dem Speichern, war dort schon die neue Seite und bekam den Titel der alten.
+  const seite = { ...offen };
+  const titel = $('#titel').value;
   await speichernJetzt();
-  if (schmutzig) return;      // ungespeichert umbenennen gaebe gleich den naechsten Konflikt
-  const r = await api('/api/seite/titel', 'POST', {
-    notizbuch: offen.notizbuch, abschnitt: offen.abschnitt, name: offen.name, titel: $('#titel').value,
-  });
-  // Der Dateiname zieht mit dem Titel mit, also muss die Seite neu geladen werden.
-  await seiteOeffnen(offen.notizbuch, offen.abschnitt, r.name);
+  if (schmutzig && gleicheSeite(offen, seite)) return;   // ungespeichert umbenennen gaebe einen Konflikt
+  let r;
+  try {
+    r = await api('/api/seite/titel', 'POST', {
+      notizbuch: seite.notizbuch, abschnitt: seite.abschnitt, name: seite.name, titel,
+    });
+  } catch (f) { melden('Umbenennen ging nicht: ' + f.message); return; }
+  // Der Dateiname zieht mit dem Titel mit - nur neu laden, wenn diese Seite noch offen ist.
+  if (gleicheSeite(offen, seite)) await seiteOeffnen(seite.notizbuch, seite.abschnitt, r.name);
   await baumLaden();
 });
 
