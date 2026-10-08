@@ -432,7 +432,13 @@ async def api_einstellungen(request: Request):
         # Ordner nicht da: trotzdem antworten, sonst kommt man nicht einmal an die
         # Einstellung, mit der man ihn umstellt.
         ordner, fehlt = None, str(f)
-    gesamt = sum(1 for _ in ordner.rglob("*.json")) if ordner else 0
+    # Nur Seiten zaehlen (Notizbuch/Abschnitt/Seite.json), und nur in Notizbuechern,
+    # die der Fragende sieht - nicht Papierkorb, Anhaenge oder .zugriff.json.
+    gesamt = 0
+    if ordner:
+        for buch in speicher.baum():
+            if _sieht(request, buch["name"]):
+                gesamt += sum(len(a["seiten"]) for a in buch["abschnitte"])
     platz = shutil.disk_usage(ordner).free if ordner else 0
     korb = ordner / speicher.PAPIERKORB if ordner else None
     return {
