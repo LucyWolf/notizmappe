@@ -81,11 +81,16 @@ jobs:
       - name: Abhaengigkeiten
         run: pip install -r requirements.txt pyinstaller
 
+      # --paths app ist der Punkt: ohne das findet PyInstaller "import main" nicht,
+      # packt app/ nur als Daten ein und sieht die Imports darin nie - dann fehlt
+      # zur Laufzeit html.parser, weil es nur reinigen.py braucht.
+      # --add-data bleibt trotzdem noetig, fuer templates, static und VERSION.
       # --collect-all: uvicorn und fastapi laden einen Teil ihrer Module erst zur
-      # Laufzeit nach Namen. PyInstaller sieht das nicht, also alles mitnehmen.
+      # Laufzeit nach Namen, das sieht keine statische Analyse.
       - name: Buendeln
         run: >
           pyinstaller --onefile --name Notizmappe
+          --paths app
           --add-data "app;app"
           --collect-all uvicorn --collect-all fastapi --collect-all starlette
           --collect-all jinja2 --collect-all pydantic
