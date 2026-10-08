@@ -70,14 +70,30 @@ def server_starten(port: int) -> threading.Thread:
     return faden
 
 
+def unter_wayland() -> bool:
+    return bool(os.environ.get("WAYLAND_DISPLAY"))
+
+
 def webkit_zurechtruecken() -> None:
-    """WebKitGTK rendert standardmaessig ueber DMABUF. Mit NVIDIA unter Wayland
-    bricht das die Verbindung zum Display ab ("Error 71, Protokollfehler") - und
-    zwar so hart, dass Gdk den Prozess beendet, bevor Python etwas davon mitbekommt.
-    Ohne diesen Renderer geht das Fenster auf; die Beschleunigung bleibt an, nur
-    der Pufferweg ist ein anderer."""
-    if sys.platform.startswith("linux"):
-        os.environ.setdefault("WEBKIT_DISABLE_DMABUF_RENDERER", "1")
+    """Zwei Dinge, ohne die das Fenster nicht oder nicht richtig aufgeht.
+
+    WebKitGTK rendert standardmaessig ueber DMABUF. Mit NVIDIA unter Wayland bricht
+    das die Verbindung zum Display ab ("Error 71, Protokollfehler") - und zwar so
+    hart, dass Gdk den Prozess beendet, bevor Python etwas davon mitbekommt. Ohne
+    diesen Renderer geht das Fenster auf; die Beschleunigung bleibt an, nur der
+    Pufferweg ist ein anderer.
+
+    Und: liegt eine Wayland-Sitzung an, soll GTK auch Wayland sprechen. Sonst nimmt
+    es bei gesetztem DISPLAY den Umweg ueber XWayland - mit unscharfer Darstellung
+    auf skalierten Bildschirmen und eigenen Eingabe-Macken.
+    """
+    if not sys.platform.startswith("linux"):
+        return
+    os.environ.setdefault("WEBKIT_DISABLE_DMABUF_RENDERER", "1")
+    if unter_wayland():
+        os.environ.setdefault("GDK_BACKEND", "wayland")
+        os.environ.setdefault("QT_QPA_PLATFORM", "wayland")   # falls pywebview Qt nimmt
+        os.environ.setdefault("MOZ_ENABLE_WAYLAND", "1")
 
 
 def fenster_zeigen(adresse: str) -> None:
@@ -126,12 +142,16 @@ def mit_browserfenster(adresse: str, profil: Path) -> bool:
         if not which(browser):
             continue
         profil.mkdir(parents=True, exist_ok=True)
+        befehl = [
+            browser, f"--app={adresse}", f"--user-data-dir={profil}",
+            "--no-first-run", "--no-default-browser-check",
+            f"--class={TITEL}", "--window-size=1280,840",
+        ]
+        if unter_wayland():
+            # Sonst laeuft auch dieses Fenster ueber XWayland.
+            befehl += ["--ozone-platform=wayland", "--enable-features=UseOzonePlatform"]
         try:
-            lauf = subprocess.run([
-                browser, f"--app={adresse}", f"--user-data-dir={profil}",
-                "--no-first-run", "--no-default-browser-check",
-                f"--class={TITEL}", f"--window-size=1280,840",
-            ])
+            lauf = subprocess.run(befehl)
             return lauf.returncode == 0
         except OSError:
             continue
@@ -220,6 +240,11 @@ def pruefen() -> int:
         gesetzt = os.environ.get("WEBKIT_DISABLE_DMABUF_RENDERER")
         print(f"  WEBKIT_DISABLE_DMABUF_RENDERER: {gesetzt or 'wird beim Start auf 1 gesetzt'}"
               f"   (ohne das bricht WebKitGTK mit NVIDIA unter Wayland ab)")
+        if unter_wayland():
+            print(f"  Sitzung: Wayland ({os.environ['WAYLAND_DISPLAY']}) -> GDK_BACKEND=wayland, "
+                  f"kein Umweg über XWayland")
+        else:
+            print("  Sitzung: kein WAYLAND_DISPLAY gesetzt - es läuft über X11")
 
     gefunden = [b for b in APP_BROWSER if which(b)]
     print(f"  Browser mit Fenstermodus: {', '.join(gefunden) if gefunden else 'keiner'}")
