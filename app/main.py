@@ -76,6 +76,25 @@ async def api_update_stand(request: Request):
     return aktualisieren.protokoll()
 
 
+@app.get("/api/einstellungen")
+async def api_einstellungen(request: Request):
+    """Was die Oberflaeche ueber die Installation wissen muss."""
+    import shutil
+    ordner = speicher.wurzel()
+    gesamt = sum(1 for _ in ordner.rglob("*.json"))
+    platz = shutil.disk_usage(ordner)
+    return {
+        "version": VERSION,
+        "ordner": str(ordner),
+        "seiten": gesamt,
+        "frei": platz.free,
+        "papierkorb": sum(1 for _ in (ordner / speicher.PAPIERKORB).glob("*")) if (ordner / speicher.PAPIERKORB).is_dir() else 0,
+        "aus_installation": aktualisieren.aus_installation(),
+        "hier": (request.client.host if request.client else "") in {"127.0.0.1", "::1"},
+        "quelle": aktualisieren.QUELLE,
+    }
+
+
 @app.get("/api/baum")
 async def api_baum():
     return {"notizbuecher": speicher.baum(), "ordner": str(speicher.wurzel())}
