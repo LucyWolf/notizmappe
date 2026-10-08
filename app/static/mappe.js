@@ -347,7 +347,18 @@ async function hochladen(datei) {
   fd.append('notizbuch', offen.notizbuch);
   fd.append('abschnitt', offen.abschnitt);
   fd.append('name', offen.name);
-  fd.append('datei', datei);
+  // Aus der Zwischenablage heisst jedes Bild "image.png". Ein Name mit Uhrzeit
+  // ist im Dateimanager lesbarer und kommt dem naechsten Bild nicht in die Quere.
+  const ablage = /^image\.(\w+)$/.exec(datei.name || '');
+  if (ablage) {
+    const z = new Date();
+    const zwei = (n) => String(n).padStart(2, '0');
+    const stempel = `${z.getFullYear()}-${zwei(z.getMonth() + 1)}-${zwei(z.getDate())}`
+      + ` ${zwei(z.getHours())}-${zwei(z.getMinutes())}-${zwei(z.getSeconds())}`;
+    fd.append('datei', datei, `Bild ${stempel}.${ablage[1]}`);
+  } else {
+    fd.append('datei', datei);
+  }
   zustandAnzeige.textContent = 'lädt …';
   let a;
   try {
