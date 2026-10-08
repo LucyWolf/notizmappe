@@ -15,6 +15,7 @@ DATEN = Path(tempfile.mkdtemp(prefix="notizen-konten-"))
 KONFIG = Path(tempfile.mkdtemp(prefix="notizen-konfig-"))
 os.environ["NOTIZEN_ORDNER"] = str(DATEN)
 os.environ["NOTIZMAPPE_KONFIG"] = str(KONFIG)
+os.environ["NOTIZMAPPE_OPTIONEN"] = str(KONFIG / "optionen.json")
 os.environ["NOTIZMAPPE_QUELLE"] = "http://127.0.0.1:1"
 os.environ.pop("NOTIZMAPPE_SERVER", None)
 sys.path.insert(0, str(WURZEL / "app"))

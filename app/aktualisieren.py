@@ -52,7 +52,8 @@ def aus_installation() -> bool:
 
 # --- Einstellungen zum Update ------------------------------------------------
 
-OPTIONEN = ORDNER / ".optionen.json"
+# NOTIZMAPPE_OPTIONEN: fuer die Tests, damit sie nicht die echten Optionen lesen.
+OPTIONEN = Path(os.environ.get("NOTIZMAPPE_OPTIONEN") or ORDNER / ".optionen.json")
 STANDARD = {"beim_start_pruefen": True, "automatisch_einspielen": False}
 
 
