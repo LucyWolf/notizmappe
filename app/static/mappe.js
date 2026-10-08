@@ -457,6 +457,10 @@ async function inTextEinsetzen(text, e, dateien, stelle) {
       text.append(bild);
     }
     textBilderZeigen(text);
+    // Gleich eintragen, nicht erst nach dem letzten Bild - sonst speichert die Uhr
+    // zwischendurch einen Stand, der die schon hochgeladenen nicht kennt.
+    e.html = text.innerHTML;
+    angefasst();
   }
   e.html = text.innerHTML;
   zustandAnzeige.textContent = '';
