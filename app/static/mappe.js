@@ -173,9 +173,16 @@ async function seiteOeffnen(buch, abschnitt, name) {
 
 /* ------------------------------------------------------------------ Kaesten */
 
+function anhangWeg(pfad) {
+  const p = new URLSearchParams({
+    notizbuch: offen.notizbuch, abschnitt: offen.abschnitt, name: offen.name, datei: pfad,
+  });
+  return '/api/anhang?' + p.toString();
+}
+
 function kastenBauen(e) {
   const k = document.createElement('div');
-  k.className = 'kasten';
+  k.className = 'kasten kasten-' + e.typ;
   k.dataset.id = e.id;
   k.style.left = e.x + 'px';
   k.style.top = e.y + 'px';
@@ -183,9 +190,27 @@ function kastenBauen(e) {
 
   const griff = document.createElement('div');
   griff.className = 'griff';
-  const weg = Object.assign(document.createElement('button'), { type: 'button', className: 'weg', textContent: '✕', title: 'Kasten löschen' });
+  const weg = Object.assign(document.createElement('button'), { type: 'button', className: 'weg', textContent: '✕', title: 'Löschen' });
   weg.addEventListener('click', () => kastenWeg(e.id));
   griff.append(weg);
+
+  if (e.typ !== 'text') {
+    const inhalt = e.typ === 'bild' ? bildBauen(e) : dateiBauen(e);
+    const breite = document.createElement('div');
+    breite.className = 'breite';
+    k.append(griff, inhalt, breite);
+    ziehen(griff, (dx, dy, start) => {
+      e.x = Math.max(0, Math.round((start.x + dx / zoom) / RASTER) * RASTER);
+      e.y = Math.max(0, Math.round((start.y + dy / zoom) / RASTER) * RASTER);
+      k.style.left = e.x + 'px';
+      k.style.top = e.y + 'px';
+    }, () => ({ x: e.x, y: e.y }));
+    ziehen(breite, (dx, _dy, start) => {
+      e.b = Math.max(e.typ === 'bild' ? 40 : 160, Math.round((start.b + dx / zoom) / RASTER) * RASTER);
+      k.style.width = e.b + 'px';
+    }, () => ({ b: e.b }));
+    return k;
+  }
 
   const text = document.createElement('div');
   text.className = 'text';
@@ -227,6 +252,89 @@ function kastenBauen(e) {
   }, () => ({ b: e.b }));
 
   return k;
+}
+
+function bildBauen(e) {
+  const bild = document.createElement('img');
+  bild.className = 'bild';
+  bild.src = anhangWeg(e.datei);
+  bild.alt = e.beschriftung || e.datei;
+  bild.draggable = false;
+  bild.addEventListener('load', flaecheMessen);
+  bild.addEventListener('error', () => {
+    bild.replaceWith(Object.assign(document.createElement('div'), {
+      className: 'fehlt', textContent: 'Bild fehlt: ' + e.datei,
+    }));
+  });
+  return bild;
+}
+
+function dateiBauen(e) {
+  const kachel = document.createElement('a');
+  kachel.className = 'datei';
+  kachel.href = anhangWeg(e.datei);
+  kachel.download = e.datei;
+  kachel.title = 'Herunterladen: ' + e.datei;
+  kachel.append(
+    Object.assign(document.createElement('span'), { className: 'zeichen', textContent: '📎' }),
+    Object.assign(document.createElement('span'), { className: 'dname', textContent: e.datei }),
+    Object.assign(document.createElement('span'), { className: 'dgroesse', textContent: groesse(e.groesse) }),
+  );
+  return kachel;
+}
+
+function groesse(bytes) {
+  if (!bytes) return '';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
+  return (bytes / 1024 / 1024).toFixed(1).replace('.', ',') + ' MB';
+}
+
+/* Hochladen: die Datei geht zuerst auf die Platte, erst danach entsteht das
+ * Element. Andersherum zeigte die Seite kurz auf etwas, das es noch nicht gibt -
+ * und bei einem Abbruch für immer. */
+async function anhangHochladen(datei, x, y) {
+  if (!offen) { sagen('Erst eine Seite öffnen', 2000); return; }
+  const fd = new FormData();
+  fd.append('notizbuch', offen.notizbuch);
+  fd.append('abschnitt', offen.abschnitt);
+  fd.append('name', offen.name);
+  fd.append('datei', datei);
+  zustandAnzeige.textContent = 'lädt …';
+  let a;
+  try {
+    a = await fetch('/api/anhang', { method: 'POST', body: fd });
+  } catch (f) {
+    melden('Hochladen ging nicht: ' + f.message);
+    return;
+  }
+  if (!a.ok) {
+    let grund = a.statusText;
+    try { grund = (await a.json()).fehler || grund; } catch (f) { /* egal */ }
+    melden(`"${datei.name}" ging nicht: ${grund}`);
+    zustandAnzeige.textContent = '';
+    return;
+  }
+  const r = await a.json();
+  const e = {
+    id: Math.random().toString(36).slice(2, 12),
+    typ: r.art, x, y,
+    b: r.art === 'bild' ? 420 : 280,
+    datei: r.datei, beschriftung: datei.name, groesse: r.groesse,
+  };
+  elemente.push(e);
+  flaeche.append(kastenBauen(e));
+  $('#leerhinweis').hidden = true;
+  flaecheMessen();
+  angefasst();
+}
+
+async function dateienAnnehmen(dateien, x, y) {
+  let versatz = 0;
+  for (const d of dateien) {
+    await anhangHochladen(d, x, y + versatz);
+    versatz += 40;
+  }
 }
 
 function ziehen(handgriff, bewegen, startWerte) {
@@ -357,6 +465,47 @@ buehne.addEventListener('dblclick', (ev) => {
     Math.max(0, Math.round((ev.clientY - r.top) / zoom / RASTER) * RASTER)
   );
   angefasst();
+});
+
+// Dateien auf die Flaeche ziehen
+for (const art of ['dragenter', 'dragover']) {
+  buehne.addEventListener(art, (ev) => {
+    if (!ev.dataTransfer || !Array.from(ev.dataTransfer.types || []).includes('Files')) return;
+    ev.preventDefault();
+    buehne.classList.add('zieltafel');
+  });
+}
+buehne.addEventListener('dragleave', (ev) => {
+  if (ev.relatedTarget && buehne.contains(ev.relatedTarget)) return;
+  buehne.classList.remove('zieltafel');
+});
+buehne.addEventListener('drop', (ev) => {
+  if (!ev.dataTransfer || !ev.dataTransfer.files.length) return;
+  ev.preventDefault();
+  buehne.classList.remove('zieltafel');
+  const r = flaeche.getBoundingClientRect();
+  dateienAnnehmen(ev.dataTransfer.files,
+    Math.max(0, Math.round((ev.clientX - r.left) / zoom / RASTER) * RASTER),
+    Math.max(0, Math.round((ev.clientY - r.top) / zoom / RASTER) * RASTER));
+});
+
+// Bild aus der Zwischenablage: landet als Datei, nicht als Text im Kasten.
+document.addEventListener('paste', (ev) => {
+  const dateien = Array.from((ev.clipboardData && ev.clipboardData.files) || []);
+  if (!dateien.length) return;
+  ev.preventDefault();
+  const k = document.activeElement && document.activeElement.closest('.kasten');
+  const e = k && elemente.find((x) => x.id === k.dataset.id);
+  dateienAnnehmen(dateien, e ? e.x : 40, e ? e.y + 60 : 40);
+});
+
+$('#anhang').addEventListener('click', () => $('#dateiwahl').click());
+$('#dateiwahl').addEventListener('change', async (ev) => {
+  if (!ev.target.files.length) return;
+  const mitte = Math.round((buehne.scrollLeft + 80) / zoom / RASTER) * RASTER;
+  const oben = Math.round((buehne.scrollTop + 80) / zoom / RASTER) * RASTER;
+  await dateienAnnehmen(ev.target.files, mitte, oben);
+  ev.target.value = '';
 });
 
 // Mit mittlerer Maustaste oder Leertaste die Flaeche schieben.

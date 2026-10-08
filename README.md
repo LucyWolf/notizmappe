@@ -67,6 +67,47 @@ Fenster offen ist, und öffnet den Browser selbst.
 https://github.com/LucyWolf/notizmappe/releases/latest/download/notizmappe-installer.sh
 ```
 
+## Bilder und Dateien
+
+Ziehen, einfügen mit Strg+V oder der Knopf 📎 — alles landet auf der Fläche, wo der
+Zeiger war. Bilder werden angezeigt, alles andere als Kachel zum Herunterladen.
+Die Dateien liegen neben der Seite:
+
+```
+Arbeit/Projekte/Phobos.json
+Arbeit/Projekte/Phobos.anhang/Urlaub.png
+```
+
+Also im selben Ordner, den der Sync ohnehin trägt — kein zweiter Ablageort, und im
+Dateimanager sieht man sofort, was zu welcher Seite gehört. Benennt man die Seite
+um, zieht der Anhangsordner mit; löscht man sie, geht er mit in den Papierkorb.
+Elemente, die man von der Seite entfernt, nehmen ihre Datei beim nächsten Speichern
+in den Papierkorb mit — gelöscht wird nichts sofort.
+
+Grenze: 25 MB pro Datei. Ob etwas ein Bild ist, wird an den ersten Bytes entschieden,
+nicht am Dateinamen und nicht am Content-Type des Browsers — beide sagen, was der
+Absender behauptet. **SVG gilt bewusst nicht als Bild**: das ist XML mit `<script>`
+darin und wäre im Fenster dasselbe Loch wie fremdes HTML. Hochladen geht, angezeigt
+wird es nicht, es kommt als Download — mit `nosniff`, damit der Browser nicht doch
+selbst entscheidet.
+
+## Tests
+
+```bash
+tests/alle.sh              # alles, baut auch das Paket (~3 Minuten)
+tests/alle.sh --schnell    # nur API und Update
+```
+
+| | |
+|---|---|
+| `tests/test_api.py` | Seiten, Anhänge, Konflikte, XSS, Pfadausbruch, Papierkorb |
+| `tests/test_update.py` | Selbstupdate gegen einen nachgemachten GitHub-Server |
+| `tests/test_installer.sh` | Installationsdatei in einem Wegwerf-Heim durchspielen |
+
+Sie liegen **im Repo**, nicht im Scratchpad einer Sitzung: der wird geleert, und
+dann sind sie weg. `release.yml` fährt sie bei jedem Release mit, `tools/pruefen.py`
+hängt als `pre-commit` davor und parst Python, Jinja und JS.
+
 ## Updates
 
 Läuft eine Installation, schaut sie einmal pro Stunde beim neuesten Release vorbei.

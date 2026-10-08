@@ -94,3 +94,31 @@ def zahl(roh, standard: float = 0.0, klein: float = -200_000, gross: float = 200
     if w != w or w in (float("inf"), float("-inf")):
         return standard
     return max(klein, min(gross, round(w, 1)))
+
+
+# --- Hochgeladene Dateien -----------------------------------------------------
+
+# An den ersten Bytes erkannt, nicht am Dateinamen und nicht am Content-Type des
+# Browsers: beides sagt, was der Absender behauptet, nicht was drin ist.
+BILDMARKEN = (
+    (b"\x89PNG\r\n\x1a\n", "image/png"),
+    (b"\xff\xd8\xff", "image/jpeg"),
+    (b"GIF87a", "image/gif"),
+    (b"GIF89a", "image/gif"),
+    (b"BM", "image/bmp"),
+)
+
+
+def bildtyp(daten: bytes) -> str | None:
+    """Liefert den Medientyp, wenn es wirklich ein Bild ist - sonst None.
+
+    Absichtlich ohne SVG: das ist XML mit <script> darin und waere im Dashboard
+    dasselbe Loch wie fremdes HTML. SVG darf hochgeladen werden, wird aber als
+    Datei zum Herunterladen behandelt, nicht als Bild angezeigt.
+    """
+    for marke, typ in BILDMARKEN:
+        if daten.startswith(marke):
+            return typ
+    if daten[:4] == b"RIFF" and daten[8:12] == b"WEBP":
+        return "image/webp"
+    return None

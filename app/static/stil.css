@@ -155,3 +155,33 @@ body {
 }
 #update:hover { background: color-mix(in srgb, var(--akzent) 30%, var(--papier)); }
 #update:disabled { opacity: .6; cursor: default; }
+
+/* --- Bilder und Dateien auf der Fläche --- */
+.kasten-bild .bild {
+  display: block; width: 100%; height: auto; border-radius: 4px;
+  border: 1px solid transparent;
+}
+.kasten-bild:hover .bild { border-color: var(--kasten-rand); }
+.kasten .fehlt {
+  padding: 10px; border: 1px dashed var(--warnung); border-radius: 4px;
+  color: var(--warnung); font-size: 13px;
+}
+.kasten-datei .datei {
+  display: flex; align-items: center; gap: 8px; text-decoration: none;
+  padding: 8px 10px; border: 1px solid var(--kasten-rand); border-radius: 6px;
+  background: var(--leiste); color: var(--schrift);
+}
+.kasten-datei .datei:hover { border-color: var(--akzent); }
+.kasten-datei .zeichen { font-size: 18px; }
+.kasten-datei .dname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kasten-datei .dgroesse { color: var(--matt); font-size: 12px; white-space: nowrap; }
+
+/* Während etwas auf die Fläche gezogen wird */
+#buehne.zieltafel::after {
+  content: "Loslassen zum Einfügen";
+  position: absolute; inset: 0; display: flex;
+  align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--akzent) 12%, transparent);
+  border: 2px dashed var(--akzent); color: var(--schrift);
+  font-size: 15px; pointer-events: none; z-index: 3;
+}

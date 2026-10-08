@@ -40,7 +40,12 @@ jobs:
           echo "VER=$VER" >> "$GITHUB_ENV"
 
       - name: Werkzeuge fuer die Pruefung
-        run: pip install jinja2 esprima
+        run: pip install -r requirements.txt esprima httpx
+
+      - name: Tests
+        run: |
+          python tests/test_api.py
+          python tests/test_update.py
 
       - name: Paket bauen
         run: PY=python ./tools/paket_bauen.sh
@@ -48,19 +53,10 @@ jobs:
       - name: Unter festem Namen danebenlegen
         run: cp "dist/notizmappe-v$VER-installer.sh" dist/notizmappe-installer.sh
 
-      # Das Paket einmal wirklich auspacken und einrichten - in einem Wegwerf-Heim,
-      # damit auffaellt, wenn die mitgelieferten Pakete nicht passen.
-      - name: Paket zur Probe installieren
-        run: |
-          H=$(mktemp -d)
-          env -u XDG_RUNTIME_DIR -u DBUS_SESSION_BUS_ADDRESS HOME="$H" \
-            NOTIZMAPPE_ZIEL="$H/nm" NOTIZEN_ORDNER="$H/Notizen" PORT=8111 \
-            bash "dist/notizmappe-v$VER-installer.sh" --install
-          env HOME="$H" NOTIZEN_ORDNER="$H/Notizen" PORT=8111 "$H/nm/starten.sh" &
-          for i in $(seq 25); do curl -sf -o /dev/null http://127.0.0.1:8111/ && break; sleep 0.5; done
-          curl -sf http://127.0.0.1:8111/ > /dev/null || { echo "::error::Installierte Fassung antwortet nicht"; exit 1; }
-          curl -sf http://127.0.0.1:8111/api/version | tee /dev/stderr | grep -q installiert
-          echo "Probeinstallation läuft."
+      # Das gebaute Paket einmal wirklich durchspielen: auspacken, einrichten,
+      # starten, aktualisieren, deinstallieren - in einem Wegwerf-Heim.
+      - name: Installationsdatei durchspielen
+        run: ./tests/test_installer.sh "dist/notizmappe-v$VER-installer.sh"
 
       - uses: actions/upload-artifact@v4
         with:
