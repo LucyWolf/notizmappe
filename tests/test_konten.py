@@ -24,6 +24,7 @@ sys.path.insert(0, str(WURZEL / "app"))
 from fastapi.testclient import TestClient
 import konten
 import main
+import verbindungen
 
 fehler = []
 
@@ -251,6 +252,15 @@ try:
 
     lokal = neu()      # vom Server-Teil oben gibt es hier noch Konten - also anmelden
     lokal.post("/api/anmelden", json={"name": "Lucy", "passwort": "adminpass1"})
+    for adr, ok in [("http://notizen.example.de", False), ("notizen.example.de", True),
+                    ("http://192.168.1.20:8099", True), ("http://nas.local", True), ("http://nas", True),
+                    ("http://8.8.8.8", False), ("http://[::1]:8099", True)]:
+        try:
+            verbindungen.adresse_ordnen(adr)
+            geht = True
+        except verbindungen.VerbindungsFehler:
+            geht = False
+        pruefe(f"Adresse {adr}: {'erlaubt' if ok else 'abgelehnt'}", geht == ok)
     pruefe("Adresse ohne Server abgelehnt",
            lokal.post("/api/verbindungen", json={"adresse": "", "name": "x", "passwort": "y"}).status_code == 400)
     r = lokal.post("/api/verbindungen", json={"adresse": ADR, "name": "Chef", "passwort": "falsch!!"})
