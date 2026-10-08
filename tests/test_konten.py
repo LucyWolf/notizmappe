@@ -137,6 +137,14 @@ pruefe("Code danach verbraucht", konten.einrichtungscode() is None)
 pruefe("Zweite Einrichtung abgelehnt", neu(False).post("/api/einrichten", json={
     "code": code, "name": "boese", "passwort": "boesepass1"}).status_code == 400)
 admin = gast
+d = konten._laden()
+for sitz in d["sitzungen"].values():
+    sitz["bis"] = int(konten.time.time() + 60)          # laeuft gleich ab
+konten.konfig.schreiben(d, konten.DATEI)
+r = admin.get("/api/baum")
+pruefe("Aktive Sitzung wird verlaengert",
+       min(x["bis"] for x in konten._laden()["sitzungen"].values()) > konten.time.time() + 86400)
+pruefe("Keks wird mitverlaengert", "max-age=2592000" in r.headers.get("set-cookie", "").lower(), r.headers)
 pruefe("Updates im Server-Betrieb gesperrt", admin.post("/api/update").status_code == 403)
 pruefe("Ordner im Server-Betrieb nicht umstellbar", neu(True).post("/api/ordner", json={"ordner": "/tmp"}).status_code in (401, 403))
 pruefe("Ordner-Dialog im Server-Betrieb gesperrt", admin.post("/api/ordner/waehlen").status_code == 403)
