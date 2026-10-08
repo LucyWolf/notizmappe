@@ -108,6 +108,32 @@ Sie liegen **im Repo**, nicht im Scratchpad einer Sitzung: der wird geleert, und
 dann sind sie weg. `release.yml` fährt sie bei jedem Release mit, `tools/pruefen.py`
 hängt als `pre-commit` davor und parst Python, Jinja und JS.
 
+## Einstellungen
+
+Zahnrad oben rechts. Dort steht, welche Version läuft und welche es gibt, mit Knopf
+zum Einspielen; der Datenordner, wie viele Seiten darin liegen, was im Papierkorb
+ist und wie viel Platz das Laufwerk noch hat; dazu die Darstellungsgröße.
+
+Der **Datenordner wird dort nicht umgestellt**, sondern beim Start über
+`NOTIZEN_ORDNER`. So bleibt eindeutig, welche Dateien ein laufendes Programm
+gerade in der Hand hat — ein Wechsel im laufenden Betrieb würde offene Seiten und
+Anhänge auseinanderreißen.
+
+## Wenn die Oberfläche nicht reagiert
+
+Ganz oben in der Seite sitzt ein Fehlerfänger: was beim Laden schiefgeht, landet in
+der Meldungszeile über der Fläche, statt die Oberfläche stumm zu lassen. Und:
+
+```bash
+.venv/bin/python tools/fenster_pruefen.py
+```
+
+Das öffnet das Fenster, legt einen Kasten an, schreibt hinein, wartet aufs Speichern
+und öffnet die Einstellungen — und meldet, was dabei herauskam. So kam heraus, dass
+WebKitGTK gar kein `localStorage` kennt: der allererste Zugriff warf, das ganze
+Skript brach ab, und nichts war mehr anklickbar. Alles, was dort gespeichert wird,
+läuft deshalb über einen Merker, der es versucht und sonst nur für die Sitzung behält.
+
 ## Updates
 
 Läuft eine Installation, schaut sie einmal pro Stunde beim neuesten Release vorbei.
