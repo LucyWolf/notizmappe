@@ -8,6 +8,7 @@
 const WARTEN = 900;        // ms Ruhe nach der letzten Eingabe, bevor gespeichert wird
 const POLL = 15000;        // ms zwischen "hat jemand von aussen geschrieben?"
 const RASTER = 8;          // Positionen auf 8px runden, sonst zappelt alles
+const MAX_ANHANG = 25 * 1024 * 1024;   // wie speicher.MAX_ANHANG
 
 /* Kleiner Merker statt localStorage direkt.
  *
@@ -376,6 +377,12 @@ function groesse(bytes) {
  * und bei einem Abbruch für immer. */
 async function hochladen(datei) {
   if (!offen) { sagen('Erst eine Seite öffnen', 2000); return null; }
+  // Vorher pruefen: sonst laedt eine riesige Datei minutenlang hoch, nur damit
+  // der Server danach "zu gross" sagt.
+  if (datei.size > MAX_ANHANG) {
+    melden(`"${datei.name}" ist ${groesse(datei.size)} groß - mehr als ${groesse(MAX_ANHANG)} gehen nicht.`);
+    return null;
+  }
   const fd = new FormData();
   fd.append('notizbuch', offen.notizbuch);
   fd.append('abschnitt', offen.abschnitt);

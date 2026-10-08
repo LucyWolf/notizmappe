@@ -165,6 +165,11 @@ for sonder in ["Übersicht.pdf", "Plan → 2026.pdf", "日本.txt", "Foto 😀.b
     r = k.get("/api/anhang", params={"notizbuch": buch, "abschnitt": absch, "name": neu, "datei": d})
     pruefe(f"Download mit Sonderzeichen: {sonder}", r.status_code == 200
            and "filename*=UTF-8''" in r.headers.get("content-disposition", ""), r.status_code)
+import re
+js = (WURZEL / "app/static/mappe.js").read_text()
+m = re.search(r"const MAX_ANHANG = (\d+) \* 1024 \* 1024", js)
+pruefe("Groessengrenze in Oberflaeche und Server gleich",
+       m and int(m.group(1)) * 1024 * 1024 == main.speicher.MAX_ANHANG, m and m.group(0))
 pruefe("Leere Datei abgelehnt", hoch("leer.txt", b"").status_code == 400)
 pruefe("Zu grosse Datei abgelehnt (413)", hoch("riesig.bin", b"x" * (26 * 1024 * 1024)).status_code == 413)
 
