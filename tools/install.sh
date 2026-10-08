@@ -92,9 +92,34 @@ exec env PYTHONPATH="$ZIEL/app" NOTIZEN_ORDNER="\${NOTIZEN_ORDNER:-$DATEN}" \\
 EOF
   chmod +x "$ZIEL/starten.sh"
 
+  # Oeffnen heisst: Dienst sicherstellen, dann Browser. Als eigene Datei, damit der
+  # Menueintrag per TryExec daran haengt - wird das Programm entfernt, verschwindet
+  # der Eintrag von selbst statt ins Leere zu zeigen.
+  cat > "$ZIEL/oeffnen.sh" <<EOF
+#!/usr/bin/env bash
+set -uo pipefail
+if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
+  systemctl --user start notizmappe.service 2>/dev/null
+elif ! curl -sf -o /dev/null "http://127.0.0.1:$PORT/" 2>/dev/null; then
+  # Ohne systemd selbst starten und die Prozessnummer hinterlassen, damit man den
+  # Server wieder findet - sonst bleibt er unerreichbar im Hintergrund haengen.
+  setsid "$ZIEL/starten.sh" >> "$ZIEL/.lauf.log" 2>&1 &
+  echo \$! > "$ZIEL/.pid"
+fi
+for i in \$(seq 20); do
+  curl -sf -o /dev/null "http://127.0.0.1:$PORT/" 2>/dev/null && break
+  sleep 0.3
+done
+exec xdg-open "http://127.0.0.1:$PORT/"
+EOF
+  chmod +x "$ZIEL/oeffnen.sh"
+
   printf '%s\n' "$NEU" > "$ZIEL/.version"
   printf 'ZIEL=%s\nDATEN=%s\nPORT=%s\n' "$ZIEL" "$DATEN" "$PORT" > "$ZIEL/.einrichtung"
 
+  # Denselben Dateinamen benutzt auch der Doppelklick-Installer (APP_ID=notizmappe),
+  # es entsteht also kein zweiter Eintrag - wer zuletzt schreibt, gewinnt, und beide
+  # Varianten starten dasselbe.
   mkdir -p "$(dirname "$MENUE")"
   cat > "$MENUE" <<EOF
 [Desktop Entry]
@@ -103,7 +128,8 @@ Version=1.0
 Name=Notizmappe
 GenericName=Notizen
 Comment=Freie Notizflaeche, Daten im eigenen Ordner ($NEU)
-Exec=xdg-open http://127.0.0.1:$PORT
+Exec=$ZIEL/oeffnen.sh
+TryExec=$ZIEL/oeffnen.sh
 Icon=accessories-text-editor
 Terminal=false
 Categories=Office;Utility;TextEditor;
@@ -117,6 +143,8 @@ EOF
 [Unit]
 Description=Notizmappe $NEU
 After=network.target
+# Ist das Programm entfernt worden, bleibt der Dienst still statt zu scheitern.
+ConditionPathExists=$ZIEL/.venv/bin/python
 
 [Service]
 Type=simple
@@ -170,9 +198,35 @@ deinstallieren() {
   sagen "Die Notizen in $DATEN sind absichtlich stehen geblieben."
 }
 
+# -------------------------------------------------------------- Oeffnen/Start
+
+hinweis() {
+  # Beim Klick aus dem Menue gibt es kein Terminal - dann wenigstens ein Fenster.
+  if command -v kdialog >/dev/null 2>&1 && [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
+    kdialog --title "Notizmappe" --passivepopup "$1" 8 >/dev/null 2>&1 &
+  elif command -v zenity >/dev/null 2>&1 && [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
+    zenity --notification --text="$1" >/dev/null 2>&1 &
+  else
+    sagen "$1"
+  fi
+}
+
+starten() {
+  if [ -z "$(installiert || true)" ]; then
+    # Erster Start nach dem Doppelklick-Installer: der hat nur diese Datei
+    # hingelegt, eingerichtet wird jetzt.
+    hinweis "Notizmappe wird eingerichtet, das dauert einen Moment …"
+    einrichten
+  fi
+  [ -x "$ZIEL/oeffnen.sh" ] && exec "$ZIEL/oeffnen.sh"
+  command -v xdg-open >/dev/null 2>&1 && exec xdg-open "http://127.0.0.1:$PORT/"
+  sagen "http://127.0.0.1:$PORT"
+}
+
 # --------------------------------------------------------------------- Menue
 
 case "${1:-}" in
+  --starten|--open) starten; exit 0 ;;
   --update|--install|--still) einrichten; exit 0 ;;
   --deinstallieren|--uninstall) deinstallieren; exit 0 ;;
   --version) sagen "Notizmappe $NEU"; exit 0 ;;

@@ -2,3 +2,6 @@
 __pycache__/
 *.pyc
 dist/
+.update-stand.json
+.update.log
+output/
