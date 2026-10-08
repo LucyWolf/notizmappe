@@ -39,7 +39,10 @@ window.addEventListener('unhandledrejection', function (ev) {
     <nav id="baum" aria-label="Notizbücher"></nav>
     <footer>
       <button type="button" id="neues-buch">+ Notizbuch</button>
-      <span id="version">v{{ version }}</span>
+      <span class="fussrechts">
+        <span id="version">v{{ version }}</span>
+        <button type="button" id="zahnrad" title="Einstellungen">⚙</button>
+      </span>
     </footer>
   </aside>
 
@@ -60,7 +63,6 @@ window.addEventListener('unhandledrejection', function (ev) {
         <button type="button" id="rein" title="Größer (Strg++)">+</button>
       </div>
       <button type="button" id="update" hidden></button>
-      <button type="button" id="zahnrad" title="Einstellungen">⚙</button>
       <span id="zustand"></span>
     </div>
 

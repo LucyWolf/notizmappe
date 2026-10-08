@@ -116,7 +116,7 @@ hängt als `pre-commit` davor und parst Python, Jinja und JS.
 
 ## Einstellungen
 
-Zahnrad oben rechts. Dort steht, welche Version läuft und welche es gibt, mit Knopf
+Zahnrad unten in der Seitenleiste, neben der Versionsnummer. Dort steht, welche Version läuft und welche es gibt, mit Knopf
 zum Einspielen; der Datenordner, wie viele Seiten darin liegen, was im Papierkorb
 ist und wie viel Platz das Laufwerk noch hat; dazu die Darstellungsgröße.
 
