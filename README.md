@@ -105,8 +105,13 @@ gebaute Paket zur Probe in ein Wegwerf-Heimverzeichnis und startet die
 erst beim Anwender auf.
 
 Die Workflow-Vorlage und `installer.conf` kommen aus
-[LucyWolf/double-click-installer](https://github.com/LucyWolf/double-click-installer)
-und liegen hier unverändert, damit Verbesserungen dort übernehmbar bleiben.
+[LucyWolf/double-click-installer](https://github.com/LucyWolf/double-click-installer).
+`template/` und `installer.conf` liegen unverändert da; `installer.yml` hat **einen**
+Zusatz bekommen: einen `workflow_call`-Auslöser. Ein Release, das `release.yml` mit
+dem `GITHUB_TOKEN` anlegt, löst nämlich keine weiteren Workflows aus — sonst könnten
+sich Workflows endlos selbst starten. Der Auslöser `release: published` der Vorlage
+greift deshalb nur, wenn ein Mensch das Release anlegt. Das wäre auch in der Vorlage
+selbst einen Zusatz wert.
 
 ### Wo der Doppelklick-Installer und dieses Paket sich treffen
 
