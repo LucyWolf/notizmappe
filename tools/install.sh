@@ -126,7 +126,8 @@ Type=Application
 Version=1.0
 Name=Notizmappe
 GenericName=Notizen
-Comment=Freie Notizflaeche, Daten im eigenen Ordner ($NEU)\nStartupWMClass=Notizmappe
+Comment=Freie Notizflaeche, Daten im eigenen Ordner ($NEU)
+StartupWMClass=Notizmappe
 Exec=$ZIEL/notizmappe
 TryExec=$ZIEL/notizmappe
 Icon=accessories-text-editor
