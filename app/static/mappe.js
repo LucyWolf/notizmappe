@@ -164,8 +164,28 @@ function klappen(knoten, schluessel) {
 
 async function loeschen(art, pfad, wie) {
   if (!confirm(`"${wie}" in den Papierkorb?`)) return;
-  await api('/api/loeschen', 'POST', { art, pfad });
-  if (art === 'seite' && offen && offen.name === pfad[2]) { offen = null; flaecheLeeren(); }
+  // Liegt die offene Seite darin - auch wenn ein ganzes Notizbuch oder ein
+  // Abschnitt weggeht? Vorher nur der Seitenname verglichen: eine gleichnamige
+  // Seite anderswo schloss die falsche, ein geloeschter Abschnitt keine.
+  const drin = offen && offen.notizbuch === pfad[0]
+    && (pfad.length < 2 || offen.abschnitt === pfad[1])
+    && (pfad.length < 3 || offen.name === pfad[2]);
+  if (drin) {
+    clearTimeout(speicherUhr);
+    while (speichertGerade) await speichertGerade;
+  }
+  try {
+    await api('/api/loeschen', 'POST', { art, pfad });
+  } catch (f) {
+    melden('Löschen ging nicht: ' + f.message);
+    return;
+  }
+  if (drin) {
+    schmutzig = false;
+    offen = null;
+    flaecheLeeren();
+    merker.legen('zuletzt', 'null');
+  }
   await baumLaden();
 }
 
