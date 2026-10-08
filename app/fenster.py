@@ -70,19 +70,52 @@ def server_starten(port: int) -> threading.Thread:
     return faden
 
 
+def webkit_zurechtruecken() -> None:
+    """WebKitGTK rendert standardmaessig ueber DMABUF. Mit NVIDIA unter Wayland
+    bricht das die Verbindung zum Display ab ("Error 71, Protokollfehler") - und
+    zwar so hart, dass Gdk den Prozess beendet, bevor Python etwas davon mitbekommt.
+    Ohne diesen Renderer geht das Fenster auf; die Beschleunigung bleibt an, nur
+    der Pufferweg ist ein anderer."""
+    if sys.platform.startswith("linux"):
+        os.environ.setdefault("WEBKIT_DISABLE_DMABUF_RENDERER", "1")
+
+
+def fenster_zeigen(adresse: str) -> None:
+    """Laeuft im Kindprozess - siehe mit_pywebview()."""
+    webkit_zurechtruecken()
+    import webview
+    webview.create_window(TITEL, adresse, width=1280, height=840, min_size=(640, 480))
+    webview.start()
+
+
 def mit_pywebview(adresse: str) -> bool:
+    """Das Fenster laeuft in einem eigenen Prozess.
+
+    Nicht aus Ordnungsliebe: stirbt die Webansicht am Display, reisst sie den
+    ganzen Prozess mit, ohne eine Ausnahme auszuloesen - ein try/except im selben
+    Prozess sieht davon nichts und der Rueckfall auf den naechsten Weg kaeme nie.
+    Als Kindprozess merkt man es am Rueckgabewert und daran, wie schnell er weg war.
+    """
     try:
-        import webview
+        import webview  # noqa: F401  - nur nachsehen, ob es ueberhaupt da ist
     except ImportError:
         return False
+
+    begonnen = time.monotonic()
     try:
-        webview.create_window(TITEL, adresse, width=1280, height=840,
-                              min_size=(640, 480), text_select=True)
-        webview.start()
-        return True
-    except Exception as f:
+        lauf = subprocess.run([sys.executable, str(Path(__file__).resolve()),
+                               "--nur-fenster", adresse])
+    except OSError as f:
         print(f"Fenster über pywebview ging nicht: {f}", file=sys.stderr)
         return False
+    dauer = time.monotonic() - begonnen
+
+    if lauf.returncode == 0 and dauer >= 2.0:
+        return True
+    print(f"Die Webansicht des Systems hat nicht getragen "
+          f"(nach {dauer:.1f}s beendet, Rückgabe {lauf.returncode}) - nächster Weg.",
+          file=sys.stderr)
+    return False
 
 
 def mit_browserfenster(adresse: str, profil: Path) -> bool:
@@ -183,6 +216,11 @@ def pruefen() -> int:
         except ImportError:
             pass
 
+    if sys.platform.startswith("linux"):
+        gesetzt = os.environ.get("WEBKIT_DISABLE_DMABUF_RENDERER")
+        print(f"  WEBKIT_DISABLE_DMABUF_RENDERER: {gesetzt or 'wird beim Start auf 1 gesetzt'}"
+              f"   (ohne das bricht WebKitGTK mit NVIDIA unter Wayland ab)")
+
     gefunden = [b for b in APP_BROWSER if which(b)]
     print(f"  Browser mit Fenstermodus: {', '.join(gefunden) if gefunden else 'keiner'}")
     print("\nOhne eines davon läuft es im normalen Browser - das ist der Notnagel.")
@@ -192,4 +230,7 @@ def pruefen() -> int:
 if __name__ == "__main__":
     if "--pruefen" in sys.argv:
         sys.exit(pruefen())
+    if "--nur-fenster" in sys.argv:
+        fenster_zeigen(sys.argv[sys.argv.index("--nur-fenster") + 1])
+        sys.exit(0)
     sys.exit(oeffnen())
