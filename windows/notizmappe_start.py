@@ -33,6 +33,12 @@ def main() -> int:
     # Der Datenordner kommt aus den Einstellungen (%APPDATA%\\notizmappe), sonst ~/Notizen.
 
     import fenster
+    # Das Fenster laeuft als eigener Prozess (siehe fenster.mit_pywebview). Im
+    # Buendel ist das wieder diese exe - mit --nur-fenster soll sie dann nur das
+    # Fenster zeigen, nicht noch einmal das ganze Programm starten.
+    if "--nur-fenster" in sys.argv:
+        fenster.fenster_zeigen(sys.argv[sys.argv.index("--nur-fenster") + 1])
+        return 0
     return fenster.oeffnen()
 
 

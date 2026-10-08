@@ -19,6 +19,7 @@ import konfig
 import konten
 import reinigen
 import speicher
+import verbindungen
 
 HIER = Path(__file__).parent
 VERSION = (HIER / "VERSION").read_text().strip()
@@ -322,6 +323,64 @@ async def api_zugriff(request: Request, rumpf: dict):
     bekannt = {k["name"] for k in konten.konten()}
     mitglieder = [n for n in (rumpf.get("mitglieder") or []) if n in bekannt]
     return {"mitglieder": speicher.zugriff_setzen(buch, mitglieder)}
+
+
+# --- Verbindungen zu Servern (Desktop-Fassung) -----------------------------------
+
+@app.exception_handler(verbindungen.VerbindungsFehler)
+async def _verbindungsfehler(request: Request, exc: verbindungen.VerbindungsFehler):
+    return JSONResponse({"fehler": str(exc)}, status_code=400)
+
+
+@app.get("/api/verbindungen")
+async def api_verbindungen(request: Request):
+    _nur_hier(request)
+    return {"verbindungen": verbindungen.liste()}
+
+
+@app.post("/api/verbindungen")
+def api_verbinden(request: Request, rumpf: dict):
+    _nur_hier(request)
+    return verbindungen.verbinden(str(rumpf.get("adresse") or ""), str(rumpf.get("name") or "").strip(),
+                                  str(rumpf.get("passwort") or ""))
+
+
+@app.post("/api/verbindungen/entfernen")
+async def api_verbindung_weg(request: Request, rumpf: dict):
+    _nur_hier(request)
+    verbindungen.entfernen(str(rumpf.get("id") or ""))
+    return {"ok": True}
+
+
+@app.post("/api/verbindungen/oeffnen")
+async def api_verbindung_oeffnen(request: Request, rumpf: dict):
+    """Eigenes Fenster fuer den Server. Ohne pywebview (z. B. im Browser geoeffnet)
+    oeffnet die Oberflaeche die Adresse selbst in einem neuen Tab."""
+    _nur_hier(request)
+    v = verbindungen.finden(str(rumpf.get("id") or ""))
+    weg = f"/verbinden/{v['id']}"
+    import fenster
+    if fenster.weiteres_fenster(f"http://127.0.0.1:{request.url.port or 8099}{weg}"):
+        return {"fenster": True}
+    return {"fenster": False, "weg": weg}
+
+
+@app.get("/verbinden/{kennung}")
+async def verbinden_seite(request: Request, kennung: str):
+    """Schickt den Geraeteschluessel als Formular an den Server. Der setzt daraufhin
+    seinen eigenen Sitzungskeks - im Fenster, nicht hier."""
+    _nur_hier(request)
+    v = verbindungen.finden(kennung)
+    from html import escape
+    return HTMLResponse(
+        '<!doctype html><meta charset="utf-8"><title>Notizmappe</title>'
+        '<link rel="stylesheet" href="/static/stil.css"><body class="anmeldeseite">'
+        f'<form method="post" action="{escape(v["adresse"])}/geraet/anmelden" class="anmeldetafel">'
+        f'<h1>Notizmappe</h1><p class="hinweis">Verbinde mit {escape(v["adresse"])} …</p>'
+        f'<input type="hidden" name="token" value="{escape(v["token"])}">'
+        '<noscript><button type="submit">Weiter</button></noscript></form>'
+        '<script>document.forms[0].submit()</script></body>',
+        headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"})
 
 
 def _nur_hier(request: Request) -> None:

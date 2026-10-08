@@ -115,6 +115,28 @@ def fenster_zeigen(adresse: str) -> None:
     webview.start(private_mode=False, storage_path=str(speicher))
 
 
+def fenster_befehl(adresse: str) -> list[str]:
+    """Befehl fuer einen Fensterprozess. Im Windows-Buendel (PyInstaller) ist
+    sys.executable die exe selbst und versteht --nur-fenster direkt."""
+    if getattr(sys, "frozen", False):
+        return [sys.executable, "--nur-fenster", adresse]
+    return [sys.executable, str(Path(__file__).resolve()), "--nur-fenster", adresse]
+
+
+def weiteres_fenster(adresse: str) -> bool:
+    """Ein zusaetzliches Fenster, ohne darauf zu warten - fuer die Verbindung zu
+    einem Server neben der lokalen Mappe. False, wenn es kein pywebview gibt."""
+    try:
+        import webview  # noqa: F401
+    except ImportError:
+        return False
+    try:
+        subprocess.Popen(fenster_befehl(adresse))
+    except OSError:
+        return False
+    return True
+
+
 def mit_pywebview(adresse: str) -> bool:
     """Das Fenster laeuft in einem eigenen Prozess.
 
@@ -130,8 +152,7 @@ def mit_pywebview(adresse: str) -> bool:
 
     begonnen = time.monotonic()
     try:
-        lauf = subprocess.run([sys.executable, str(Path(__file__).resolve()),
-                               "--nur-fenster", adresse])
+        lauf = subprocess.run(fenster_befehl(adresse))
     except OSError as f:
         print(f"Fenster über pywebview ging nicht: {f}", file=sys.stderr)
         return False
