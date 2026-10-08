@@ -1,3 +1,6 @@
+/* hidden muss gewinnen, auch gegen display: flex an einer ID */
+[hidden] { display: none !important; }
+
 :root {
   --papier: #fffefb;
   --linie: #e3e0d8;
