@@ -180,7 +180,19 @@ def anhang_ablegen(buch: str, abschnitt: str, seite: str, dateiname: str, daten:
     if not stamm:
         stamm, endung = slug(dateiname) or "Datei", ""
     endung = ("." + endung[:12]) if endung else ""
-    name = frei(ordner, stamm[:60], endung) + endung
+    # Namen, die diese Seite schon einmal hatte (jetzt im Papierkorb), nicht neu
+    # vergeben: gleicher Name = gleiche Adresse, und die Webansicht zeigt dann
+    # das alte Bild aus ihrem Speicher statt des neuen.
+    korb = wurzel() / PAPIERKORB
+    trenner = f" {seite} - "
+    gehabt = ({d.name.split(trenner, 1)[1] for d in korb.iterdir() if trenner in d.name}
+              if korb.is_dir() else set())
+    stamm = stamm[:60]
+    kandidat, n = stamm, 2
+    while (ordner / (kandidat + endung)).exists() or (kandidat + endung) in gehabt:
+        kandidat = f"{stamm} ({n})"
+        n += 1
+    name = kandidat + endung
     ziel = ordner / name
     tmp = ziel.with_name(f".{name}.neu")
     tmp.write_bytes(daten)

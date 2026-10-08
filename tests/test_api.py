@@ -205,6 +205,16 @@ pruefe("src und onerror am Textbild weg", "src=" not in html_t9 and "onerror" no
 pruefe("Fremde und Pfad-Bilder im Text verworfen", html_t9.count("<img") == 1, html_t9)
 pruefe("Bild im Text nicht aufgeraeumt", (DATEN / f"Arbeit/Projekte/{neu}.anhang/{imtext}").is_file())
 
+# Name eines weggeraeumten Anhangs wird nicht neu vergeben - sonst zeigt die
+# Webansicht unter derselben Adresse das alte Bild aus ihrem Speicher.
+erst = hoch("image.png", PNG).json()["datei"]
+s = k.get("/api/seite", params={"notizbuch": buch, "abschnitt": absch, "name": neu}).json()
+k.put("/api/seite", json={"notizbuch": buch, "abschnitt": absch, "name": neu, "rev": s["rev"],
+                          "titel": s["titel"], "elemente": s["elemente"]})
+pruefe("Unbenutztes image.png im Papierkorb", not (DATEN / f"Arbeit/Projekte/{neu}.anhang/{erst}").exists())
+dann = hoch("image.png", PNG + b"anders").json()["datei"]
+pruefe("Neues Bild bekommt neuen Namen", dann != erst, (erst, dann))
+
 # --- Update-Routen: lesen darf jeder, anstossen nur von diesem Rechner --------
 # Der Testclient meldet sich als "testclient", nicht als 127.0.0.1 - genau wie ein
 # fremder Rechner im Netz. Dass er abgewiesen wird, ist der Sinn der Pruefung.
