@@ -43,7 +43,48 @@ kümmert sich nur um die zwei Stellen, an denen das wehtut:
 Alle 15 Sekunden fragt der Browser nach, ob die offene Seite von außen neuer
 geworden ist, und sagt es, bevor etwas kaputtgeht.
 
-## Starten
+## Installationsdatei bauen
+
+```bash
+./tools/paket_bauen.sh      # -> dist/notizmappe-v<version>-installer.sh
+```
+
+Das Ergebnis ist **eine** Datei (~4,5 MB): Programm, Installationsskript und die
+Python-Pakete als Rad-Dateien stecken als base64-Nutzlast darin. Der Installer
+braucht deshalb weder Internet noch GitHub — nur `python3` ≥ 3.10. Passen die
+mitgelieferten Pakete nicht zur Python-Version auf dem Zielrechner, holt er sie
+als Rückfalllösung aus dem Netz und sagt das.
+
+Auf dem Zielrechner:
+
+```bash
+bash notizmappe-v1.0.1-installer.sh                   # einrichten / aktualisieren
+bash notizmappe-v1.0.1-installer.sh --deinstallieren  # Programm weg, Notizen bleiben
+bash notizmappe-v1.0.1-installer.sh --version
+NOTIZMAPPE_ZIEL=/opt/nm NOTIZEN_ORDNER=/mnt/nas/Notizen PORT=9000 \
+  bash notizmappe-v1.0.1-installer.sh                 # andere Orte
+```
+
+Ohne Root. Es entstehen: `~/.local/share/notizmappe` (Programm und venv),
+`~/Notizen` (Daten), ein Menüeintrag und — wenn systemd im Benutzerkontext
+erreichbar ist — der Dienst `notizmappe.service`, sonst ein Autostart-Eintrag der
+Sitzung. Läuft schon eine Fassung, fragt der Installer: aktualisieren,
+deinstallieren oder abbrechen.
+
+Vor dem Entpacken prüft die Datei ihre eigene SHA256-Summe, damit ein halber
+Download nicht halb installiert.
+
+## Versionsnummern
+
+`app/VERSION` ist die eine Quelle. Die Nummer landet im Dateinamen des Installers,
+im Kopf der Datei, im Menüeintrag, im Dienstnamen und in `--version`.
+
+Die letzte Stelle zählt bis 99 (1.0.9 → 1.0.10), **nie rückwärts**. Der Installer
+verweigert eine ältere Fassung über einer neueren: eine Datei, die die neuere
+Fassung geschrieben hat, soll nicht von einer älteren gelesen werden. Wer das
+wirklich will, deinstalliert erst.
+
+## Starten (aus dem Quellordner, zum Entwickeln)
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
