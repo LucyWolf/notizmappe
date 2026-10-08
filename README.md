@@ -43,6 +43,17 @@ kümmert sich nur um die zwei Stellen, an denen das wehtut:
 Alle 15 Sekunden fragt der Browser nach, ob die offene Seite von außen neuer
 geworden ist, und sagt es, bevor etwas kaputtgeht.
 
+## Installieren
+
+Die fertige Datei hängt am jeweiligen Release. Der Link zeigt immer auf die neueste:
+
+```
+https://github.com/LucyWolf/notizmappe/releases/latest/download/notizmappe-v1.0.1-installer.sh
+```
+
+(Der Dateiname trägt die Version, also wechselt der Link mit jedem Release —
+`releases/latest` listet die aktuelle.)
+
 ## Installationsdatei bauen
 
 ```bash
