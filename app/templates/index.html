@@ -106,9 +106,21 @@ window.addEventListener('unhandledrejection', function (ev) {
         <p class="zeile2"><span>Seiten</span><span id="e-seiten">…</span></p>
         <p class="zeile2"><span>Im Papierkorb</span><span id="e-papierkorb">…</span></p>
         <p class="zeile2"><span>Frei auf dem Laufwerk</span><span id="e-frei">…</span></p>
-        <p class="hinweis">Der Ordner wird nicht hier umgestellt, sondern beim Start:
-          <code>NOTIZEN_ORDNER</code>. So bleibt klar, welche Dateien ein laufendes
-          Programm gerade in der Hand hat.</p>
+        <div id="e-ordnerwahl">
+          <p class="ordnerzeile">
+            <input type="text" id="e-ordner-neu" placeholder="/home/name/Nextcloud/Notizen" autocomplete="off" spellcheck="false">
+            <button type="button" id="e-ordner-waehlen" hidden>Durchsuchen …</button>
+          </p>
+          <label class="haken"><input type="checkbox" id="e-mitnehmen" checked>
+            Vorhandene Notizen in den neuen Ordner kopieren</label>
+          <p class="knoepfe">
+            <button type="button" id="e-ordner-setzen">Ordner übernehmen</button>
+            <button type="button" id="e-ordner-standard">Zurück auf ~/Notizen</button>
+          </p>
+        </div>
+        <p class="hinweis" id="e-ordner-hinweis">Am besten ein Ordner im Nextcloud- oder
+          NAS-Ordner, dann sind die Notizen auf allen Geräten da. Kopiert wird nur, was
+          im neuen Ordner noch nicht liegt; der alte Ordner bleibt unangetastet.</p>
       </section>
 
       <section>

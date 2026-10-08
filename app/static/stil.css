@@ -232,6 +232,11 @@ body {
 }
 #einstellungen button:not(#zu):hover { border-color: var(--akzent); }
 #einstellungen #e-einspielen { border-color: var(--akzent); background: color-mix(in srgb, var(--akzent) 18%, var(--papier)); }
+#einstellungen .ordnerzeile { display: flex; gap: 8px; margin: 10px 0 4px; }
+#einstellungen input[type="text"], #einstellungen input[type="password"], #einstellungen input[type="url"] {
+  flex: 1; min-width: 0; padding: 4px 8px; border: 1px solid var(--linie); border-radius: 6px;
+  background: var(--papier); color: var(--schrift); font: inherit; font-size: 13px;
+}
 #einstellungen .hinweis { color: var(--matt); font-size: 12px; margin: 8px 0 0; }
 #einstellungen .notizen {
   background: var(--leiste); border: 1px solid var(--linie); border-radius: 6px;

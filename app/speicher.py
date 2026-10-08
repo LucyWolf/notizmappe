@@ -15,6 +15,7 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
+import konfig
 import reinigen
 
 FORMAT = 1
@@ -35,10 +36,64 @@ class KonfliktFehler(Exception):
         self.seite = seite
 
 
+def ordner_quelle() -> str:
+    """Woher der Datenordner kommt: "umgebung" (NOTIZEN_ORDNER, fest), "gewaehlt"
+    (in den Einstellungen) oder "standard"."""
+    if os.environ.get("NOTIZEN_ORDNER"):
+        return "umgebung"
+    return "gewaehlt" if konfig.lesen().get("ordner") else "standard"
+
+
 def wurzel() -> Path:
-    p = Path(os.environ.get("NOTIZEN_ORDNER", "~/Notizen")).expanduser()
+    # NOTIZEN_ORDNER vor der Einstellung: Tests und Docker muessen sich darauf
+    # verlassen koennen, dass nichts anderes angefasst wird.
+    roh = os.environ.get("NOTIZEN_ORDNER") or konfig.lesen().get("ordner") or "~/Notizen"
+    p = Path(roh).expanduser()
     p.mkdir(parents=True, exist_ok=True)
     return p
+
+
+def inhalt_kopieren(alt: Path, neu: Path) -> int:
+    """Notizbuecher in den neuen Ordner kopieren - kopieren, nicht verschieben: geht
+    unterwegs etwas schief, ist im alten Ordner noch alles da. Was es im neuen
+    Ordner schon gibt, wird nicht ueberschrieben."""
+    import shutil
+    if neu.resolve().is_relative_to(alt.resolve()):
+        raise SpeicherFehler("Der neue Ordner liegt im alten - so lässt sich nichts mitnehmen")
+    n = 0
+    for quelle in alt.iterdir():
+        if quelle.name.startswith(".") and quelle.name != PAPIERKORB:
+            continue
+        ziel = neu / quelle.name
+        if ziel.exists():
+            continue
+        if quelle.is_dir():
+            shutil.copytree(quelle, ziel)
+        else:
+            shutil.copy2(quelle, ziel)
+        n += 1
+    return n
+
+
+def ordner_pruefen(roh: str) -> Path:
+    """Taugt der Ordner als Ablage? Legt ihn an, wenn es ihn noch nicht gibt, und
+    probiert einmal Schreiben - lieber jetzt scheitern als beim ersten Speichern."""
+    roh = (roh or "").strip()
+    if not roh:
+        raise SpeicherFehler("Kein Ordner angegeben")
+    p = Path(roh).expanduser()
+    if not p.is_absolute():
+        raise SpeicherFehler("Bitte einen vollständigen Pfad angeben, z. B. /home/name/Nextcloud/Notizen")
+    if p.exists() and not p.is_dir():
+        raise SpeicherFehler("Das ist eine Datei, kein Ordner")
+    try:
+        p.mkdir(parents=True, exist_ok=True)
+        probe = p / f".schreibprobe-{uuid.uuid4().hex[:6]}"
+        probe.write_text("ok")
+        probe.unlink()
+    except OSError as f:
+        raise SpeicherFehler(f"In den Ordner lässt sich nicht schreiben: {f.strerror or f}")
+    return p.resolve()
 
 
 # --- Namen und Pfade ----------------------------------------------------------
