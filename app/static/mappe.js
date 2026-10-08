@@ -505,30 +505,46 @@ function flaecheMessen() {
 
 /* --------------------------------------------------------------- Speichern */
 
+let aenderung = 0;          // zaehlt jede Eingabe - so sieht ein Speichern, ob danach noch getippt wurde
+let speichertGerade = null; // laufendes Speichern, damit nie zwei gleichzeitig unterwegs sind
+
 function angefasst() {
+  aenderung++;
   schmutzig = true;
   zustandAnzeige.textContent = '…';
   clearTimeout(speicherUhr);
   speicherUhr = setTimeout(speichernJetzt, WARTEN);
 }
 
+const gleicheSeite = (a, b) => a && b && a.notizbuch === b.notizbuch && a.abschnitt === b.abschnitt && a.name === b.name;
+
 async function speichernJetzt() {
   clearTimeout(speicherUhr);
+  // Laeuft schon eines, erst abwarten: zwei Speichern mit derselben rev - das
+  // zweite bekaeme 409 und haelt die eigene Aenderung fuer eine fremde.
+  while (speichertGerade) await speichertGerade;
   if (!offen || !schmutzig) return;
   const stand = { ...offen };
-  try {
-    const r = await api('/api/seite', 'PUT', {
-      notizbuch: stand.notizbuch, abschnitt: stand.abschnitt, name: stand.name,
-      rev: stand.rev, titel: $('#titel').value, elemente, geraet,
-    });
-    if (offen && offen.name === stand.name) { offen.rev = r.rev; offen.mtime = r.mtime; }
-    schmutzig = false;
-    sagen('gespeichert');
-  } catch (f) {
-    if (f.status === 409) { konflikt(f.daten && f.daten.aktuell); return; }
-    zustandAnzeige.textContent = 'nicht gespeichert';
-    melden('Speichern ging nicht: ' + f.message, [['Nochmal', () => { schmutzig = true; speichernJetzt(); }]]);
-  }
+  const nr = aenderung;
+  speichertGerade = (async () => {
+    try {
+      const r = await api('/api/seite', 'PUT', {
+        notizbuch: stand.notizbuch, abschnitt: stand.abschnitt, name: stand.name,
+        rev: stand.rev, titel: $('#titel').value, elemente, geraet,
+      });
+      if (gleicheSeite(offen, stand)) { offen.rev = r.rev; offen.mtime = r.mtime; }
+      // Nur sauber, wenn waehrenddessen nichts dazukam. Sonst ist die Uhr von
+      // angefasst() noch gestellt und das naechste Speichern nimmt den Rest mit.
+      if (aenderung === nr) { schmutzig = false; sagen('gespeichert'); }
+    } catch (f) {
+      if (f.status === 409) { konflikt(f.daten && f.daten.aktuell); return; }
+      zustandAnzeige.textContent = 'nicht gespeichert';
+      melden('Speichern ging nicht: ' + f.message, [['Nochmal', () => { schmutzig = true; speichernJetzt(); }]]);
+    } finally {
+      speichertGerade = null;
+    }
+  })();
+  await speichertGerade;
 }
 
 function konflikt(fremd) {
