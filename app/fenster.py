@@ -101,10 +101,34 @@ def webkit_zurechtruecken() -> None:
         os.environ.setdefault("MOZ_ENABLE_WAYLAND", "1")
 
 
+def eltern_wache(webview) -> None:
+    """Das Hauptfenster gehoert zu seinem Server. Stirbt der Elternprozess (Absturz,
+    kill, Abmelden), blieb das Fenster sonst offen und zeigte auf einen toten
+    Server. Unter Linux/macOS merkt man das daran, dass sich getppid() aendert -
+    der Prozess wird an init oder einen Subreaper weitergereicht."""
+    roh = os.environ.get("NOTIZMAPPE_ELTERN")
+    if not roh or os.name != "posix":
+        return
+    eltern = int(roh)
+
+    def wachen():
+        while os.getppid() == eltern:
+            time.sleep(1.5)
+        for w in list(getattr(webview, "windows", [])):
+            try:
+                w.destroy()
+            except Exception:
+                pass
+        os._exit(0)
+
+    threading.Thread(target=wachen, daemon=True).start()
+
+
 def fenster_zeigen(adresse: str) -> None:
     """Laeuft im Kindprozess - siehe mit_pywebview()."""
     webkit_zurechtruecken()
     import webview
+    eltern_wache(webview)
     webview.create_window(TITEL, adresse, width=1280, height=840, min_size=(640, 480))
     # private_mode=False: im Privatmodus stellt WebKitGTK gar kein localStorage
     # bereit - die Variable fehlt dann komplett. Die Oberflaeche kommt inzwischen
@@ -152,7 +176,9 @@ def mit_pywebview(adresse: str) -> bool:
 
     begonnen = time.monotonic()
     try:
-        lauf = subprocess.run(fenster_befehl(adresse))
+        # Mit Eltern-PID: das Fenster soll mit dem Server gehen (eltern_wache).
+        lauf = subprocess.run(fenster_befehl(adresse),
+                              env=dict(os.environ, NOTIZMAPPE_ELTERN=str(os.getpid())))
     except OSError as f:
         print(f"Fenster über pywebview ging nicht: {f}", file=sys.stderr)
         return False
