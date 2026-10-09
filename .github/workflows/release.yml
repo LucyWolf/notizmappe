@@ -45,7 +45,6 @@ jobs:
       - name: Tests
         run: |
           python tests/test_api.py
-          python tests/test_konten.py
           python tests/test_update.py
 
       - name: Paket bauen

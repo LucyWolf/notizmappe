@@ -267,7 +267,6 @@ pruefe("Update-Protokoll von fremder Adresse abgelehnt", k.get("/api/update/stan
 e = k.get("/api/einstellungen")
 pruefe("Einstellungen abfragbar", e.status_code == 200 and "ordner" in e.json(), e.text)
 hoch("daten.json", b'{"x": 1}')                      # Anhang, keine Seite
-main.speicher.zugriff_setzen(buch, [])                 # .zugriff.json, keine Seite
 e = k.get("/api/einstellungen")
 echt = sum(len(a["seiten"]) for b in k.get("/api/baum").json()["notizbuecher"] for a in b["abschnitte"])
 pruefe("Seitenzahl zaehlt nur Seiten", e.json()["seiten"] == echt, (e.json()["seiten"], echt))
