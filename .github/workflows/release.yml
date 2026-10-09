@@ -124,9 +124,11 @@ jobs:
             throw "Notizmappe.exe antwortet nicht auf 8112 (beendet: $($p.HasExited))"
           }
           Write-Host "Bis zur ersten Antwort: $([math]::Round($uhr.Elapsed.TotalSeconds, 1)) s"
+          # --onefile hat immer zwei: den Auspacker und das ausgepackte Programm.
+          # Mehr waeren ein zweites Buendel - genau das soll auf Windows nicht sein.
           $wieviele = (Get-Process -Name Notizmappe -ErrorAction SilentlyContinue).Count
           Write-Host "Prozesse mit diesem Namen: $wieviele"
-          if ($wieviele -gt 1) { throw "Es laufen $wieviele Prozesse - auf Windows soll es einer sein" }
+          if ($wieviele -gt 2) { throw "Es laufen $wieviele Prozesse - das Buendel packt sich mehrfach aus" }
           $baum = Invoke-WebRequest "http://127.0.0.1:8112/api/baum" -UseBasicParsing
           if ($baum.Content -notmatch "notizbuecher") { throw "API antwortet nicht wie erwartet" }
           Stop-Process -Id $p.Id -Force
