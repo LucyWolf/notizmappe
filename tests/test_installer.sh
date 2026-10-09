@@ -83,10 +83,10 @@ pruefe "Neu auflegen geht"              "printf '%s' \"\$aus\" | grep -q 'schon 
 pruefe "Notizen beim Update unberuehrt" "[ -d '$H/Notizen/Probe' ]"
 pruefe "Pakete kamen aus dem Paket, nicht aus dem Netz" "! printf '%s' \"\$aus\" | grep -q 'aus dem Netz'"
 
-echo "--- --starten: einrichten und Programm hochfahren ---"
-# Ohne Desktop gibt es weder pywebview noch einen Browser mit Fenstermodus; die
-# Kette faellt auf den letzten Zweig zurueck. Der Server laeuft trotzdem - genau
-# das wird hier geprueft. Das Fenster selbst kann hier niemand sehen.
+echo "--- --starten: einrichten, und ohne Desktop sauber melden ---"
+# Hier gibt es kein Fenstersystem, also kann auch kein Fenster aufgehen. Richtig
+# ist dann: den Grund melden und enden - und gerade nicht heimlich einen Browser
+# aufmachen. Der Server kommt hier nur hoch, wenn man ihn ausdruecklich will.
 Z3=$H/drittes
 env -u XDG_RUNTIME_DIR -u DBUS_SESSION_BUS_ADDRESS -u DISPLAY -u WAYLAND_DISPLAY \
   HOME="$H" NOTIZMAPPE_ZIEL="$Z3" NOTIZEN_ORDNER="$H/Notizen" PORT=8157 \
@@ -94,10 +94,18 @@ env -u XDG_RUNTIME_DIR -u DBUS_SESSION_BUS_ADDRESS -u DISPLAY -u WAYLAND_DISPLAY
 startpid=$!
 for i in $(seq 90); do curl -sf -o /dev/null http://127.0.0.1:8157/ 2>/dev/null && break; sleep 1; done
 pruefe "--starten richtet ein, wenn nichts da ist" "[ -f '$Z3/app/main.py' ]"
-pruefe "Programm bringt den Server selbst mit"     "curl -sf http://127.0.0.1:8157/api/baum | grep -q notizbuecher"
+pruefe "ohne Fenster kein heimlicher Browser"      "! grep -qi 'im normalen Browser' '$H/starten.log'"
+pruefe "Grund wird genannt"                        "grep -qi 'fenster' '$H/starten.log'"
 pruefe "Menueintrag haengt an TryExec"             "grep -q 'TryExec=$Z3/notizmappe' '$H/.local/share/applications/notizmappe.desktop'"
 pruefe "Dienst-Unit nur bei vorhandenem Programm"  "grep -q ConditionPathExists '$WURZEL/tools/install.sh'"
 kill $startpid 2>/dev/null; wait $startpid 2>/dev/null
+# Und jetzt ausdruecklich als Server: dann muss er antworten.
+env NOTIZMAPPE_NUR_SERVER=1 PORT=8157 NOTIZEN_ORDNER="$H/Notizen" HOME="$H" \
+  timeout 25 "$Z3/notizmappe" > "$H/nurserver.log" 2>&1 &
+nurpid=$!
+for i in $(seq 25); do curl -sf -o /dev/null http://127.0.0.1:8157/ 2>/dev/null && break; sleep 1; done
+pruefe "mit NOTIZMAPPE_NUR_SERVER laeuft der Server" "curl -sf http://127.0.0.1:8157/api/baum | grep -q notizbuecher"
+kill $nurpid 2>/dev/null; wait $nurpid 2>/dev/null
 # Vollen Pfad nehmen: ein kurzes Muster traefe auch eine andere Shell, die
 # diesen Text zufaellig in ihrer Kommandozeile stehen hat.
 pkill -f "$Z3/.venv/bin/python" 2>/dev/null
