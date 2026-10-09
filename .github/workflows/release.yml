@@ -200,6 +200,30 @@ jobs:
           Stop-Process -Id $p.Id -Force
           Write-Host "Installierte Fassung läuft."
 
+      # Der Fall aus dem echten Leben: es laeuft bereits eine Fassung, und man
+      # installiert darueber. Genau daran ist das Setup gescheitert - die
+      # Schliessen-Aufforderung erreicht einen Prozess ohne Fenster nicht.
+      - name: Ueber eine laufende Fassung installieren
+        shell: pwsh
+        run: |
+          $env:PORT = "8114"
+          $env:NOTIZMAPPE_NUR_SERVER = "1"
+          $laeuft = Start-Process -FilePath "$env:EXE" -PassThru -NoNewWindow `
+                      -RedirectStandardOutput lauf.txt -RedirectStandardError lauf-err.txt
+          foreach ($i in 1..20) {
+            Start-Sleep -Seconds 2
+            try { if ((Invoke-WebRequest "http://127.0.0.1:8114/" -UseBasicParsing).StatusCode -eq 200) { break } } catch {}
+          }
+          if ($laeuft.HasExited) { throw "Die laufende Fassung ist von selbst beendet" }
+          Write-Host "laeuft als PID $($laeuft.Id), jetzt darueber installieren"
+
+          $p = Start-Process .\setup.exe -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -PassThru -Wait
+          Write-Host "Setup-Rueckgabe: $($p.ExitCode)"
+          if ($p.ExitCode -ne 0) { throw "Setup ueber eine laufende Fassung endete mit $($p.ExitCode)" }
+          if (-not (Test-Path "$env:EXE")) { throw "Nach dem Ueberinstallieren fehlt die exe" }
+          Get-Process -Name "Notizmappe" -ErrorAction SilentlyContinue | Stop-Process -Force
+          Write-Host "Ueberinstallieren hat funktioniert."
+
       - name: Wieder deinstallieren
         if: always()
         shell: pwsh
