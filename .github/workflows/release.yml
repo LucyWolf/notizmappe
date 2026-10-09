@@ -86,10 +86,13 @@ jobs:
       - name: Buendeln
         run: >
           pyinstaller --onefile --name Notizmappe --icon icon.ico
+          --splash icon.png
           --paths app
           --add-data "app;app"
           --collect-all uvicorn --collect-all fastapi --collect-all starlette
           --collect-all jinja2 --collect-all pydantic --collect-all webview
+          --exclude-module tkinter --exclude-module unittest --exclude-module pydoc
+          --exclude-module test --exclude-module lib2to3 --exclude-module pip
           --noconsole
           windows/notizmappe_start.py
 
@@ -98,6 +101,8 @@ jobs:
       - name: Buendel wirklich starten
         shell: pwsh
         run: |
+          Write-Host "Groesse: $([math]::Round((Get-Item dist\Notizmappe.exe).Length / 1MB, 1)) MB"
+          $uhr = [Diagnostics.Stopwatch]::StartNew()
           $env:PORT = "8112"
           # Der Buildlauf hat keinen Desktop - also Server ohne Fenster pruefen.
           $env:NOTIZMAPPE_NUR_SERVER = "1"
@@ -118,6 +123,10 @@ jobs:
             if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
             throw "Notizmappe.exe antwortet nicht auf 8112 (beendet: $($p.HasExited))"
           }
+          Write-Host "Bis zur ersten Antwort: $([math]::Round($uhr.Elapsed.TotalSeconds, 1)) s"
+          $wieviele = (Get-Process -Name Notizmappe -ErrorAction SilentlyContinue).Count
+          Write-Host "Prozesse mit diesem Namen: $wieviele"
+          if ($wieviele -gt 1) { throw "Es laufen $wieviele Prozesse - auf Windows soll es einer sein" }
           $baum = Invoke-WebRequest "http://127.0.0.1:8112/api/baum" -UseBasicParsing
           if ($baum.Content -notmatch "notizbuecher") { throw "API antwortet nicht wie erwartet" }
           Stop-Process -Id $p.Id -Force
