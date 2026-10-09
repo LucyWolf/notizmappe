@@ -125,81 +125,9 @@ window.addEventListener('unhandledrejection', function (ev) {
           im neuen Ordner noch nicht liegt; der alte Ordner bleibt unangetastet.</p>
       </section>
 
-      <section id="e-sperre-teil" hidden>
-        <h3>Sperre</h3>
-        <div id="e-sperre-aus">
-          <p class="hinweis">Mit Passwort fragt die Notizmappe beim Start und nach einer
-            Weile ohne Benutzung danach. Die Dateien bleiben lesbar wie bisher, der Sync
-            läuft weiter.</p>
-          <p class="ordnerzeile">
-            <input type="password" id="e-sperre-pw" placeholder="Passwort (mind. 8 Zeichen)" autocomplete="new-password">
-            <input type="password" id="e-sperre-pw2" placeholder="Wiederholen" autocomplete="new-password">
-          </p>
-          <p class="knoepfe"><button type="button" id="e-sperre-an">Sperre einschalten</button></p>
-        </div>
-        <div id="e-sperre-ein">
-          <p class="zeile2"><span>Sperren nach</span>
-            <span><input type="number" id="e-sperre-min" min="0" max="1440" class="zahl"> Minuten ohne Benutzung (0 = nie)</span></p>
-          <p class="knoepfe">
-            <button type="button" id="e-sperre-jetzt">Jetzt sperren</button>
-            <button type="button" id="e-sperre-weg">Sperre ausschalten</button>
-          </p>
-          <p class="ordnerzeile" id="e-sperre-weg-frage" hidden>
-            <input type="password" id="e-sperre-weg-pw" placeholder="Passwort zur Bestätigung" autocomplete="current-password">
-            <button type="button" id="e-sperre-weg-ok">Ausschalten</button>
-          </p>
-        </div>
-        <p class="hinweis" id="e-sperre-hinweis"></p>
-      </section>
 
-      <section id="e-konto-teil" hidden>
-        <h3>Mein Konto</h3>
-        <p class="zeile2"><span>Angemeldet als</span><strong id="e-ich">…</strong></p>
-        <p class="ordnerzeile">
-          <input type="password" id="e-pw-alt" placeholder="Bisheriges Passwort" autocomplete="current-password">
-          <input type="password" id="e-pw-neu" placeholder="Neues Passwort" autocomplete="new-password">
-        </p>
-        <p class="knoepfe">
-          <button type="button" id="e-pw-aendern">Passwort ändern</button>
-          <button type="button" id="e-abmelden">Abmelden</button>
-        </p>
-        <div id="e-geraete"></div>
-        <p class="hinweis" id="e-konto-hinweis"></p>
-      </section>
 
-      <section id="e-konten-teil" hidden>
-        <h3>Konten</h3>
-        <div id="e-kontenliste" class="liste"></div>
-        <p class="ordnerzeile">
-          <input type="text" id="e-neu-name" placeholder="Name" autocomplete="off">
-          <input type="password" id="e-neu-pw" placeholder="Passwort (mind. 8 Zeichen)" autocomplete="new-password">
-        </p>
-        <label class="haken"><input type="checkbox" id="e-neu-admin"> Admin (sieht alle Notizbücher, verwaltet Konten)</label>
-        <p class="knoepfe"><button type="button" id="e-konto-anlegen">Konto anlegen</button></p>
-        <h3 class="abstand">Projekte</h3>
-        <div id="e-projekte" class="liste"></div>
-        <p class="hinweis">Jedes Notizbuch ist ein Projekt. Admins sehen alle, alle anderen
-          nur die, bei denen sie hier angehakt sind. Wer selbst ein Notizbuch anlegt, ist
-          automatisch drin.</p>
-        <p class="hinweis" id="e-konten-hinweis"></p>
-      </section>
 
-      <section id="e-server-teil" hidden>
-        <h3>Server</h3>
-        <div id="e-verbindungen" class="liste"></div>
-        <p class="hinweis">Mit einem Notizmappe-Server verbinden (z. B. dem Docker-Server
-          deines Teams). Er öffnet sich in einem eigenen Fenster, mit seinen Projekten.</p>
-        <p class="ordnerzeile">
-          <input type="url" id="e-srv-adresse" placeholder="notizen.example.de" autocomplete="url" spellcheck="false">
-        </p>
-        <p class="ordnerzeile">
-          <input type="text" id="e-srv-name" placeholder="Name" autocomplete="username">
-          <input type="password" id="e-srv-pw" placeholder="Passwort" autocomplete="current-password">
-        </p>
-        <p class="knoepfe"><button type="button" id="e-srv-verbinden">Verbinden</button></p>
-        <p class="hinweis" id="e-srv-hinweis">Das Passwort wird nicht gespeichert, nur ein
-          Geräteschlüssel. Den kann man am Server unter „Mein Konto“ wieder abmelden.</p>
-      </section>
 
       <section>
         <h3>Fenster</h3>

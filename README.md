@@ -309,84 +309,20 @@ NOTIZEN_ORDNER=~/Nextcloud/Notizen ./starten.sh      # Standard: ~/Notizen
 
 Die Fläche wächst nach rechts und unten mit, es gibt keinen Seitenrand.
 
-## Sperre (eigener Rechner)
-
-Ohne weiteres Zutun gibt es keine Anmeldung — das Programm läuft nur auf
-`127.0.0.1`. Unter **Einstellungen → Sperre** lässt sich ein Passwort festlegen: dann
-fragt die Notizmappe beim Start danach und sperrt sich nach einer einstellbaren Zeit
-ohne Benutzung (Standard 15 Minuten, 0 = nur beim Start). 🔒 unten in der Leiste
-sperrt sofort. Vor dem Sperren wird gespeichert.
-
-Die Dateien bleiben unverschlüsselt und lesbar — die Sperre schützt die Oberfläche,
-nicht die Platte. Nextcloud synchronisiert weiter wie bisher.
-
-Auch ohne Sperre antwortet der lokale Server nur auf `127.0.0.1`, `localhost` oder
-eine IP als Host — sonst könnte eine fremde Webseite ihren Namen per DNS-Rebinding
-auf diesen Rechner umbiegen und die Notizen lesen. Wer die Mappe unter einem Namen
-im eigenen Netz erreichen will: `NOTIZMAPPE_HOSTS=rechner.local`.
-
-## Server für ein Team (Docker)
-
-Damit mehrere Leute an denselben Notizbüchern arbeiten, läuft die Notizmappe als
-Server; jeder öffnet sie im Browser, installieren muss niemand etwas.
-
-```bash
-docker compose up -d                  # nimmt ghcr.io/lucywolf/notizmappe:latest
-docker logs notizmappe                # dort steht der Einrichtungscode
-```
-
-Dann `http://<rechner>:8099` öffnen, Code eingeben und das Admin-Konto anlegen. Der
-Code steht nur im Protokoll, damit nicht der Erstbeste, der die Adresse findet, sich
-zum Admin macht. Ohne fertiges Image: `docker compose up -d --build`.
-
-**Konten und Projekte** — in den Einstellungen (Zahnrad) legt ein Admin Konten an.
-Jedes **Notizbuch ist ein Projekt**: Admins sehen alle, alle anderen nur die, bei
-denen sie unter „Projekte“ angehakt sind. Wer selbst ein Notizbuch anlegt, ist
-automatisch drin; ganze Notizbücher löschen dürfen nur Admins. Wer nicht Mitglied
-ist, bekommt 404 — er erfährt nicht einmal, dass es das Notizbuch gibt.
-
-Arbeiten zwei Leute gleichzeitig an **derselben Seite**, greift die Konflikterkennung
-von oben: wer mit einem veralteten Stand speichert, wird gefragt, statt die fremde
-Änderung zu überschreiben. Live-Mitschreiben wie in Google Docs gibt es nicht.
-
-**Fürs Internet** gehört HTTPS davor, z. B. Caddy:
-
-```
-notizen.example.de {
-    reverse_proxy 127.0.0.1:8099
-}
-```
-
-Bei nginx `proxy_set_header Host $host;` und `X-Forwarded-Proto` mitgeben — sonst
-lehnt die Herkunftsprüfung Änderungen ab bzw. der Keks bekommt kein `Secure`.
-
-Gespeichert wird in zwei Volumes: `/notizen` (die Notizbücher, eine `.zugriff.json`
-pro Notizbuch hält die Mitglieder) und `/konfig` (`konten.json`: scrypt-Hashes,
-Sitzungen nur als SHA-256). Im Server-Betrieb (`NOTIZMAPPE_SERVER=1`) sind
-Selbstupdate und Ordnerwahl abgeschaltet — aktualisiert wird mit
-`docker compose pull && docker compose up -d`. Das Image baut `docker.yml` bei jedem
-Release; beim allerersten Mal muss das Paket auf GitHub einmal auf „Public“
-gestellt werden.
-
-**Vom Desktop aus** — in der installierten Notizmappe unter **Einstellungen → Server**
-Adresse, Name und Passwort eintragen und „Verbinden“. Der Server öffnet sich in einem
-eigenen Fenster neben der lokalen Mappe, mit seinen Konten und Projekten. Gespeichert
-wird nicht das Passwort, sondern ein Geräteschlüssel (in
-`~/.config/notizmappe/einstellungen.json`, nur für den eigenen Benutzer lesbar). Am
-Server lässt er sich unter „Mein Konto“ einzeln abmelden; ein neues Passwort macht
-alle Geräteschlüssel ungültig.
-
-**Sicherheit** — Anmeldung mit Bremse gegen Passwortraten (pro Absender und pro
-Name), Keks `HttpOnly` + `SameSite=Strict`, Änderungen von fremden Seiten werden an
-der Herkunft erkannt und abgelehnt. Ein neues Passwort meldet alle anderen
-Sitzungen und Geräte ab.
-
 ## HTML aus dem Editor
 
 Aus dem Editor kommendes HTML wird beim **Speichern** gesäubert (`app/reinigen.py`,
 Positivliste). Das passiert absichtlich vor dem Schreiben, nicht erst beim Anzeigen:
 sonst steht der Dreck in der Datei und jeder spätere Weg — Export, Suche, zweite
 Oberfläche — sieht ihn wieder.
+
+## Server für ein Team
+
+Steht **nicht** hier drin. Die Notizmappe ist ein Desktop-Programm: eigenes
+Fenster, hört nur auf `127.0.0.1`, keine Konten, keine Anmeldung. Wer die Notizen
+mit mehreren teilen will, nimmt die Server-Fassung — eigenes Projekt, eigener
+Docker-Container, eigene Versionen. Sie fasst diese hier nicht an und steckt auch
+nicht im Installationspaket mit drin.
 
 ## Noch nicht gebaut
 
