@@ -86,7 +86,6 @@ jobs:
       - name: Buendeln
         run: >
           pyinstaller --onefile --name Notizmappe --icon icon.ico
-          --splash icon.png
           --paths app
           --add-data "app;app"
           --collect-all uvicorn --collect-all fastapi --collect-all starlette

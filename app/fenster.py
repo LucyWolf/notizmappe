@@ -123,10 +123,51 @@ def meldung_zeigen(text: str) -> None:
     print(text, file=sys.stderr, flush=True)
 
 
+def webview2_lage() -> str:
+    """Das Fenster kommt auf Windows von der Edge-WebView2-Laufzeit. Fehlt die,
+    geht nichts auf - und das muss dastehen, statt dass man raet."""
+    if sys.platform != "win32":
+        return ""
+    teile = []
+    try:
+        import winreg
+        gefunden = None
+        for wurzel, pfad in (
+            (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"),
+            (winreg.HKEY_CURRENT_USER, r"SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"),
+        ):
+            try:
+                with winreg.OpenKey(wurzel, pfad) as k:
+                    gefunden = winreg.QueryValueEx(k, "pv")[0]
+                    break
+            except OSError:
+                continue
+        teile.append(f"WebView2-Laufzeit: {gefunden}" if gefunden
+                     else "WebView2-Laufzeit: FEHLT - zu holen bei Microsoft "
+                          "(\"Evergreen Standalone Installer\")")
+    except Exception as f:
+        teile.append(f"WebView2-Laufzeit: nicht feststellbar ({f})")
+    try:
+        import clr  # noqa: F401  - pywebview spricht ueber pythonnet mit WebView2
+        teile.append("pythonnet: da")
+    except Exception as f:
+        teile.append(f"pythonnet: FEHLT ({f})")
+    return "  ".join(teile)
+
+
 def browserfenster_erlaubt() -> bool:
-    """Standardmaessig nein: die Notizmappe soll ein Programm sein, kein Browsertab.
-    Wer den Notnagel doch will, setzt NOTIZMAPPE_BROWSERFENSTER=1."""
-    return os.environ.get("NOTIZMAPPE_BROWSERFENSTER") == "1"
+    """Auf Windows ja, sonst nur auf Ansage.
+
+    Ein Fenster mit --app hat keine Adresszeile, keine Lesezeichen und einen
+    eigenen Eintrag in der Taskleiste - es sieht aus und verhaelt sich wie ein
+    Programm, auch wenn innen ein Browser steckt. Auf Windows ist Edge immer
+    vorhanden, also gibt es damit immer ein Fenster, auch wenn die WebView2-
+    Laufzeit fehlt. Unter Linux bleibt es abgeschaltet: dort ist die Webansicht
+    des Systems der richtige Weg, und ein Browserfenster wuerde nur verdecken,
+    dass etwas fehlt."""
+    if os.environ.get("NOTIZMAPPE_BROWSERFENSTER") == "0":
+        return False
+    return sys.platform == "win32" or os.environ.get("NOTIZMAPPE_BROWSERFENSTER") == "1"
 
 
 def unter_wayland() -> bool:
@@ -242,14 +283,26 @@ def mit_pywebview(adresse: str) -> bool:
         # eine Ausnahme auszuloesen - das ist ein Linux-Problem. Hier wuerde der
         # zweite Prozess dagegen das ganze Buendel ein zweites Mal auspacken
         # (PyInstaller --onefile), und der Start dauert doppelt so lange.
+        notieren(f"Windows: {webview2_lage()}")
+        begonnen = time.monotonic()
         try:
-            notieren("Fenster über die Webansicht von Windows (WebView2), selber Prozess.")
             fenster_zeigen(adresse)
-            return True
         except Exception as f:
+            import traceback
             mit_pywebview.grund = f"Die Webansicht von Windows hat nicht getragen: {f}"
+            notieren(mit_pywebview.grund + "\n" + traceback.format_exc()[-800:])
+            return False
+        dauer = time.monotonic() - begonnen
+        if dauer < 2.0:
+            # Kam zurueck, ohne dass jemand etwas schliessen konnte: dann ist nie
+            # ein Fenster aufgegangen. Ohne diese Pruefung sieht man nur, wie das
+            # Programm sich kommentarlos beendet.
+            mit_pywebview.grund = (f"Das Fenster war nach {dauer:.1f}s schon wieder zu - "
+                                   f"es ist wohl nie aufgegangen.\n{webview2_lage()}")
             notieren(mit_pywebview.grund)
             return False
+        notieren(f"Fenster war {dauer:.0f}s offen.")
+        return True
 
     begonnen = time.monotonic()
     try:
@@ -280,13 +333,32 @@ def mit_pywebview(adresse: str) -> bool:
 mit_pywebview.grund = ""
 
 
+def app_fenster_programme() -> list[str]:
+    """Was auf diesem Rechner ein Fenster ohne Adresszeile aufmachen kann."""
+    from shutil import which
+    if sys.platform == "win32":
+        # Edge gehoert zu Windows, ist also immer da. Mit --app ist das ein
+        # eigenes Fenster mit eigenem Eintrag in der Taskleiste - kein Browsertab.
+        kandidaten = []
+        for ordner in (os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)"),
+                       os.environ.get("ProgramFiles", r"C:\Program Files"),
+                       os.environ.get("LOCALAPPDATA", "")):
+            if not ordner:
+                continue
+            for weg in (r"Microsoft\Edge\Application\msedge.exe",
+                        r"Google\Chrome\Application\chrome.exe",
+                        r"BraveSoftware\Brave-Browser\Application\brave.exe"):
+                voll = Path(ordner) / weg
+                if voll.is_file():
+                    kandidaten.append(str(voll))
+        return kandidaten
+    return [b for b in APP_BROWSER if which(b)]
+
+
 def mit_browserfenster(adresse: str, profil: Path) -> bool:
     """--app= gibt ein Fenster ohne Adresszeile. Ein eigenes Profil, damit das
     Fenster nicht in einer laufenden Browsersitzung aufgeht und mit ihr stirbt."""
-    for browser in APP_BROWSER:
-        from shutil import which
-        if not which(browser):
-            continue
+    for browser in app_fenster_programme():
         profil.mkdir(parents=True, exist_ok=True)
         befehl = [
             browser, f"--app={adresse}", f"--user-data-dir={profil}",
@@ -297,9 +369,16 @@ def mit_browserfenster(adresse: str, profil: Path) -> bool:
             # Sonst laeuft auch dieses Fenster ueber XWayland.
             befehl += ["--ozone-platform=wayland", "--enable-features=UseOzonePlatform"]
         try:
+            notieren(f"Fenster über {Path(browser).name} (--app, ohne Adresszeile).")
+            begonnen = time.monotonic()
             lauf = subprocess.run(befehl)
-            return lauf.returncode == 0
-        except OSError:
+            dauer = time.monotonic() - begonnen
+            if lauf.returncode == 0 and dauer >= 2.0:
+                return True
+            notieren(f"{Path(browser).name} war nach {dauer:.1f}s wieder weg "
+                     f"(Rückgabe {lauf.returncode}).")
+        except OSError as f:
+            notieren(f"{browser} liess sich nicht starten: {f}")
             continue
     return False
 
@@ -340,7 +419,7 @@ def oeffnen(port: int | None = None, eigener_server: bool = True) -> int:
         return 0
 
     if browserfenster_erlaubt():
-        notieren("Webansicht ging nicht - versuche ein Browserfenster (NOTIZMAPPE_BROWSERFENSTER=1).")
+        notieren("Webansicht ging nicht - jetzt ein Fenster ohne Adresszeile.")
         if mit_browserfenster(adresse, daten / "fensterprofil"):
             return 0
 
@@ -405,11 +484,20 @@ def pruefen() -> int:
         else:
             print("  Sitzung: kein WAYLAND_DISPLAY gesetzt - es läuft über X11")
 
-    gefunden = [b for b in APP_BROWSER if which(b)]
-    print(f"  Browser mit Fenstermodus: {', '.join(gefunden) if gefunden else 'keiner'}")
-    print("\nOhne pywebview mit WebKit2 oder Qt geht kein Fenster auf. Es wird dann auch"
-          "\nnichts im Browser geöffnet - nur gemeldet. Wer den Notnagel doch will:"
-          "\n    NOTIZMAPPE_BROWSERFENSTER=1 notizmappe")
+    if sys.platform == "win32":
+        print(f"  {webview2_lage()}")
+
+    gefunden = app_fenster_programme()
+    print("  Fenster ohne Adresszeile möglich über: "
+          + (", ".join(Path(g).name for g in gefunden) if gefunden else "nichts gefunden"))
+    if sys.platform == "win32":
+        print("\nReihenfolge: Webansicht von Windows (WebView2), sonst ein Fenster über"
+              "\nEdge oder Chrome mit --app - ohne Adresszeile, eigener Eintrag in der"
+              "\nTaskleiste. Abschalten mit NOTIZMAPPE_BROWSERFENSTER=0.")
+    else:
+        print("\nOhne pywebview mit WebKit2 oder Qt geht hier kein Fenster auf. Es wird dann"
+              "\nauch nichts im Browser geöffnet - nur gemeldet. Wer das doch will:"
+              "\n    NOTIZMAPPE_BROWSERFENSTER=1 notizmappe")
     return 0
 
 
