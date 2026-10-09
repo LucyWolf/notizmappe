@@ -22,7 +22,14 @@ SolidCompression=yes
 WizardStyle=modern
 @SETUP_ICON@
 UninstallDisplayIcon={app}\{#AppExe}
-CloseApplications=yes
+; "force" statt "yes": Inno schickt zum Schliessen eine Nachricht an das Fenster
+; einer Anwendung. Die Notizmappe besteht aus zwei Prozessen, und der mit dem Server
+; hat gar kein Fenster - er bekommt die Aufforderung nie, haelt die Datei weiter und
+; das Setup bricht ab. Mit "force" werden sie beendet.
+CloseApplications=force
+; Nach der Installation nicht selbst wieder starten: das Setup bietet das am Ende
+; ohnehin an, sonst stuenden zwei Fassungen gleichzeitig da.
+RestartApplications=no
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
