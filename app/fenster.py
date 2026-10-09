@@ -75,6 +75,45 @@ def server_starten(port: int) -> threading.Thread:
     return faden
 
 
+PROTOKOLL = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / "notizmappe/.fenster.log"
+
+
+def notieren(zeile: str) -> None:
+    """Jeder Versuch kommt ins Protokoll. Beim Klick aus dem Menue gibt es kein
+    Terminal - ohne Datei weiss hinterher niemand, welcher Weg genommen wurde und
+    warum er nicht trug."""
+    stempel = time.strftime("%d.%m.%Y %H:%M:%S")
+    print(zeile, file=sys.stderr, flush=True)
+    try:
+        PROTOKOLL.parent.mkdir(parents=True, exist_ok=True)
+        with PROTOKOLL.open("a", encoding="utf-8") as f:
+            f.write(f"{stempel}  {zeile}\n")
+    except OSError:
+        pass
+
+
+def meldung_zeigen(text: str) -> None:
+    """Ohne Terminal und ohne Fenster bliebe sonst gar nichts uebrig - dann wenigstens
+    ein Hinweisfenster der Arbeitsumgebung."""
+    from shutil import which
+    hat_anzeige = bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+    for werkzeug, befehl in (("kdialog", ["kdialog", "--title", TITEL, "--error", text]),
+                             ("zenity", ["zenity", "--error", f"--title={TITEL}", f"--text={text}"])):
+        if hat_anzeige and which(werkzeug):
+            try:
+                subprocess.run(befehl, timeout=120)
+                return
+            except (OSError, subprocess.TimeoutExpired):
+                continue
+    print(text, file=sys.stderr, flush=True)
+
+
+def browserfenster_erlaubt() -> bool:
+    """Standardmaessig nein: die Notizmappe soll ein Programm sein, kein Browsertab.
+    Wer den Notnagel doch will, setzt NOTIZMAPPE_BROWSERFENSTER=1."""
+    return os.environ.get("NOTIZMAPPE_BROWSERFENSTER") == "1"
+
+
 def unter_wayland() -> bool:
     return bool(os.environ.get("WAYLAND_DISPLAY"))
 
@@ -183,19 +222,30 @@ def mit_pywebview(adresse: str) -> bool:
     begonnen = time.monotonic()
     try:
         # Mit Eltern-PID: das Fenster soll mit dem Server gehen (eltern_wache).
+        # Die Ausgabe wird eingefangen, damit der Grund im Protokoll landet und
+        # nicht im Nichts verschwindet, wenn niemand ein Terminal offen hat.
         lauf = subprocess.run(fenster_befehl(adresse),
-                              env=dict(os.environ, NOTIZMAPPE_ELTERN=str(os.getpid())))
+                              env=dict(os.environ, NOTIZMAPPE_ELTERN=str(os.getpid())),
+                              capture_output=True, text=True)
     except OSError as f:
-        print(f"Fenster über pywebview ging nicht: {f}", file=sys.stderr)
+        mit_pywebview.grund = f"pywebview liess sich nicht starten: {f}"
+        notieren(mit_pywebview.grund)
         return False
     dauer = time.monotonic() - begonnen
 
+    gemeckert = "\n".join(z for z in (lauf.stderr or "").splitlines()[-6:] if z.strip())
     if lauf.returncode == 0 and dauer >= 2.0:
+        notieren(f"Fenster über die Webansicht des Systems, {dauer:.0f}s offen gewesen.")
         return True
-    print(f"Die Webansicht des Systems hat nicht getragen "
-          f"(nach {dauer:.1f}s beendet, Rückgabe {lauf.returncode}) - nächster Weg.",
-          file=sys.stderr)
+
+    mit_pywebview.grund = (f"Die Webansicht des Systems hat nicht getragen: nach {dauer:.1f}s "
+                           f"beendet, Rückgabe {lauf.returncode}."
+                           + (f"\n{gemeckert}" if gemeckert else ""))
+    notieren(mit_pywebview.grund)
     return False
+
+
+mit_pywebview.grund = ""
 
 
 def mit_browserfenster(adresse: str, profil: Path) -> bool:
@@ -246,21 +296,24 @@ def oeffnen(port: int | None = None, eigener_server: bool = True) -> int:
 
     if mit_pywebview(adresse):
         return 0
-    if mit_browserfenster(adresse, daten / "fensterprofil"):
-        return 0
 
-    import webbrowser
-    print(f"Kein Fenster möglich - weder pywebview noch ein Browser mit Fenstermodus.\n"
-          f"Es geht im normalen Browser auf: {adresse}", file=sys.stderr)
-    webbrowser.open(adresse)
-    if eigener_server:
-        print("Dieses Fenster offen lassen, sonst ist die Notizmappe weg.")
-        try:
-            while True:
-                time.sleep(3600)
-        except KeyboardInterrupt:
-            pass
-    return 0
+    if browserfenster_erlaubt():
+        notieren("Webansicht ging nicht - versuche ein Browserfenster (NOTIZMAPPE_BROWSERFENSTER=1).")
+        if mit_browserfenster(adresse, daten / "fensterprofil"):
+            return 0
+
+    # Hier wird bewusst nichts im Browser geöffnet. Die Notizmappe soll ein
+    # Programm im eigenen Fenster sein; ein Tab im Browser ist kein Ersatz, und
+    # stillschweigend einen aufzumachen verdeckt nur, dass etwas kaputt ist.
+    meldung_zeigen(
+        "Das Fenster ließ sich nicht öffnen.\n\n"
+        + (mit_pywebview.grund or "Die Webansicht des Systems steht nicht zur Verfügung.")
+        + "\n\nWas fehlt, sagt:\n"
+        + f"    {Path(sys.argv[0]).resolve().parent}/notizmappe --pruefen\n\n"
+        + f"Protokoll: {PROTOKOLL}\n"
+        + "Notfalls im Browser: NOTIZMAPPE_BROWSERFENSTER=1 davor setzen."
+    )
+    return 1
 
 
 def pruefen() -> int:
@@ -312,7 +365,9 @@ def pruefen() -> int:
 
     gefunden = [b for b in APP_BROWSER if which(b)]
     print(f"  Browser mit Fenstermodus: {', '.join(gefunden) if gefunden else 'keiner'}")
-    print("\nOhne eines davon läuft es im normalen Browser - das ist der Notnagel.")
+    print("\nOhne pywebview mit WebKit2 oder Qt geht kein Fenster auf. Es wird dann auch"
+          "\nnichts im Browser geöffnet - nur gemeldet. Wer den Notnagel doch will:"
+          "\n    NOTIZMAPPE_BROWSERFENSTER=1 notizmappe")
     return 0
 
 
