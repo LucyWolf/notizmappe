@@ -12,6 +12,7 @@ ZIEL=${NOTIZMAPPE_ZIEL:-$HOME/.local/share/notizmappe}
 DATEN=${NOTIZEN_ORDNER:-$HOME/Notizen}
 PORT=${PORT:-8099}
 MENUE=$HOME/.local/share/applications/notizmappe.desktop
+SYMBOL=$HOME/.local/share/icons/hicolor/512x512/apps/notizmappe.png
 UNIT=$HOME/.config/systemd/user/notizmappe.service
 AUTOSTART=$HOME/.config/autostart/notizmappe-dienst.desktop
 
@@ -140,6 +141,17 @@ EINTRAG
   # Denselben Dateinamen benutzt auch der Doppelklick-Installer (APP_ID=notizmappe),
   # es entsteht also kein zweiter Eintrag - wer zuletzt schreibt, gewinnt, und beide
   # Varianten starten dasselbe.
+  # Symbol aus dem Paket, nicht aus dem Netz nachgeladen: der Installer soll auch
+  # ohne Internet ein vollstaendiges Programm hinterlassen.
+  SYMBOL_NAME=accessories-text-editor
+  if [ -f "$HIER/icon.png" ]; then
+    mkdir -p "$(dirname "$SYMBOL")"
+    cp -f "$HIER/icon.png" "$SYMBOL"
+    SYMBOL_NAME=notizmappe
+    command -v gtk-update-icon-cache >/dev/null 2>&1 \
+      && gtk-update-icon-cache -q -t "$HOME/.local/share/icons/hicolor" 2>/dev/null || true
+  fi
+
   mkdir -p "$(dirname "$MENUE")"
   cat > "$MENUE" <<EOF
 [Desktop Entry]
@@ -151,7 +163,7 @@ Comment=Freie Notizflaeche, Daten im eigenen Ordner ($NEU)
 StartupWMClass=Notizmappe
 Exec=$ZIEL/notizmappe
 TryExec=$ZIEL/notizmappe
-Icon=accessories-text-editor
+Icon=$SYMBOL_NAME
 Terminal=false
 Categories=Office;Utility;TextEditor;
 StartupNotify=false
@@ -227,7 +239,7 @@ deinstallieren() {
     rm -f "$UNIT"
     systemctl --user daemon-reload || true
   fi
-  rm -f "$AUTOSTART" "$MENUE"
+  rm -f "$AUTOSTART" "$MENUE" "$SYMBOL"
   rm -rf "$ZIEL"
   sagen "Notizmappe $alt entfernt."
   sagen "Die Notizen in $DATEN sind absichtlich stehen geblieben."

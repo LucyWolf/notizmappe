@@ -136,7 +136,13 @@ def fenster_zeigen(adresse: str) -> None:
     # offene Seite ueber einen Neustart hinweg erhalten.
     speicher = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / "notizmappe/webansicht"
     speicher.mkdir(parents=True, exist_ok=True)
-    webview.start(private_mode=False, storage_path=str(speicher))
+    # Das Symbol gilt fuer die Fensterleiste. Aeltere pywebview-Fassungen kennen
+    # den Parameter nicht - dann eben ohne, statt ganz ohne Fenster dazustehen.
+    symbol = Path(__file__).resolve().parent / "static/icon.png"
+    try:
+        webview.start(private_mode=False, storage_path=str(speicher), icon=str(symbol))
+    except TypeError:
+        webview.start(private_mode=False, storage_path=str(speicher))
 
 
 def fenster_befehl(adresse: str) -> list[str]:
