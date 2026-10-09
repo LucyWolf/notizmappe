@@ -106,18 +106,20 @@ env -u XDG_RUNTIME_DIR -u DBUS_SESSION_BUS_ADDRESS -u DISPLAY -u WAYLAND_DISPLAY
   HOME="$H" NOTIZMAPPE_ZIEL="$Z3" NOTIZEN_ORDNER="$H/Notizen" PORT=8157 \
   timeout 120 bash "$PAKET" --starten < /dev/null > "$H/starten.log" 2>&1 &
 startpid=$!
-for i in $(seq 90); do curl -sf -o /dev/null http://127.0.0.1:8157/ 2>/dev/null && break; sleep 1; done
+# Auf das Ende warten, nicht auf eine Uhr: das Einrichten baut ein venv und holt
+# Pakete, das dauert auf einem langsamen Rechner laenger als jede feste Frist -
+# und dann prueft man ein Protokoll, das noch gar nicht geschrieben ist.
+wait $startpid 2>/dev/null
 pruefe "--starten richtet ein, wenn nichts da ist" "[ -f '$Z3/app/main.py' ]"
 pruefe "ohne Fenster kein heimlicher Browser"      "! grep -qi 'im normalen Browser' '$H/starten.log'" "$H/starten.log"
 pruefe "Grund wird genannt"                        "grep -qi 'fenster' '$H/starten.log'" "$H/starten.log" "$H/.local/share/notizmappe/.fenster.log"
 pruefe "Menueintrag haengt an TryExec"             "grep -q 'TryExec=$Z3/notizmappe' '$H/.local/share/applications/notizmappe.desktop'"
 pruefe "Dienst-Unit nur bei vorhandenem Programm"  "grep -q ConditionPathExists '$WURZEL/tools/install.sh'"
-kill $startpid 2>/dev/null; wait $startpid 2>/dev/null
 # Und jetzt ausdruecklich als Server: dann muss er antworten.
 env NOTIZMAPPE_NUR_SERVER=1 PORT=8157 NOTIZEN_ORDNER="$H/Notizen" HOME="$H" \
-  timeout 25 "$Z3/notizmappe" > "$H/nurserver.log" 2>&1 &
+  timeout 60 "$Z3/notizmappe" > "$H/nurserver.log" 2>&1 &
 nurpid=$!
-for i in $(seq 25); do curl -sf -o /dev/null http://127.0.0.1:8157/ 2>/dev/null && break; sleep 1; done
+for i in $(seq 40); do curl -sf -o /dev/null http://127.0.0.1:8157/ 2>/dev/null && break; sleep 1; done
 pruefe "mit NOTIZMAPPE_NUR_SERVER laeuft der Server" "curl -sf http://127.0.0.1:8157/api/baum | grep -q notizbuecher" "$H/nurserver.log"
 kill $nurpid 2>/dev/null; wait $nurpid 2>/dev/null
 # Vollen Pfad nehmen: ein kurzes Muster traefe auch eine andere Shell, die
