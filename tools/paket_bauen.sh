@@ -24,6 +24,7 @@ mkdir -p "$PAKET"
 cp -r "$WURZEL/app" "$PAKET/app"
 find "$PAKET/app" -name '__pycache__' -prune -exec rm -rf {} + 2>/dev/null || true
 cp "$WURZEL/requirements.txt" "$WURZEL/README.md" "$PAKET/"
+cp "$WURZEL/icon.png" "$PAKET/icon.png"
 cp "$WURZEL/tools/install.sh" "$PAKET/install.sh"
 chmod +x "$PAKET/install.sh"
 

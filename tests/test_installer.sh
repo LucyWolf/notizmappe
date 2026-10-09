@@ -41,6 +41,8 @@ pruefe "Notizordner angelegt"               "[ -d '$H/Notizen' ]"
 pruefe "Menueintrag angelegt"               "[ -f '$H/.local/share/applications/notizmappe.desktop' ]"
 pruefe "Menueintrag startet das Programm"   "grep -q 'Exec=$Z/notizmappe' '$H/.local/share/applications/notizmappe.desktop'"
 pruefe "Version im Menueintrag"             "grep -q $VER '$H/.local/share/applications/notizmappe.desktop'"
+pruefe "Symbol mitinstalliert"              "[ -s '$H/.local/share/icons/hicolor/512x512/apps/notizmappe.png' ]"
+pruefe "Menueintrag zeigt aufs eigene Symbol" "grep -q '^Icon=notizmappe$' '$H/.local/share/applications/notizmappe.desktop'"
 pruefe "Nichts im echten Heim gelandet"     "[ ! -e \$HOME/.config/systemd/user/notizmappe.service ]"
 
 echo "--- Installierte Fassung starten und abfragen ---"
@@ -131,6 +133,7 @@ echo "--- Deinstallieren ---"
 lauf --deinstallieren | sed 's/^/      /'
 pruefe "Programmordner weg" "[ ! -d '$Z' ]"
 pruefe "Menueintrag weg"    "[ ! -f '$H/.local/share/applications/notizmappe.desktop' ]"
+pruefe "Symbol weg"         "[ ! -f '$H/.local/share/icons/hicolor/512x512/apps/notizmappe.png' ]"
 pruefe "NOTIZEN BLEIBEN"    "[ -d '$H/Notizen/Probe' ]"
 lauf --deinstallieren >/dev/null 2>&1
 pruefe "Zweites Deinstallieren meldet sauber Fehler" "[ $? -ne 0 ]"

@@ -86,7 +86,7 @@ jobs:
       # Laufzeit nach Namen, das sieht keine statische Analyse.
       - name: Buendeln
         run: >
-          pyinstaller --onefile --name Notizmappe
+          pyinstaller --onefile --name Notizmappe --icon icon.ico
           --paths app
           --add-data "app;app"
           --collect-all uvicorn --collect-all fastapi --collect-all starlette
