@@ -26,6 +26,17 @@ def basis() -> Path:
     return Path(gebuendelt) if gebuendelt else Path(__file__).resolve().parent.parent
 
 
+def startbild_weg() -> None:
+    """PyInstaller zeigt beim Entpacken ein Startbild. Es verschwindet erst, wenn
+    das Programm es wegnimmt - sonst steht es noch da, wenn das Fenster laengst
+    offen ist."""
+    try:
+        import pyi_splash          # gibt es nur im gebuendelten Programm
+        pyi_splash.close()
+    except Exception:
+        pass
+
+
 def main() -> int:
     ausgabe_absichern()
     ordner = basis() / "app"
@@ -37,8 +48,12 @@ def main() -> int:
     # Buendel ist das wieder diese exe - mit --nur-fenster soll sie dann nur das
     # Fenster zeigen, nicht noch einmal das ganze Programm starten.
     if "--nur-fenster" in sys.argv:
+        startbild_weg()
         fenster.fenster_zeigen(sys.argv[sys.argv.index("--nur-fenster") + 1])
         return 0
+    # Das Startbild bleibt stehen, bis der Server antwortet - dann kommt gleich das
+    # Fenster. Ohne das sieht man beim ersten Start sekundenlang gar nichts.
+    fenster.nach_dem_start = startbild_weg
     return fenster.oeffnen()
 
 

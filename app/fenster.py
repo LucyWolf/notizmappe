@@ -75,7 +75,13 @@ def server_starten(port: int) -> threading.Thread:
     return faden
 
 
-PROTOKOLL = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / "notizmappe/.fenster.log"
+def _datenort() -> Path:
+    if sys.platform == "win32":
+        return Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData/Local")) / "notizmappe"
+    return Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / "notizmappe"
+
+
+PROTOKOLL = _datenort() / "fenster.log"
 
 
 def notieren(zeile: str) -> None:
@@ -96,6 +102,15 @@ def meldung_zeigen(text: str) -> None:
     """Ohne Terminal und ohne Fenster bliebe sonst gar nichts uebrig - dann wenigstens
     ein Hinweisfenster der Arbeitsumgebung."""
     from shutil import which
+    if sys.platform == "win32":
+        # Ohne Konsole landet print() im Nichts - das Fenster von Windows selbst
+        # ist hier die einzige Moeglichkeit, ueberhaupt etwas zu sagen.
+        try:
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(None, text, TITEL, 0x10)
+            return
+        except Exception:
+            pass
     hat_anzeige = bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
     for werkzeug, befehl in (("kdialog", ["kdialog", "--title", TITEL, "--error", text]),
                              ("zenity", ["zenity", "--error", f"--title={TITEL}", f"--text={text}"])):
@@ -207,7 +222,7 @@ def weiteres_fenster(adresse: str) -> bool:
 
 
 def mit_pywebview(adresse: str) -> bool:
-    """Das Fenster laeuft in einem eigenen Prozess.
+    """Das Fenster laeuft in einem eigenen Prozess - ausser auf Windows.
 
     Nicht aus Ordnungsliebe: stirbt die Webansicht am Display, reisst sie den
     ganzen Prozess mit, ohne eine Ausnahme auszuloesen - ein try/except im selben
@@ -217,7 +232,24 @@ def mit_pywebview(adresse: str) -> bool:
     try:
         import webview  # noqa: F401  - nur nachsehen, ob es ueberhaupt da ist
     except ImportError:
+        mit_pywebview.grund = "pywebview fehlt"
+        notieren(mit_pywebview.grund)
         return False
+
+    if sys.platform == "win32":
+        # Auf Windows im selben Prozess. Der Grund fuer den Kindprozess ist, dass
+        # WebKitGTK bei einem Display-Fehler den ganzen Prozess mitreisst, ohne
+        # eine Ausnahme auszuloesen - das ist ein Linux-Problem. Hier wuerde der
+        # zweite Prozess dagegen das ganze Buendel ein zweites Mal auspacken
+        # (PyInstaller --onefile), und der Start dauert doppelt so lange.
+        try:
+            notieren("Fenster über die Webansicht von Windows (WebView2), selber Prozess.")
+            fenster_zeigen(adresse)
+            return True
+        except Exception as f:
+            mit_pywebview.grund = f"Die Webansicht von Windows hat nicht getragen: {f}"
+            notieren(mit_pywebview.grund)
+            return False
 
     begonnen = time.monotonic()
     try:
@@ -272,6 +304,11 @@ def mit_browserfenster(adresse: str, profil: Path) -> bool:
     return False
 
 
+# Wird vom Windows-Einstieg gesetzt, um das Startbild wegzunehmen, sobald der
+# Server steht. Sonst passiert hier nichts.
+nach_dem_start = lambda: None
+
+
 def oeffnen(port: int | None = None, eigener_server: bool = True) -> int:
     port = port or int(os.environ.get("PORT", "8099"))
     if laeuft_schon(port):
@@ -279,6 +316,11 @@ def oeffnen(port: int | None = None, eigener_server: bool = True) -> int:
     elif eigener_server:
         port = freier_port(port)
         server_starten(port)
+
+    try:
+        nach_dem_start()
+    except Exception:
+        pass
 
     adresse = f"http://127.0.0.1:{port}/"
     daten = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / "notizmappe"
@@ -308,9 +350,9 @@ def oeffnen(port: int | None = None, eigener_server: bool = True) -> int:
     meldung_zeigen(
         "Das Fenster ließ sich nicht öffnen.\n\n"
         + (mit_pywebview.grund or "Die Webansicht des Systems steht nicht zur Verfügung.")
-        + "\n\nWas fehlt, sagt:\n"
-        + f"    {Path(sys.argv[0]).resolve().parent}/notizmappe --pruefen\n\n"
-        + f"Protokoll: {PROTOKOLL}\n"
+        + f"\n\nProtokoll: {PROTOKOLL}\n"
+        + ("" if sys.platform == "win32" else
+           f"Was fehlt, sagt:\n    {Path(sys.argv[0]).resolve().parent}/notizmappe --pruefen\n")
         + "Notfalls im Browser: NOTIZMAPPE_BROWSERFENSTER=1 davor setzen."
     )
     return 1
