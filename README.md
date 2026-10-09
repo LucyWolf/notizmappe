@@ -320,9 +320,13 @@ Oberfläche — sieht ihn wieder.
 
 Steht **nicht** hier drin. Die Notizmappe ist ein Desktop-Programm: eigenes
 Fenster, hört nur auf `127.0.0.1`, keine Konten, keine Anmeldung. Wer die Notizen
-mit mehreren teilen will, nimmt die Server-Fassung — eigenes Projekt, eigener
-Docker-Container, eigene Versionen. Sie fasst diese hier nicht an und steckt auch
-nicht im Installationspaket mit drin.
+mit mehreren teilen will, nimmt die Server-Fassung:
+
+**https://github.com/LucyWolf/notizmappe-server**
+
+Eigenes Projekt, eigener Container, eigene Versionen. Sie fasst diese hier nicht an
+und steckt auch nicht im Installationspaket mit drin. Gemeinsam sind nur Herkunft
+und Dateiformat — ein Notizordner lässt sich zwischen beiden hin- und herkopieren.
 
 ## Noch nicht gebaut
 
