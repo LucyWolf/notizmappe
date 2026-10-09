@@ -149,6 +149,68 @@ jobs:
             anhaenge/linux/*
             anhaenge/windows/*
 
+  # Die fertige setup.exe einmal wirklich benutzen: installieren, starten, abfragen,
+  # deinstallieren. Der Vorlagen-Workflow prueft nur, dass die Installation
+  # durchlaeuft - ob danach etwas laeuft, sagt das nicht. Unter Linux war genau das
+  # der Unterschied zwischen "installiert" und "tut was".
+  windows_probe:
+    needs: doppelklick
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: windows-latest
+    steps:
+      - name: Setup aus dem Release holen
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          Invoke-WebRequest -UseBasicParsing -OutFile setup.exe `
+            "https://github.com/${{ github.repository }}/releases/download/$tag/notizmappe-setup.exe"
+          Write-Host "geladen: $((Get-Item setup.exe).Length) Bytes"
+
+      - name: Stumm installieren
+        shell: pwsh
+        run: |
+          $p = Start-Process .\setup.exe -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "Setup endete mit $($p.ExitCode)" }
+          $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter "Notizmappe.exe" | Select-Object -First 1
+          if (-not $exe) { throw "Notizmappe.exe nach der Installation nicht gefunden" }
+          Write-Host "installiert: $($exe.FullName)"
+          "EXE=$($exe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Installierte Fassung starten und abfragen
+        shell: pwsh
+        run: |
+          $env:PORT = "8113"
+          $env:NOTIZMAPPE_NUR_SERVER = "1"    # auf dem Runner gibt es keinen Desktop
+          $p = Start-Process -FilePath "$env:EXE" -PassThru -NoNewWindow `
+                 -RedirectStandardOutput out.txt -RedirectStandardError err.txt
+          $ok = $false
+          foreach ($i in 1..30) {
+            Start-Sleep -Seconds 2
+            if ($p.HasExited) { break }
+            try { if ((Invoke-WebRequest "http://127.0.0.1:8113/" -UseBasicParsing).StatusCode -eq 200) { $ok = $true; break } } catch {}
+          }
+          Write-Host "--- Ausgabe ---"; if (Test-Path out.txt) { Get-Content out.txt }
+          Write-Host "--- Fehler ---";  if (Test-Path err.txt) { Get-Content err.txt }
+          if (-not $ok) {
+            if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
+            throw "Die installierte Notizmappe antwortet nicht (beendet: $($p.HasExited))"
+          }
+          $v = (Invoke-WebRequest "http://127.0.0.1:8113/api/einstellungen" -UseBasicParsing).Content
+          Write-Host "Einstellungen: $v"
+          if ($v -notmatch "${{ github.ref_name }}".TrimStart("v")) { throw "Falsche Version in der Installation" }
+          Stop-Process -Id $p.Id -Force
+          Write-Host "Installierte Fassung läuft."
+
+      - name: Wieder deinstallieren
+        if: always()
+        shell: pwsh
+        run: |
+          $u = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter "unins000.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($u) {
+            $r = Start-Process $u.FullName -ArgumentList "/VERYSILENT" -PassThru -Wait
+            Write-Host "deinstalliert, Rückgabe $($r.ExitCode)"
+          }
+
   # Macht aus installer.conf die drei Linux-Doppelklick-Dateien und setup.exe und
   # haengt sie an dasselbe Release.
   doppelklick:
