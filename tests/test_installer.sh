@@ -16,7 +16,21 @@ H=$(mktemp -d /tmp/notizmappe-probe-XXXX)
 PORT=8155
 fehler=0
 
-pruefe() { if eval "$2" >/dev/null 2>&1; then echo "  ok    $1"; else echo "FEHLER  $1"; fehler=$((fehler+1)); fi; }
+# Bei einem Fehlschlag die genannten Dateien zeigen - sonst steht im Buildlauf nur
+# "FEHLER" und man raet, was das Programm eigentlich gesagt hat.
+pruefe() {
+  if eval "$2" >/dev/null 2>&1; then
+    echo "  ok    $1"
+  else
+    echo "FEHLER  $1"
+    fehler=$((fehler+1))
+    for datei in "${@:3}"; do
+      [ -s "$datei" ] || continue
+      echo "        --- $(basename "$datei") ---"
+      sed 's/^/        /' "$datei" | tail -15
+    done
+  fi
+}
 lauf() { env -u XDG_RUNTIME_DIR -u DBUS_SESSION_BUS_ADDRESS \
            HOME="$H" PATH="$PATH" NOTIZMAPPE_ZIEL="$H/.local/share/notizmappe" \
            NOTIZEN_ORDNER="$H/Notizen" PORT="$PORT" bash "$PAKET" "$@" < /dev/null; }
@@ -94,8 +108,8 @@ env -u XDG_RUNTIME_DIR -u DBUS_SESSION_BUS_ADDRESS -u DISPLAY -u WAYLAND_DISPLAY
 startpid=$!
 for i in $(seq 90); do curl -sf -o /dev/null http://127.0.0.1:8157/ 2>/dev/null && break; sleep 1; done
 pruefe "--starten richtet ein, wenn nichts da ist" "[ -f '$Z3/app/main.py' ]"
-pruefe "ohne Fenster kein heimlicher Browser"      "! grep -qi 'im normalen Browser' '$H/starten.log'"
-pruefe "Grund wird genannt"                        "grep -qi 'fenster' '$H/starten.log'"
+pruefe "ohne Fenster kein heimlicher Browser"      "! grep -qi 'im normalen Browser' '$H/starten.log'" "$H/starten.log"
+pruefe "Grund wird genannt"                        "grep -qi 'fenster' '$H/starten.log'" "$H/starten.log" "$H/.local/share/notizmappe/.fenster.log"
 pruefe "Menueintrag haengt an TryExec"             "grep -q 'TryExec=$Z3/notizmappe' '$H/.local/share/applications/notizmappe.desktop'"
 pruefe "Dienst-Unit nur bei vorhandenem Programm"  "grep -q ConditionPathExists '$WURZEL/tools/install.sh'"
 kill $startpid 2>/dev/null; wait $startpid 2>/dev/null
@@ -104,7 +118,7 @@ env NOTIZMAPPE_NUR_SERVER=1 PORT=8157 NOTIZEN_ORDNER="$H/Notizen" HOME="$H" \
   timeout 25 "$Z3/notizmappe" > "$H/nurserver.log" 2>&1 &
 nurpid=$!
 for i in $(seq 25); do curl -sf -o /dev/null http://127.0.0.1:8157/ 2>/dev/null && break; sleep 1; done
-pruefe "mit NOTIZMAPPE_NUR_SERVER laeuft der Server" "curl -sf http://127.0.0.1:8157/api/baum | grep -q notizbuecher"
+pruefe "mit NOTIZMAPPE_NUR_SERVER laeuft der Server" "curl -sf http://127.0.0.1:8157/api/baum | grep -q notizbuecher" "$H/nurserver.log"
 kill $nurpid 2>/dev/null; wait $nurpid 2>/dev/null
 # Vollen Pfad nehmen: ein kurzes Muster traefe auch eine andere Shell, die
 # diesen Text zufaellig in ihrer Kommandozeile stehen hat.
