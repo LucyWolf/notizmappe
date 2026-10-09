@@ -119,14 +119,21 @@ pruefe "Dienst-Unit nur bei vorhandenem Programm"  "grep -q ConditionPathExists 
 env NOTIZMAPPE_NUR_SERVER=1 PORT=8157 NOTIZEN_ORDNER="$H/Notizen" HOME="$H" \
   timeout 60 "$Z3/notizmappe" > "$H/nurserver.log" 2>&1 &
 nurpid=$!
-for i in $(seq 40); do curl -sf -o /dev/null http://127.0.0.1:8157/ 2>/dev/null && break; sleep 1; done
-pruefe "mit NOTIZMAPPE_NUR_SERVER laeuft der Server" "curl -sf http://127.0.0.1:8157/api/baum | grep -q notizbuecher" "$H/nurserver.log"
+# Den Port aus der Ausgabe lesen, nicht raten: ist der gewuenschte belegt, nimmt
+# das Programm den naechsten freien - genau dafuer ist das gebaut.
+echtport=""
+for i in $(seq 40); do
+  echtport=$(sed -n 's|.*http://127.0.0.1:\([0-9]*\)/.*|\1|p' "$H/nurserver.log" 2>/dev/null | head -1)
+  [ -n "$echtport" ] && curl -sf -o /dev/null "http://127.0.0.1:$echtport/" 2>/dev/null && break
+  sleep 1
+done
+pruefe "mit NOTIZMAPPE_NUR_SERVER laeuft der Server" "curl -sf 'http://127.0.0.1:${echtport:-0}/api/baum' | grep -q notizbuecher" "$H/nurserver.log"
 kill $nurpid 2>/dev/null; wait $nurpid 2>/dev/null
 # Vollen Pfad nehmen: ein kurzes Muster traefe auch eine andere Shell, die
 # diesen Text zufaellig in ihrer Kommandozeile stehen hat.
 pkill -f "$Z3/.venv/bin/python" 2>/dev/null
 sleep 2
-pruefe "Server ist mit dem Programm gegangen" "! curl -sf -o /dev/null --max-time 2 http://127.0.0.1:8157/"
+pruefe "Server ist mit dem Programm gegangen" "! curl -sf -o /dev/null --max-time 2 'http://127.0.0.1:${echtport:-8157}/'"
 
 echo "--- --mit-dienst legt zusaetzlich den Hintergrunddienst an ---"
 Z4=$H/viertes
