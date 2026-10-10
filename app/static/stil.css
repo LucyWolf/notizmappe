@@ -342,3 +342,31 @@ body.anmeldeseite {
 @media (prefers-color-scheme: dark) {
   .kasten .text mark { background: #b59000; color: #fff; }
 }
+
+/* --- Update laeuft --- */
+#updatefenster {
+  position: fixed; inset: 0; z-index: 40; display: flex;
+  align-items: center; justify-content: center;
+  background: color-mix(in srgb, #000 55%, transparent);
+}
+#updatefenster .tafel {
+  width: min(420px, 90%); background: var(--papier); color: var(--schrift);
+  border: 1px solid var(--linie); border-radius: 10px; padding: 18px 20px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .4);
+}
+#updatefenster h3 { margin: 0 0 10px; font-size: 16px; }
+#updatefenster p { margin: 6px 0; }
+#updatefenster .balken {
+  height: 4px; background: var(--linie); border-radius: 2px; overflow: hidden; margin: 14px 0 6px;
+}
+#updatefenster .balken i {
+  display: block; height: 100%; width: 35%; background: var(--akzent); border-radius: 2px;
+  animation: schieben 1.2s ease-in-out infinite;
+}
+#updatefenster .balken.fertig i { width: 100%; animation: none; }
+@keyframes schieben { 0% { margin-left: -35%; } 100% { margin-left: 100%; } }
+#updatefenster .knoepfe { display: flex; justify-content: flex-end; }
+#updatefenster button {
+  border: 1px solid var(--linie); background: var(--leiste); color: var(--schrift);
+  border-radius: 6px; padding: 5px 12px; cursor: pointer;
+}

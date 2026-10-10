@@ -276,7 +276,10 @@ def einspielen() -> dict:
             stapel.write_text(
                 "@echo off\r\n"
                 f'echo Setup laeuft: {ziel}>"{mitschrift}"\r\n'
-                f'"{ziel}" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART '
+                # /SILENT statt /VERYSILENT: ein Fortschrittsfenster gehoert zu
+                # einem normalen Update dazu. Ohne eines verschwindet das Programm
+                # kommentarlos und kommt irgendwann wieder - das sieht kaputt aus.
+                f'"{ziel}" /SILENT /SUPPRESSMSGBOXES /NORESTART '
                 f'/LOG="{mitschrift.with_name("update-setup.log")}" >>"{mitschrift}" 2>&1\r\n'
                 f'echo Rueckgabe %ERRORLEVEL%>>"{mitschrift}"\r\n'
                 "ping -n 4 127.0.0.1 >nul\r\n"

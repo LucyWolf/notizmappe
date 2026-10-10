@@ -790,15 +790,22 @@ for (const [farbe, name] of FARBEN) {
   $('#farben').append(k);
 }
 
-function minileisteZeigen() {
+/* Welcher Textkasten ist gerade markiert? Geradeaus und ohne Verschachtelung -
+ * jeder Sonderfall hier kostet die ganze Leiste. */
+function kastenVonAuswahl() {
   const sel = window.getSelection();
-  if (!sel || sel.isCollapsed || !sel.rangeCount) { minileiste.hidden = true; return; }
-  const knoten = sel.anchorNode;
-  const kasten = (knoten && (knoten.nodeType === 1 ? knoten : knoten.parentElement) || {}).closest
-    ? (knoten.nodeType === 1 ? knoten : knoten.parentElement).closest('.kasten .text')
-    : null;
+  if (!sel || !sel.rangeCount || sel.isCollapsed) return null;
+  let knoten = sel.getRangeAt(0).commonAncestorContainer;
+  if (knoten && knoten.nodeType !== 1) knoten = knoten.parentElement;
+  if (!knoten || !knoten.closest) return null;
+  return knoten.closest('.kasten');
+}
+
+function minileisteZeigen() {
+  const kasten = kastenVonAuswahl();
   if (!kasten) { minileiste.hidden = true; return; }
-  letzterKasten = kasten.closest('.kasten');
+  const sel = window.getSelection();
+  letzterKasten = kasten;
 
   const r = sel.getRangeAt(0).getBoundingClientRect();
   minileiste.hidden = false;
@@ -843,7 +850,16 @@ document.addEventListener('mousedown', (ev) => {
   minileiste.hidden = true;
 });
 document.addEventListener('mouseup', () => { ziehtMarkierung = false; setTimeout(minileisteZeigen, 0); });
-document.addEventListener('keyup', (ev) => { if (ev.shiftKey || ev.key === 'Escape') minileisteZeigen(); });
+document.addEventListener('touchend', () => { ziehtMarkierung = false; setTimeout(minileisteZeigen, 30); });
+document.addEventListener('dblclick', () => setTimeout(minileisteZeigen, 0));
+document.addEventListener('keyup', (ev) => {
+  // Mit Umschalt markieren, Strg+A, und nach Escape wieder weg.
+  if (ev.shiftKey || ev.key === 'Shift' || (ev.ctrlKey && ev.key.toLowerCase() === 'a')) {
+    setTimeout(minileisteZeigen, 0);
+  } else if (ev.key === 'Escape') {
+    minileiste.hidden = true;
+  }
+});
 
 /* Ein Klick in die Leiste darf die Markierung nicht kosten. Bei Knöpfen genügt
  * preventDefault; ein Auswahlfeld muss den Fokus bekommen, sonst klappt es nicht
@@ -1056,7 +1072,7 @@ async function versionPruefen(frisch = false) {
     if (!v.neuer || !v.aktualisierbar) { updateKnopf.hidden = true; return v; }
     updateKnopf.hidden = false;
     updateKnopf.disabled = false;
-    updateKnopf.textContent = `Version ${v.verfuegbar} laden`;
+    updateKnopf.textContent = `Update auf ${v.verfuegbar}`;
     updateKnopf.title = `Installiert ist ${v.installiert}.` + (v.notizen ? '\n\n' + v.notizen.slice(0, 500) : '');
     return v;
   } catch (f) { updateKnopf.hidden = true; }
@@ -1064,23 +1080,44 @@ async function versionPruefen(frisch = false) {
 
 updateKnopf.addEventListener('click', async () => {
   const v = await api('/api/version');
-  if (!confirm(`Version ${v.verfuegbar} einspielen? Installiert ist ${v.installiert}.\n\n`
-    + 'Die Notizen bleiben unberührt. Der Dienst startet dabei neu, die Seite ist kurz weg.')) return;
+  if (!confirm(`Auf Version ${v.verfuegbar} aktualisieren? Installiert ist ${v.installiert}.\n\n`
+    + 'Die Notizen bleiben unberührt. Die Notizmappe startet dabei einmal neu.')) return;
   updateKnopf.disabled = true;
-  updateKnopf.textContent = 'lädt …';
   if (schmutzig) await speichernJetzt();
+  updateFensterZeigen('Update wird geladen …',
+                      `Version ${v.verfuegbar} wird von GitHub geholt und geprüft.`);
   try {
     const r = await api('/api/update', 'POST');
-    melden(`Update ${r.von} → ${r.nach} läuft. Die Seite lädt sich neu, sobald der Dienst wieder da ist.`);
+    updateFensterZeigen('Update wird installiert …',
+                        `${r.von} → ${r.nach}. Die Notizmappe startet gleich neu.`);
     updateVerfolgen(r.nach);
   } catch (f) {
+    updateFensterFehler('Das Update ging nicht: ' + f.message);
     updateKnopf.disabled = false;
-    updateKnopf.textContent = 'Update fehlgeschlagen';
-    melden('Update ging nicht: ' + f.message, [['Nochmal versuchen', () => versionPruefen(true)]]);
   }
 });
 
-/* Waehrend des Updates startet der Dienst neu - die Abfragen laufen also eine
+const updatefenster = $('#updatefenster');
+
+function updateFensterZeigen(titel, text) {
+  $('#u-titel').textContent = titel;
+  $('#u-schritt').textContent = text;
+  $('#u-hinweis').textContent = '';
+  $('#u-zu').hidden = true;
+  updatefenster.querySelector('.balken').classList.remove('fertig');
+  updatefenster.hidden = false;
+}
+
+function updateFensterFehler(text) {
+  $('#u-titel').textContent = 'Update fehlgeschlagen';
+  $('#u-schritt').textContent = text;
+  $('#u-hinweis').textContent = 'Die alte Fassung läuft unverändert weiter.';
+  updatefenster.querySelector('.balken').classList.add('fertig');
+  $('#u-zu').hidden = false;
+}
+$('#u-zu').addEventListener('click', () => { updatefenster.hidden = true; });
+
+/* Waehrend des Updates startet das Programm neu - die Abfragen laufen also eine
  * Weile ins Leere. Das ist kein Fehler, sondern genau der Moment. */
 function updateVerfolgen(ziel) {
   let versuche = 0;
@@ -1090,19 +1127,22 @@ function updateVerfolgen(ziel) {
       const v = await api('/api/version');
       if (v.installiert === ziel) {
         clearInterval(uhr);
-        melden(`Version ${ziel} ist da. Seite wird neu geladen …`);
+        updateFensterZeigen('Fertig', `Version ${ziel} ist installiert.`);
+        updatefenster.querySelector('.balken').classList.add('fertig');
         setTimeout(() => location.reload(), 1200);
         return;
       }
       const p = await api('/api/update/stand');
       if (p.fehler) {
         clearInterval(uhr);
-        melden('Das Update ist auf einen Fehler gelaufen:', [['Protokoll zeigen', () => alert(p.text)]]);
+        updateFensterFehler('Beim Installieren ist etwas schiefgegangen.');
+        $('#u-hinweis').textContent = p.text.slice(-400);
       }
     } catch (f) { /* Dienst gerade weg - weiter warten */ }
     if (versuche > 60) {   // 3 Minuten
       clearInterval(uhr);
-      melden('Das Update dauert ungewöhnlich lange. Protokoll: ~/.local/share/notizmappe/.update.log');
+      updateFensterFehler('Das dauert ungewöhnlich lange.');
+      $('#u-hinweis').textContent = 'Falls nichts mehr passiert: die Notizmappe von Hand neu starten.';
     }
   }, 3000);
 }
@@ -1119,13 +1159,13 @@ async function updateBeimStart() {
   if (!v || !v.neuer || !v.aktualisierbar) return;
   if (!o.automatisch_einspielen || !e.hier) return;
 
-  melden(`Version ${v.verfuegbar} wird eingespielt …`);
+  updateFensterZeigen('Update wird geladen …', `Version ${v.verfuegbar} wird geholt.`);
   try {
     const r = await api('/api/update', 'POST');
     updateVerfolgen(r.nach);
   } catch (f) {
-    melden('Das Update beim Start ging nicht: ' + f.message
-      + ' — über das Zahnrad kann man es von Hand versuchen.');
+    updateFensterFehler('Das Update beim Start ging nicht: ' + f.message);
+    $('#u-hinweis').textContent = 'Über das Zahnrad lässt es sich von Hand versuchen.';
   }
 }
 
@@ -1207,8 +1247,8 @@ function updateAnzeigen(v) {
   if (v.notizen) $('#e-notizen').textContent = v.notizen;
   $('#e-einspielen').hidden = !(v.neuer && v.aktualisierbar);
   $('#e-updatehinweis').textContent = v.fehler ? v.fehler
-    : v.neuer ? (v.aktualisierbar ? `Version ${v.verfuegbar} kann eingespielt werden.`
-                                  : 'Neuere Fassung da, aber hier nicht einspielbar.')
+    : v.neuer ? (v.aktualisierbar ? `Version ${v.verfuegbar} steht bereit.`
+                                  : 'Neuere Fassung da, aber hier nicht installierbar.')
     : 'Das ist die neueste Fassung.';
 }
 
