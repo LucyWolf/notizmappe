@@ -68,10 +68,7 @@ def server_starten(port: int) -> threading.Thread:
     server = uvicorn.Server(config)
     faden = threading.Thread(target=server.run, daemon=True)
     faden.start()
-    for _ in range(100):               # bis zu 10 Sekunden auf "antwortet" warten
-        if laeuft_schon(port):
-            return faden
-        time.sleep(0.1)
+    notieren(f"Server gestartet auf Port {port} (Importe sind damit durch).")
     return faden
 
 
@@ -82,6 +79,11 @@ def _datenort() -> Path:
 
 
 PROTOKOLL = _datenort() / "fenster.log"
+BEGONNEN = time.monotonic()
+
+
+def seit_start() -> str:
+    return f"[{time.monotonic() - BEGONNEN:5.1f}s]"
 
 
 def notieren(zeile: str) -> None:
@@ -89,6 +91,7 @@ def notieren(zeile: str) -> None:
     Terminal - ohne Datei weiss hinterher niemand, welcher Weg genommen wurde und
     warum er nicht trug."""
     stempel = time.strftime("%d.%m.%Y %H:%M:%S")
+    zeile = f"{seit_start()} {zeile}"
     print(zeile, file=sys.stderr, flush=True)
     try:
         PROTOKOLL.parent.mkdir(parents=True, exist_ok=True)
@@ -219,12 +222,42 @@ def eltern_wache(webview) -> None:
     threading.Thread(target=wachen, daemon=True).start()
 
 
+WARTESEITE = """<!doctype html><html lang="de"><head><meta charset="utf-8">
+<style>
+ html,body{height:100%;margin:0;display:flex;align-items:center;justify-content:center;
+   background:#fffefb;color:#78736a;font:15px system-ui,sans-serif}
+ @media (prefers-color-scheme:dark){html,body{background:#1b1a18;color:#938d83}}
+ .p{width:180px;height:3px;background:#e3e0d8;border-radius:2px;overflow:hidden}
+ @media (prefers-color-scheme:dark){.p{background:#332f2a}}
+ .p i{display:block;height:100%;width:40%;background:#7a5cff;border-radius:2px;
+   animation:l 1.1s ease-in-out infinite}
+ @keyframes l{0%{margin-left:-40%}100%{margin-left:100%}}
+ div{text-align:center}
+</style></head><body><div>
+ <p>Notizmappe wird geöffnet …</p><div class="p"><i></i></div>
+</div></body></html>"""
+
+
 def fenster_zeigen(adresse: str) -> None:
     """Laeuft im Kindprozess - siehe mit_pywebview()."""
     webkit_zurechtruecken()
     import webview
     eltern_wache(webview)
-    webview.create_window(TITEL, adresse, width=1280, height=840, min_size=(640, 480))
+    # Erst eine Warteseite, dann die Oberflaeche. Sonst steht das Fenster so lange
+    # aus, bis der Server antwortet - und in der Zeit sieht man gar nichts und
+    # haelt das Programm fuer kaputt.
+    fenster = webview.create_window(TITEL, html=WARTESEITE,
+                                    width=1280, height=840, min_size=(640, 480))
+
+    def wenn_bereit():
+        port = int(adresse.rstrip("/").rsplit(":", 1)[-1])
+        for _ in range(600):           # bis zu einer Minute
+            if laeuft_schon(port):
+                notieren("Oberfläche geladen.")
+                fenster.load_url(adresse)
+                return
+            time.sleep(0.1)
+        notieren("Der Server ist nicht hochgekommen - das Fenster bleibt bei der Warteseite.")
     # private_mode=False: im Privatmodus stellt WebKitGTK gar kein localStorage
     # bereit - die Variable fehlt dann komplett. Die Oberflaeche kommt inzwischen
     # auch ohne aus, aber so bleiben Zoom, aufgeklappte Abschnitte und die zuletzt
@@ -242,10 +275,10 @@ def fenster_zeigen(adresse: str) -> None:
         if symbol.is_file():
             zusatz["icon"] = str(symbol)
     try:
-        webview.start(private_mode=False, storage_path=str(speicher), **zusatz)
+        webview.start(wenn_bereit, private_mode=False, storage_path=str(speicher), **zusatz)
     except TypeError:
         # Aeltere pywebview-Fassungen kennen den Parameter nicht.
-        webview.start(private_mode=False, storage_path=str(speicher))
+        webview.start(wenn_bereit, private_mode=False, storage_path=str(speicher))
 
 
 def fenster_befehl(adresse: str) -> list[str]:
@@ -391,11 +424,6 @@ def mit_browserfenster(adresse: str, profil: Path) -> bool:
     return False
 
 
-# Wird vom Windows-Einstieg gesetzt, um das Startbild wegzunehmen, sobald der
-# Server steht. Sonst passiert hier nichts.
-nach_dem_start = lambda: None
-
-
 def oeffnen(port: int | None = None, eigener_server: bool = True) -> int:
     port = port or int(os.environ.get("PORT", "8099"))
     if laeuft_schon(port):
@@ -403,11 +431,6 @@ def oeffnen(port: int | None = None, eigener_server: bool = True) -> int:
     elif eigener_server:
         port = freier_port(port)
         server_starten(port)
-
-    try:
-        nach_dem_start()
-    except Exception:
-        pass
 
     adresse = f"http://127.0.0.1:{port}/"
     daten = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / "notizmappe"
