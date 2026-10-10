@@ -14,13 +14,26 @@ from html.parser import HTMLParser
 ERLAUBT = {
     "p", "br", "div", "span", "b", "strong", "i", "em", "u", "s", "strike",
     "ul", "ol", "li", "h1", "h2", "h3", "h4", "blockquote", "code", "pre", "a",
+    "font",
     "img",
 }
 LEER = {"br", "img"}
 # Nur das, was der Editor selbst setzt. Kein style, kein class, kein on*.
 # Bilder im Text zeigen nur auf einen eigenen Anhang (data-datei), nie per src
 # irgendwohin - die Adresse setzt die Oberflaeche beim Anzeigen.
-ATTRIBUTE = {"a": {"href"}, "img": {"data-datei", "alt"}}
+ATTRIBUTE = {"a": {"href"}, "img": {"data-datei", "alt"}, "font": {"size", "face"}}
+
+# <font> ist aus der Mode, aber genau das, was der Editor fuer Groesse und Art
+# erzeugt - und es traegt nur zwei feste Werte statt beliebigem CSS. Ein style-
+# Attribut waere bequemer und zugleich ein Einfallstor: damit liesse sich ein
+# Element ueber die ganze Seite legen und alles darunter abfangen.
+#
+# Nur was im Auswahlfeld steht; andere Angaben fliegen raus, damit niemand ueber
+# den Namen einer Schrift etwas anderes hineinschreibt.
+SCHRIFTEN = {
+    "system-ui", "Georgia, serif", "ui-monospace, monospace",
+    "Segoe Script, Comic Sans MS, cursive",
+}
 SCHEMA_OK = ("http://", "https://", "mailto:", "notiz:")
 
 
@@ -44,6 +57,10 @@ class _Reiniger(HTMLParser):
             if name == "href" and not wert.lower().startswith(SCHEMA_OK):
                 continue
             if name == "data-datei" and not anhangname_ok(wert):
+                continue
+            if name == "size" and wert not in {"1", "2", "3", "4", "5", "6", "7"}:
+                continue
+            if name == "face" and wert not in SCHRIFTEN:
                 continue
             gut.append(f' {name}="{escape(wert, quote=True)}"')
         if tag == "img" and not any(g.startswith(" data-datei=") for g in gut):

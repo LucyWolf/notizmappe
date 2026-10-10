@@ -56,6 +56,21 @@ window.addEventListener('unhandledrejection', function (ev) {
         <button type="button" data-befehl="italic" title="Kursiv (Strg+I)"><i>I</i></button>
         <button type="button" data-befehl="underline" title="Unterstrichen (Strg+U)"><u>U</u></button>
         <button type="button" data-befehl="insertUnorderedList" title="Liste">•</button>
+        <select id="schriftart" title="Schriftart">
+          <option value="system-ui">Standard</option>
+          <option value="Georgia, serif">Serife</option>
+          <option value="ui-monospace, monospace">Feste Breite</option>
+          <option value="Segoe Script, Comic Sans MS, cursive">Handschrift</option>
+        </select>
+        <select id="schriftgroesse" title="Schriftgröße">
+          <option value="1">sehr klein</option>
+          <option value="2">klein</option>
+          <option value="3" selected>normal</option>
+          <option value="4">groß</option>
+          <option value="5">größer</option>
+          <option value="6">sehr groß</option>
+          <option value="7">riesig</option>
+        </select>
         <span class="trenner"></span>
         <button type="button" id="anhang" title="Bild oder Datei einfügen (geht auch per Ziehen und Strg+V)">📎</button>
         <input type="file" id="dateiwahl" multiple hidden>
@@ -75,6 +90,13 @@ window.addEventListener('unhandledrejection', function (ev) {
       <p id="leerhinweis">Doppelklick irgendwohin, um zu schreiben.</p>
     </div>
   </main>
+
+  <div id="rechtsmenue" hidden>
+    <button type="button" data-tun="ausschneiden">Ausschneiden</button>
+    <button type="button" data-tun="kopieren">Kopieren</button>
+    <button type="button" data-tun="einfuegen">Einfügen</button>
+    <button type="button" data-tun="alles">Alles markieren</button>
+  </div>
 
   <div id="einstellungen" hidden>
     <div class="tafel" role="dialog" aria-label="Einstellungen">

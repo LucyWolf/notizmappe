@@ -735,6 +735,104 @@ for (const b of document.querySelectorAll('#werkzeuge [data-befehl]')) {
   });
 }
 
+/* --- Schriftart und -groesse ------------------------------------------------
+ *
+ * execCommand ist aus der Mode, macht hier aber genau das Richtige: es setzt die
+ * Auszeichnung auf die Auswahl und laesst den Rest in Ruhe. styleWithCSS=false
+ * sorgt dafuer, dass dabei <font size> und <font face> entsteht statt beliebigem
+ * CSS - nur diese beiden Angaben laesst der Server durch. */
+function aufAuswahl(befehl, wert) {
+  const k = document.activeElement && document.activeElement.closest('.kasten');
+  if (!k) { sagen('Erst in einen Kasten klicken', 2000); return; }
+  try { document.execCommand('styleWithCSS', false, false); } catch (f) { /* egal */ }
+  document.execCommand(befehl, false, wert);
+  const e = elemente.find((x) => x.id === k.dataset.id);
+  if (e) { e.html = k.querySelector('.text').innerHTML; angefasst(); }
+}
+
+// mousedown abfangen: ein Klick ins Auswahlfeld wuerde sonst erst den Textkasten
+// verlassen, und dann gibt es keine Auswahl mehr, auf die man etwas anwenden kann.
+for (const [feld, befehl] of [['#schriftart', 'fontName'], ['#schriftgroesse', 'fontSize']]) {
+  const w = $(feld);
+  let merker = null;
+  w.addEventListener('mousedown', () => {
+    const k = document.activeElement && document.activeElement.closest('.kasten');
+    merker = k ? k.dataset.id : null;
+  });
+  w.addEventListener('change', () => {
+    if (merker) {
+      const kasten = flaeche.querySelector(`.kasten[data-id="${merker}"] .text`);
+      if (kasten) kasten.focus();
+    }
+    aufAuswahl(befehl, w.value);
+  });
+}
+
+/* --- Menü bei der rechten Maustaste ----------------------------------------
+ *
+ * Die Webansicht im Fenster bringt keins mit. Ohne das kommt man an Kopieren und
+ * Einfuegen nur ueber die Tastatur - und wer das nicht weiss, kann seinen eigenen
+ * Text nicht herausbekommen. */
+const rechtsmenue = $('#rechtsmenue');
+
+function menueZu() { rechtsmenue.hidden = true; }
+
+document.addEventListener('contextmenu', (ev) => {
+  if (ev.target.closest('#einstellungen')) return;
+  ev.preventDefault();
+  const imText = !!ev.target.closest('[contenteditable]');
+  const etwasMarkiert = !window.getSelection().isCollapsed;
+  rechtsmenue.querySelector('[data-tun="ausschneiden"]').disabled = !(imText && etwasMarkiert);
+  rechtsmenue.querySelector('[data-tun="kopieren"]').disabled = !etwasMarkiert;
+  rechtsmenue.querySelector('[data-tun="einfuegen"]').disabled = !imText;
+  rechtsmenue.querySelector('[data-tun="alles"]').disabled = !imText;
+  rechtsmenue.hidden = false;
+  // Ins Bild rücken, falls am Rand geklickt wurde
+  const b = rechtsmenue.getBoundingClientRect();
+  rechtsmenue.style.left = Math.min(ev.clientX, window.innerWidth - b.width - 8) + 'px';
+  rechtsmenue.style.top = Math.min(ev.clientY, window.innerHeight - b.height - 8) + 'px';
+});
+document.addEventListener('mousedown', (ev) => { if (!ev.target.closest('#rechtsmenue')) menueZu(); });
+document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') menueZu(); });
+
+rechtsmenue.addEventListener('click', async (ev) => {
+  const knopf = ev.target.closest('button');
+  if (!knopf) return;
+  const tun = knopf.dataset.tun;
+  menueZu();
+  const kasten = document.activeElement && document.activeElement.closest('.kasten');
+  try {
+    if (tun === 'kopieren' || tun === 'ausschneiden') {
+      // Erst die Zwischenablage des Systems, sonst der alte Weg - je nach
+      // Webansicht ist mal das eine, mal das andere erlaubt.
+      const text = window.getSelection().toString();
+      try { await navigator.clipboard.writeText(text); }
+      catch (f) { document.execCommand('copy'); }
+      if (tun === 'ausschneiden') document.execCommand('delete');
+    } else if (tun === 'einfuegen') {
+      let text = '';
+      try { text = await navigator.clipboard.readText(); }
+      catch (f) { sagen('Einfügen geht hier nur mit Strg+V', 3000); return; }
+      document.execCommand('insertText', false, text);
+    } else if (tun === 'alles') {
+      const feld = kasten ? kasten.querySelector('.text') : null;
+      if (feld) {
+        const r = document.createRange();
+        r.selectNodeContents(feld);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(r);
+      }
+    }
+  } catch (f) {
+    melden('Ging nicht: ' + f.message);
+  }
+  if (kasten) {
+    const e = elemente.find((x) => x.id === kasten.dataset.id);
+    if (e) { e.html = kasten.querySelector('.text').innerHTML; angefasst(); }
+  }
+});
+
 function zoomen(d) { zoomSetzen(zoom + d); }
 function zoomSetzen(z) {
   zoom = Math.min(2.5, Math.max(0.4, Math.round(z * 10) / 10));
