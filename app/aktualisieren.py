@@ -27,7 +27,21 @@ ORDNER = HIER.parent                      # Installationsordner (oder Quellordne
 QUELLE = os.environ.get("NOTIZMAPPE_QUELLE", "https://api.github.com/repos/LucyWolf/notizmappe")
 FRIST = 3600                              # Sekunden, die eine Antwort gilt
 NOTIZ = ORDNER / ".update-stand.json"     # letzte Antwort, damit nicht jeder Aufruf fragt
-PROTOKOLL = ORDNER / ".update.log"
+def _eigener_ort() -> Path:
+    """Wo Protokoll und Einstellungen liegen.
+
+    Nicht im Programmordner: auf Windows ist das der Ordner, den ein Update
+    austauscht - die Einstellungen waeren nach jedem Update weg, und das
+    Protokoll des Updates loescht sich selbst mittendrin.
+    """
+    if sys.platform == "win32":
+        ort = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData/Local")) / "notizmappe"
+        ort.mkdir(parents=True, exist_ok=True)
+        return ort
+    return ORDNER
+
+
+PROTOKOLL = _eigener_ort() / ("update.log" if sys.platform == "win32" else ".update.log")
 MAX_PAKET = 60 * 1024 * 1024              # Was groesser ist, ist nicht unser Installer
 
 
@@ -65,7 +79,8 @@ def _windows_setup(r: dict) -> tuple[str | None, str | None]:
 # --- Einstellungen zum Update ------------------------------------------------
 
 # NOTIZMAPPE_OPTIONEN: fuer die Tests, damit sie nicht die echten Optionen lesen.
-OPTIONEN = Path(os.environ.get("NOTIZMAPPE_OPTIONEN") or ORDNER / ".optionen.json")
+OPTIONEN = Path(os.environ.get("NOTIZMAPPE_OPTIONEN")
+                or _eigener_ort() / ("optionen.json" if sys.platform == "win32" else ".optionen.json"))
 STANDARD = {"beim_start_pruefen": True, "automatisch_einspielen": False}
 
 
@@ -243,16 +258,22 @@ def einspielen() -> dict:
             # danach wieder. Wir haengen uns ab, damit es nicht auf uns wartet -
             # und beenden uns gleich darauf, sonst sieht der Anwender ein Fenster,
             # das waehrend der Installation weggeraeumt wird.
-            # Das Setup laeuft still und startet danach nichts von selbst (sonst
-            # wuerde es auch in Buildlaeufen Fenster aufmachen). Also haengen wir
-            # einen Nachlauf an, der wartet und dann die frisch installierte
-            # Fassung startet - wir selbst sind zu dem Zeitpunkt laengst beendet,
-            # das Setup raeumt uns weg.
-            wieder = sys.executable
-            befehl = (f'"{ziel}" /SILENT /NORESTART & '
-                      f'ping -n 6 127.0.0.1 >nul & '
-                      f'start "" "{wieder}"')
-            subprocess.Popen(["cmd", "/c", befehl],
+            # Als Stapeldatei, nicht als Befehlszeile: cmd zerlegt eine Zeile mit
+            # mehreren Anfuehrungszeichen nach eigenen Regeln und verschluckt
+            # dabei Teile des Pfades. In einer Datei steht jeder Befehl fuer sich.
+            #
+            # Das Setup beendet uns selbst; der Nachlauf wartet danach und startet
+            # die frisch installierte Fassung, sonst steht der Anwender vor nichts.
+            stapel = ziel.with_suffix(".cmd")
+            stapel.write_text(
+                "@echo off\r\n"
+                f'start "" /wait "{ziel}" /SILENT /NORESTART\r\n'
+                "ping -n 4 127.0.0.1 >nul\r\n"
+                f'start "" "{sys.executable}"\r\n',
+                encoding="ascii", errors="replace")
+            log.write(f"Stapeldatei: {stapel}\n")
+            log.flush()
+            subprocess.Popen(["cmd", "/c", str(stapel)],
                              stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
                              creationflags=0x00000008 | 0x00000200,   # DETACHED | NEW_GROUP
                              cwd=str(ziel.parent))
