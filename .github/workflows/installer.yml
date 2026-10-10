@@ -95,4 +95,8 @@ jobs:
         run: |
           shopt -s nullglob
           files=(output/output/*-setup.exe)
+          # Pruefsumme dazu: das Programm laedt die setup.exe beim Selbstupdate
+          # und vergleicht sie damit, bevor es sie ausfuehrt.
+          for f in "${files[@]}"; do ( cd "$(dirname "$f")" && sha256sum "$(basename "$f")" > "$(basename "$f").sha256" ); done
+          files+=(output/output/*-setup.exe.sha256)
           [ ${#files[@]} -eq 0 ] || gh release upload "$TAG" "${files[@]}" --clobber --repo "${{ github.repository }}"
