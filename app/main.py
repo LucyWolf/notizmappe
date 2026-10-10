@@ -1,9 +1,9 @@
 """Notizmappe - freie Notizflaeche, die auf Dateien in einem Sync-Ordner liegt.
 
 Ein Prozess: FastAPI liefert die Oberflaeche und die API, das Fenster steht in
-fenster.py. Ein Desktop-Programm - es hoert nur auf 127.0.0.1, kennt keine Konten
-und keine Anmeldung. Wer die Notizen mit anderen teilen will, nimmt die
-Server-Fassung; die ist ein eigenes Projekt und faesst diese hier nicht an.
+fenster.py. Ein Desktop-Programm - keine Konten, keine Anmeldung, nichts im Netz.
+Es hoert ausschliesslich auf 127.0.0.1, und das nur, weil die Oberflaeche HTML
+ist und eine Webansicht sie ueber HTTP laden muss.
 """
 from __future__ import annotations
 
@@ -49,7 +49,7 @@ def _host_ok(host: str) -> bool:
     import ipaddress
     name = (host or "").rsplit(":", 1)[0] if not (host or "").endswith("]") else host
     name = name.strip("[]").lower()
-    if name in {"localhost"} | {h.strip().lower() for h in os.environ.get("NOTIZMAPPE_HOSTS", "").split(",") if h.strip()}:
+    if name == "localhost":
         return True
     try:
         ipaddress.ip_address(name)
@@ -63,7 +63,7 @@ async def _waechter(request: Request, call_next):
     pfad = request.url.path
     if not _host_ok(request.headers.get("host", "")):
         return JSONResponse({"fehler": "Unbekannter Host - die Notizmappe antwortet hier nur auf "
-                                       "127.0.0.1/localhost (weitere über NOTIZMAPPE_HOSTS)"}, status_code=421)
+                                       "127.0.0.1 und localhost"}, status_code=421)
     # Fremde Seiten duerfen nichts aendern: der Browser schickt bei solchen
     # Anfragen seine Herkunft mit. Zusammen mit SameSite=Strict am Keks reicht das
     # gegen untergeschobene Formulare. "null" (Sandbox-iframe, file://) ist fremd.
@@ -91,7 +91,7 @@ def _nur_hier(request: Request) -> None:
     """Update heisst: fremder Code wird heruntergeladen und ausgefuehrt; der
     Ordner-Dialog geht auf dem Bildschirm dieses Rechners auf. Beides nur direkt
     hier. Das Programm hoert zwar ohnehin nur auf 127.0.0.1 - aber die Schranke
-    steht da, wo sie hingehoert, und nicht nur in der Startzeile des Servers."""
+    steht da, wo sie hingehoert, und nicht nur in der Startzeile."""
     if not _von_hier(request):
         raise HTTPException(403, "Das geht nur direkt an diesem Rechner")
 
@@ -166,7 +166,7 @@ async def api_einstellungen_setzen(request: Request, rumpf: dict):
 
 def _ordnerdialog() -> list[str] | None:
     """Der Ordner-Dialog des Systems, wenn es einen gibt. Er geht auf dem Rechner
-    auf, auf dem der Server laeuft - deshalb nur zusammen mit _nur_hier."""
+    auf, auf dem die Notizmappe laeuft - deshalb nur zusammen mit _nur_hier."""
     import shutil
     if shutil.which("kdialog"):
         return ["kdialog", "--getexistingdirectory", str(Path.home()), "--title", "Ordner für die Notizen"]
@@ -370,7 +370,7 @@ async def api_anhang_runter(request: Request, notizbuch: str, abschnitt: str, na
 
 def _dateiname_kopf(art: str, name: str) -> str:
     """Content-Disposition mit Umlauten, Emoji usw. Header sind Latin-1 - ein
-    "Plan → 2026.pdf" roh hineingeschrieben gab einen Serverfehler. Deshalb nach
+    "Plan → 2026.pdf" roh hineingeschrieben gab einen Fehler. Deshalb nach
     RFC 5987: ASCII-Ersatz fuer alte Programme, dazu filename* in UTF-8."""
     from urllib.parse import quote
     ersatz = "".join(z if 32 <= ord(z) < 127 and z not in '"\\' else "_" for z in name) or "Datei"
@@ -401,5 +401,8 @@ async def api_loeschen(request: Request, rumpf: dict):
 if __name__ == "__main__":
     import os
     import uvicorn
-    uvicorn.run(app, host=os.environ.get("HOST", "127.0.0.1"),
+    # Fest auf dem eigenen Rechner. Keine Variable, mit der sich das aufmachen
+    # liesse: ein Desktop-Programm hat im Netz nichts zu suchen, und sobald etwas
+    # auf 0.0.0.0 lauscht, fragt Windows nach einer Firewall-Freigabe.
+    uvicorn.run(app, host="127.0.0.1",
                 port=int(os.environ.get("PORT", "8099")))

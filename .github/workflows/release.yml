@@ -112,7 +112,7 @@ jobs:
           $uhr = [Diagnostics.Stopwatch]::StartNew()
           $env:PORT = "8112"
           # Der Buildlauf hat keinen Desktop - also Server ohne Fenster pruefen.
-          $env:NOTIZMAPPE_NUR_SERVER = "1"
+          $env:NOTIZMAPPE_OHNE_FENSTER = "1"
           $p = Start-Process -FilePath $exe -PassThru -NoNewWindow `
                  -RedirectStandardOutput out.txt -RedirectStandardError err.txt
           $ok = $false
@@ -159,7 +159,7 @@ jobs:
         shell: pwsh
         run: |
           $env:PORT = "8115"
-          Remove-Item Env:\NOTIZMAPPE_NUR_SERVER -ErrorAction SilentlyContinue
+          Remove-Item Env:\NOTIZMAPPE_OHNE_FENSTER -ErrorAction SilentlyContinue
           $p = Start-Process -FilePath dist\Notizmappe\Notizmappe.exe -PassThru `
                  -RedirectStandardOutput fenster-out.txt -RedirectStandardError fenster-err.txt
           Start-Sleep -Seconds 35
@@ -232,7 +232,7 @@ jobs:
         shell: pwsh
         run: |
           $env:PORT = "8113"
-          $env:NOTIZMAPPE_NUR_SERVER = "1"    # auf dem Runner gibt es keinen Desktop
+          $env:NOTIZMAPPE_OHNE_FENSTER = "1"    # auf dem Runner gibt es keinen Desktop
           $p = Start-Process -FilePath "$env:EXE" -PassThru -NoNewWindow `
                  -RedirectStandardOutput out.txt -RedirectStandardError err.txt
           $ok = $false
@@ -260,7 +260,7 @@ jobs:
         shell: pwsh
         run: |
           $env:PORT = "8114"
-          $env:NOTIZMAPPE_NUR_SERVER = "1"
+          $env:NOTIZMAPPE_OHNE_FENSTER = "1"
           $laeuft = Start-Process -FilePath "$env:EXE" -PassThru -NoNewWindow `
                       -RedirectStandardOutput lauf.txt -RedirectStandardError lauf-err.txt
           foreach ($i in 1..20) {
@@ -298,7 +298,7 @@ jobs:
           Write-Host "Versionsdatei von $echt auf 1.0.0 gesetzt: $vdatei"
 
           $env:PORT = "8116"
-          $env:NOTIZMAPPE_NUR_SERVER = "1"
+          $env:NOTIZMAPPE_OHNE_FENSTER = "1"
           Start-Process "$env:EXE" -PassThru -NoNewWindow -RedirectStandardOutput u1.txt -RedirectStandardError u2.txt | Out-Null
           foreach ($i in 1..20) {
             Start-Sleep -Seconds 2

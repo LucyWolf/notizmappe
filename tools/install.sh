@@ -92,19 +92,8 @@ Wenn du das wirklich willst: erst deinstallieren (--deinstallieren)."
       || fehler "Pakete liessen sich nicht einrichten."
   fi
 
-  # Startskript, damit man es auch ohne Dienst von Hand starten kann.
-  cat > "$ZIEL/starten.sh" <<EOF
-#!/usr/bin/env bash
-set -euo pipefail
-exec env PYTHONPATH="$ZIEL/app" \\
-  "$ZIEL/.venv/bin/python" -m uvicorn main:app --app-dir "$ZIEL/app" \\
-  --host "\${HOST:-127.0.0.1}" --port "\${PORT:-$PORT}"
-EOF
-  chmod +x "$ZIEL/starten.sh"
-
-  # Das eigentliche Programm: ein Fenster. Laeuft nebenher schon ein Dienst, dockt
-  # es daran an; sonst bringt es seinen Server selbst mit und nimmt ihn beim
-  # Schliessen wieder mit. Eigene Datei, damit der Menueintrag per TryExec daran
+  # Das eigentliche Programm: ein Fenster. Es bringt alles mit, was es braucht,
+  # und nimmt es beim Schliessen wieder mit. Eigene Datei, damit der Menueintrag per TryExec daran
   # haengt - wird das Programm entfernt, verschwindet der Eintrag von selbst.
   cat > "$ZIEL/notizmappe" <<EOF
 #!/usr/bin/env bash
@@ -170,62 +159,19 @@ StartupNotify=false
 EOF
   update-desktop-database "$(dirname "$MENUE")" >/dev/null 2>&1 || true
 
-  # Standard: kein Hintergrunddienst. Die Notizmappe ist ein Programm - startet man
-  # es, laeuft es; schliesst man das Fenster, ist es weg. Wer sie auch vom Handy
-  # oder vom zweiten Rechner aus erreichen will, nimmt --mit-dienst.
-  if [ "${MIT_DIENST:-0}" != "1" ]; then
-    if dienst_moeglich && systemctl --user is-enabled notizmappe.service >/dev/null 2>&1; then
-      sagen "  Hintergrunddienst wird abgeschaltet (--mit-dienst behält ihn)."
+  # Kein Hintergrunddienst, keine Unit, kein Autostart. Die Notizmappe ist ein
+  # Programm: man startet es, es laeuft; man schliesst es, es ist weg. Ein frueher
+  # eingerichteter Dienst wird abgeschaltet.
+  if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
+    if systemctl --user is-enabled notizmappe.service >/dev/null 2>&1; then
+      sagen "  Alter Hintergrunddienst wird abgeschaltet."
       systemctl --user disable --now notizmappe.service >/dev/null 2>&1 || true
-      rm -f "$UNIT"
-      systemctl --user daemon-reload || true
     fi
-    rm -f "$AUTOSTART"
-  elif dienst_moeglich; then
-    mkdir -p "$(dirname "$UNIT")"
-    cat > "$UNIT" <<EOF
-[Unit]
-Description=Notizmappe $NEU
-After=network.target
-# Ist das Programm entfernt worden, bleibt der Dienst still statt zu scheitern.
-ConditionPathExists=$ZIEL/.venv/bin/python
-
-[Service]
-Type=simple
-Environment=PYTHONPATH=$ZIEL/app
-ExecStart=$ZIEL/.venv/bin/python -m uvicorn main:app --app-dir $ZIEL/app --host 127.0.0.1 --port $PORT
-Restart=on-failure
-RestartSec=3
-
-[Install]
-WantedBy=default.target
-EOF
-    systemctl --user daemon-reload
-    systemctl --user enable --now notizmappe.service >/dev/null
-    sagen "  Dienst läuft (systemctl --user status notizmappe)"
-    rm -f "$AUTOSTART"
-  else
-    # Kein systemd im Benutzerkontext (z.B. in einem Container): dann startet
-    # die Sitzung das Programm selbst.
-    mkdir -p "$(dirname "$AUTOSTART")"
-    cat > "$AUTOSTART" <<EOF
-[Desktop Entry]
-Type=Application
-Name=Notizmappe (Dienst)
-Exec=$ZIEL/starten.sh
-Terminal=false
-X-GNOME-Autostart-enabled=true
-EOF
-    sagen "  Kein systemd gefunden - Autostart über die Sitzung eingerichtet."
-    sagen "  Jetzt starten: $ZIEL/starten.sh"
   fi
+  rm -f "$UNIT" "$AUTOSTART"
 
   sagen ""
-  if [ "${MIT_DIENST:-0}" = "1" ]; then
-    sagen "Fertig. Im Menü: Notizmappe - und im Netz unter http://127.0.0.1:$PORT"
-  else
-    sagen "Fertig. Im Menü: Notizmappe   (oder direkt: $ZIEL/notizmappe)"
-  fi
+  sagen "Fertig. Im Menü: Notizmappe   (oder direkt: $ZIEL/notizmappe)"
 }
 
 # ------------------------------------------------------------ Deinstallieren
@@ -234,7 +180,7 @@ deinstallieren() {
   local alt; alt=$(installiert || true)
   [ -n "$alt" ] || fehler "Hier ist keine Notizmappe installiert ($ZIEL)."
   [ -f "$ZIEL/.einrichtung" ] && . "$ZIEL/.einrichtung"
-  if dienst_moeglich; then
+  if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
     systemctl --user disable --now notizmappe.service >/dev/null 2>&1 || true
     rm -f "$UNIT"
     systemctl --user daemon-reload || true
@@ -271,12 +217,6 @@ starten() {
 
 # --------------------------------------------------------------------- Menue
 
-# --mit-dienst darf vor oder hinter dem Befehl stehen
-for arg in "$@"; do
-  [ "$arg" = "--mit-dienst" ] && MIT_DIENST=1
-done
-set -- $(printf '%s\n' "$@" | grep -v -- '--mit-dienst' || true)
-
 case "${1:-}" in
   --starten|--open) starten; exit 0 ;;
   --update|--install|--still) einrichten; exit 0 ;;
@@ -286,7 +226,6 @@ case "${1:-}" in
     sagen "Notizmappe $NEU"
     sagen "  --install / --update   einrichten oder aktualisieren"
     sagen "  --deinstallieren       Programm entfernen (Notizen bleiben)"
-    sagen "  --mit-dienst           zusaetzlich im Hintergrund laufen lassen,"
     sagen "                         damit Handy und andere Rechner drankommen"
     sagen "Variablen: NOTIZMAPPE_ZIEL, NOTIZEN_ORDNER, PORT"
     exit 0 ;;
