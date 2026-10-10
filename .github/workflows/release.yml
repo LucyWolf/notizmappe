@@ -309,7 +309,7 @@ jobs:
             if ((Test-Path $vdatei) -and ((Get-Content $vdatei -Raw).Trim() -eq $echt)) { $fertig = $true; break }
           }
           Write-Host "--- Protokolle ---"
-          foreach ($k in @("update.log", "update-lauf.log", "fenster.log")) {
+          foreach ($k in @("update.log", "update-lauf.log", "update-setup.log", "fenster.log")) {
             $d = Join-Path $env:LOCALAPPDATA "notizmappe\$k"
             if (Test-Path $d) { Write-Host "[$k]"; Get-Content $d }
           }
