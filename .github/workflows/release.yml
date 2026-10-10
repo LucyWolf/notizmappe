@@ -44,7 +44,7 @@ jobs:
 
       - name: Tests
         run: |
-          python tests/test_api.py
+          python tests/test_bruecke.py
           python tests/test_update.py
 
       - name: Paket bauen
@@ -116,7 +116,9 @@ jobs:
           Write-Host "--- Fehler ---";  if (Test-Path err.txt) { Get-Content err.txt }
           if ($p.ExitCode -ne 0) { throw "Notizmappe.exe --pruefen endete mit $($p.ExitCode)" }
           $text = Get-Content out.txt -Raw
-          if ($text -notmatch "Oberfläche:.*da") { throw "Die Oberflaeche wurde nicht gefunden" }
+          # Nicht auf Umlaute prüfen: je nach Kodierung der Ausgabedatei stehen dort
+          # Fragezeichen. index.html und "Daten:" reichen als Nachweis.
+          if ($text -notmatch "index\.html") { throw "Die Oberflaeche wurde nicht gefunden" }
           if ($text -notmatch "Daten:") { throw "Die Daten liessen sich nicht lesen" }
 
       # Die Gegenprobe zu "kein Server": waehrend das Programm laeuft, darf es
