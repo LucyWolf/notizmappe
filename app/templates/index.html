@@ -91,6 +91,16 @@ window.addEventListener('unhandledrejection', function (ev) {
     </div>
   </main>
 
+  <div id="updatefenster" hidden>
+    <div class="tafel">
+      <h3 id="u-titel">Update</h3>
+      <p id="u-schritt">wird vorbereitet …</p>
+      <div class="balken"><i></i></div>
+      <p class="hinweis" id="u-hinweis"></p>
+      <p class="knoepfe"><button type="button" id="u-zu" hidden>Schließen</button></p>
+    </div>
+  </div>
+
   <div id="minileiste" hidden>
     <select data-befehl="fontName" title="Schriftart">
       <option value="system-ui">Standard</option>
@@ -136,17 +146,16 @@ window.addEventListener('unhandledrejection', function (ev) {
         <p class="zeile2"><span>Im neuesten Release</span><code id="e-verfuegbar">wird geprüft …</code></p>
         <p id="e-notizen" class="notizen" hidden></p>
         <p class="knoepfe">
-          <button type="button" id="e-pruefen">Nach Updates sehen</button>
-          <button type="button" id="e-einspielen" hidden>Jetzt einspielen</button>
+          <button type="button" id="e-pruefen">Nach Updates suchen</button>
+          <button type="button" id="e-einspielen" hidden>Update installieren</button>
         </p>
         <p id="e-updatehinweis" class="hinweis"></p>
         <label class="haken"><input type="checkbox" id="e-start-pruefen">
           Beim Start nach Updates sehen</label>
         <label class="haken"><input type="checkbox" id="e-auto">
-          Gefundene Updates gleich einspielen</label>
-        <p class="hinweis">Eingespielt wird nur, wenn die Notizmappe auf diesem Rechner
-          läuft. Das Fenster lädt sich danach selbst neu; offene Änderungen werden
-          vorher gespeichert.</p>
+          Updates automatisch installieren</label>
+        <p class="hinweis">Läuft nur auf dem Rechner, auf dem die Notizmappe geöffnet ist.
+          Offene Änderungen werden vorher gespeichert, danach startet sie neu.</p>
       </section>
 
       <section>
