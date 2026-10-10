@@ -77,19 +77,18 @@ jobs:
       - name: Abhaengigkeiten
         run: pip install -r requirements.txt pyinstaller
 
-      # --paths app ist der Punkt: ohne das findet PyInstaller "import main" nicht,
-      # packt app/ nur als Daten ein und sieht die Imports darin nie - dann fehlt
-      # zur Laufzeit html.parser, weil es nur reinigen.py braucht.
-      # --add-data bleibt trotzdem noetig, fuer templates, static und VERSION.
-      # --collect-all: uvicorn und fastapi laden einen Teil ihrer Module erst zur
-      # Laufzeit nach Namen, das sieht keine statische Analyse.
+      # --paths app: ohne das findet PyInstaller "import fenster" nicht, packt app/
+      # nur als Daten ein und sieht die Imports darin nie - dann fehlt zur Laufzeit
+      # html.parser, weil es nur reinigen.py braucht.
+      # --add-data bleibt noetig, fuer die Oberflaeche und VERSION.
+      # Seit es keinen Webserver mehr gibt, fallen fastapi, uvicorn, starlette,
+      # jinja2 und pydantic ganz weg - das war der groesste Teil der Ladezeit.
       - name: Buendeln
         run: >
           pyinstaller --onedir --name Notizmappe --icon icon.ico
           --paths app
           --add-data "app;app"
-          --collect-all uvicorn --collect-all fastapi --collect-all starlette
-          --collect-all jinja2 --collect-all pydantic --collect-all webview
+          --collect-all webview
           --exclude-module tkinter --exclude-module unittest --exclude-module pydoc
           --exclude-module test --exclude-module lib2to3 --exclude-module pip
           --noconsole
@@ -110,71 +109,33 @@ jobs:
         run: |
           $exe = "dist\Notizmappe\Notizmappe.exe"
           $uhr = [Diagnostics.Stopwatch]::StartNew()
-          $env:PORT = "8112"
-          # Der Buildlauf hat keinen Desktop - also Server ohne Fenster pruefen.
-          $env:NOTIZMAPPE_OHNE_FENSTER = "1"
-          $p = Start-Process -FilePath $exe -PassThru -NoNewWindow `
-                 -RedirectStandardOutput out.txt -RedirectStandardError err.txt
-          $ok = $false
-          foreach ($i in 1..30) {
-            Start-Sleep -Seconds 2
-            if ($p.HasExited) { break }
-            try { if ((Invoke-WebRequest "http://127.0.0.1:8112/" -UseBasicParsing).StatusCode -eq 200) { $ok = $true; break } } catch {}
-          }
-          Write-Host "--- Ausgabe der exe ---"
-          if (Test-Path out.txt) { Get-Content out.txt }
-          Write-Host "--- Fehlerausgabe ---"
-          if (Test-Path err.txt) { Get-Content err.txt }
-          Write-Host "-----------------------"
-          if (-not $ok) {
-            if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
-            throw "Notizmappe.exe antwortet nicht auf 8112 (beendet: $($p.HasExited))"
-          }
-          Write-Host "Bis zur ersten Antwort: $([math]::Round($uhr.Elapsed.TotalSeconds, 1)) s"
+          $p = Start-Process -FilePath $exe -ArgumentList "--pruefen" -PassThru -NoNewWindow `
+                 -RedirectStandardOutput out.txt -RedirectStandardError err.txt -Wait
+          Write-Host "Bis zur Antwort: $([math]::Round($uhr.Elapsed.TotalSeconds, 1)) s, Rueckgabe $($p.ExitCode)"
+          Write-Host "--- Ausgabe ---"; if (Test-Path out.txt) { Get-Content out.txt }
+          Write-Host "--- Fehler ---";  if (Test-Path err.txt) { Get-Content err.txt }
+          if ($p.ExitCode -ne 0) { throw "Notizmappe.exe --pruefen endete mit $($p.ExitCode)" }
+          $text = Get-Content out.txt -Raw
+          if ($text -notmatch "Oberfläche:.*da") { throw "Die Oberflaeche wurde nicht gefunden" }
+          if ($text -notmatch "Daten:") { throw "Die Daten liessen sich nicht lesen" }
 
-          # Ein Desktop-Programm darf nur auf dem eigenen Rechner lauschen. Sobald
-          # etwas auf 0.0.0.0 haengt, fragt Windows nach einer Firewall-Freigabe -
-          # und dann ist es eben doch ein Server im Netz.
-          $lauscht = Get-NetTCPConnection -State Listen -OwningProcess $p.Id -ErrorAction SilentlyContinue
-          Write-Host "--- worauf gelauscht wird ---"
-          $lauscht | Select-Object LocalAddress,LocalPort | Format-Table | Out-String | Write-Host
-          $fremd = $lauscht | Where-Object { $_.LocalAddress -notin @("127.0.0.1", "::1") }
-          if ($fremd) {
-            $fremd | ForEach-Object { Write-Host "::error::lauscht auf $($_.LocalAddress):$($_.LocalPort)" }
-            throw "Es wird auf mehr als dem eigenen Rechner gelauscht - das loest die Firewall-Abfrage aus"
-          }
-          # Aus einem Ordner gestartet gibt es keinen Auspacker mehr: genau einer.
-          $wieviele = (Get-Process -Name Notizmappe -ErrorAction SilentlyContinue).Count
-          Write-Host "Prozesse mit diesem Namen: $wieviele"
-          if ($wieviele -gt 1) { throw "Es laufen $wieviele Prozesse - erwartet war einer" }
-          $baum = Invoke-WebRequest "http://127.0.0.1:8112/api/baum" -UseBasicParsing
-          if ($baum.Content -notmatch "notizbuecher") { throw "API antwortet nicht wie erwartet" }
-          Stop-Process -Id $p.Id -Force
-          Write-Host "Buendel läuft."
-
-      # Bisher lief die exe im Buildlauf immer nur als Server - der Weg zum
-      # Fenster wurde nie geprueft. Genau dort klemmt es aber: oeffnet sich keins,
-      # beendet sich das Programm, und man sieht nichts.
-      - name: Fenster wirklich oeffnen
+      # Die Gegenprobe zu "kein Server": waehrend das Programm laeuft, darf es
+      # keinen einzigen offenen Port geben. Frueher lauschte es auf 127.0.0.1.
+      - name: Nachsehen, dass nichts lauscht
         shell: pwsh
         run: |
-          $env:PORT = "8115"
-          Remove-Item Env:\NOTIZMAPPE_OHNE_FENSTER -ErrorAction SilentlyContinue
-          $p = Start-Process -FilePath dist\Notizmappe\Notizmappe.exe -PassThru `
-                 -RedirectStandardOutput fenster-out.txt -RedirectStandardError fenster-err.txt
-          Start-Sleep -Seconds 35
-          $log = Join-Path $env:LOCALAPPDATA "notizmappe\fenster.log"
-          Write-Host "--- fenster.log ---"
-          if (Test-Path $log) { Get-Content $log } else { Write-Host "(kein Protokoll geschrieben)" }
-          Write-Host "--- Ausgabe ---"; if (Test-Path fenster-out.txt) { Get-Content fenster-out.txt }
-          Write-Host "--- Fehler ---";  if (Test-Path fenster-err.txt) { Get-Content fenster-err.txt }
-          Write-Host "--- Prozesse ---"
-          Get-Process -Name Notizmappe,msedge,chrome -ErrorAction SilentlyContinue |
-            Select-Object Name,Id | Format-Table | Out-String | Write-Host
-          $lebt = -not $p.HasExited
-          Get-Process -Name Notizmappe,msedge -ErrorAction SilentlyContinue | Stop-Process -Force
-          if (-not $lebt) { throw "Das Programm hat sich beendet, statt ein Fenster offen zu halten" }
-          Write-Host "Das Programm läuft mit Fenster."
+          $env:NOTIZMAPPE_OHNE_FENSTER = "1"
+          $p = Start-Process -FilePath dist\Notizmappe\Notizmappe.exe -PassThru -NoNewWindow `
+                 -RedirectStandardOutput lauf.txt -RedirectStandardError lauf-err.txt
+          Start-Sleep -Seconds 8
+          $lauscht = Get-NetTCPConnection -State Listen -OwningProcess $p.Id -ErrorAction SilentlyContinue
+          if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
+          Write-Host "--- Ausgabe ---"; if (Test-Path lauf.txt) { Get-Content lauf.txt }
+          if ($lauscht) {
+            $lauscht | ForEach-Object { Write-Host "::error::lauscht auf $($_.LocalAddress):$($_.LocalPort)" }
+            throw "Es wird gelauscht - ein Desktop-Programm soll keinen Port offen haben"
+          }
+          Write-Host "Kein offener Port."
 
       - uses: actions/upload-artifact@v4
         with:
@@ -228,48 +189,28 @@ jobs:
           Write-Host "installiert: $($exe.FullName)"
           "EXE=$($exe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: Installierte Fassung starten und abfragen
+      - name: Installierte Fassung pruefen
         shell: pwsh
         run: |
-          $env:PORT = "8113"
-          $env:NOTIZMAPPE_OHNE_FENSTER = "1"    # auf dem Runner gibt es keinen Desktop
-          $p = Start-Process -FilePath "$env:EXE" -PassThru -NoNewWindow `
-                 -RedirectStandardOutput out.txt -RedirectStandardError err.txt
-          $ok = $false
-          foreach ($i in 1..30) {
-            Start-Sleep -Seconds 2
-            if ($p.HasExited) { break }
-            try { if ((Invoke-WebRequest "http://127.0.0.1:8113/" -UseBasicParsing).StatusCode -eq 200) { $ok = $true; break } } catch {}
-          }
-          Write-Host "--- Ausgabe ---"; if (Test-Path out.txt) { Get-Content out.txt }
-          Write-Host "--- Fehler ---";  if (Test-Path err.txt) { Get-Content err.txt }
-          if (-not $ok) {
-            if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
-            throw "Die installierte Notizmappe antwortet nicht (beendet: $($p.HasExited))"
-          }
-          $v = (Invoke-WebRequest "http://127.0.0.1:8113/api/einstellungen" -UseBasicParsing).Content
-          Write-Host "Einstellungen: $v"
-          if ($v -notmatch "${{ github.ref_name }}".TrimStart("v")) { throw "Falsche Version in der Installation" }
-          Stop-Process -Id $p.Id -Force
-          Write-Host "Installierte Fassung läuft."
+          $p = Start-Process -FilePath "$env:EXE" -ArgumentList "--pruefen" -PassThru -NoNewWindow `
+                 -RedirectStandardOutput i.txt -RedirectStandardError i-err.txt -Wait
+          Get-Content i.txt
+          if ($p.ExitCode -ne 0) { throw "Die installierte Fassung meldet $($p.ExitCode)" }
+          $erwartet = "${{ github.ref_name }}".TrimStart("v")
+          $vdatei = Join-Path (Split-Path $env:EXE) "_internal\app\VERSION"
+          $drin = (Get-Content $vdatei -Raw).Trim()
+          Write-Host "installierte Version: $drin"
+          if ($drin -ne $erwartet) { throw "Falsche Version installiert: $drin statt $erwartet" }
 
       # Der Fall aus dem echten Leben: es laeuft bereits eine Fassung, und man
-      # installiert darueber. Genau daran ist das Setup gescheitert - die
-      # Schliessen-Aufforderung erreicht einen Prozess ohne Fenster nicht.
+      # installiert darueber. Daran ist das Setup frueher gescheitert.
       - name: Ueber eine laufende Fassung installieren
         shell: pwsh
         run: |
-          $env:PORT = "8114"
           $env:NOTIZMAPPE_OHNE_FENSTER = "1"
           $laeuft = Start-Process -FilePath "$env:EXE" -PassThru -NoNewWindow `
                       -RedirectStandardOutput lauf.txt -RedirectStandardError lauf-err.txt
-          foreach ($i in 1..20) {
-            Start-Sleep -Seconds 2
-            try { if ((Invoke-WebRequest "http://127.0.0.1:8114/" -UseBasicParsing).StatusCode -eq 200) { break } } catch {}
-          }
-          if ($laeuft.HasExited) { throw "Die laufende Fassung ist von selbst beendet" }
-          Write-Host "laeuft als PID $($laeuft.Id), jetzt darueber installieren"
-
+          Start-Sleep -Seconds 6
           $p = Start-Process .\setup.exe -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -PassThru -Wait
           Write-Host "Setup-Rueckgabe: $($p.ExitCode)"
           if ($p.ExitCode -ne 0) { throw "Setup ueber eine laufende Fassung endete mit $($p.ExitCode)" }
@@ -277,43 +218,23 @@ jobs:
           Get-Process -Name "Notizmappe" -ErrorAction SilentlyContinue | Stop-Process -Force
           Write-Host "Ueberinstallieren hat funktioniert."
 
-      # Das Selbstupdate auf Windows wirklich durchspielen.
-      #
-      # Nicht von der vorigen Fassung aus: die bringt ihren eigenen, alten
-      # Update-Code mit, und der Lauf wuerde immer den von gestern pruefen statt
-      # den von heute. Stattdessen wird die neue Fassung installiert und ihre
-      # Versionsdatei heruntergesetzt - dann haelt sie sich fuer veraltet, holt
-      # das Release und spielt es mit dem Code ein, der gerade gebaut wurde.
+      # Das Selbstupdate durchspielen - mit dem Code, der gerade gebaut wurde.
+      # Dafuer wird die Versionsdatei heruntergesetzt, damit sich die neue Fassung
+      # fuer veraltet haelt.
       - name: Selbstupdate durchspielen
         shell: pwsh
         run: |
           $ordner = Split-Path $env:EXE
           $vdatei = Join-Path $ordner "_internal\app\VERSION"
-          if (-not (Test-Path $vdatei)) {
-            $vdatei = (Get-ChildItem $ordner -Recurse -Filter VERSION | Select-Object -First 1).FullName
-          }
-          if (-not $vdatei) { throw "VERSION in der Installation nicht gefunden" }
           $echt = (Get-Content $vdatei -Raw).Trim()
           Set-Content -Path $vdatei -Value "1.0.0" -NoNewline
-          Write-Host "Versionsdatei von $echt auf 1.0.0 gesetzt: $vdatei"
+          Write-Host "Versionsdatei von $echt auf 1.0.0 gesetzt"
 
-          $env:PORT = "8116"
-          $env:NOTIZMAPPE_OHNE_FENSTER = "1"
-          Start-Process "$env:EXE" -PassThru -NoNewWindow -RedirectStandardOutput u1.txt -RedirectStandardError u2.txt | Out-Null
-          foreach ($i in 1..20) {
-            Start-Sleep -Seconds 2
-            try { if ((Invoke-WebRequest "http://127.0.0.1:8116/api/einstellungen" -UseBasicParsing).StatusCode -eq 200) { break } } catch {}
-          }
-          $vor = Invoke-WebRequest "http://127.0.0.1:8116/api/einstellungen" -UseBasicParsing | ConvertFrom-Json
-          Write-Host "laeuft als $($vor.version), haelt sich fuer aktualisierbar: $($vor.aus_installation)"
-          if (-not $vor.aus_installation) { throw "Haelt sich nicht fuer aktualisierbar - der Knopf erschiene nie" }
-
-          $v = Invoke-WebRequest "http://127.0.0.1:8116/api/version?frisch=true" -UseBasicParsing | ConvertFrom-Json
-          Write-Host "sieht im Release: $($v.verfuegbar), neuer: $($v.neuer)"
-          if (-not $v.neuer) { throw "Erkennt das Release nicht als neuer" }
-
-          $a = Invoke-WebRequest "http://127.0.0.1:8116/api/update" -Method POST -UseBasicParsing
-          Write-Host "angestossen: $($a.Content)"
+          $p = Start-Process -FilePath "$env:EXE" -ArgumentList "--update" -PassThru -NoNewWindow `
+                 -RedirectStandardOutput u.txt -RedirectStandardError u-err.txt -Wait
+          Write-Host "--- Antwort ---"; Get-Content u.txt
+          if (Test-Path u-err.txt) { Get-Content u-err.txt }
+          if ($p.ExitCode -ne 0) { throw "Das Update liess sich nicht anstossen" }
 
           $fertig = $false
           foreach ($i in 1..40) {
@@ -325,12 +246,9 @@ jobs:
             $d = Join-Path $env:LOCALAPPDATA "notizmappe\$k"
             if (Test-Path $d) { Write-Host "[$k]"; Get-Content $d }
           }
-          if (Test-Path u2.txt) { Write-Host "[stderr]"; Get-Content u2.txt }
           Get-Process -Name Notizmappe -ErrorAction SilentlyContinue | Stop-Process -Force
-          if (-not $fertig) {
-            throw "Nach dem Update steht in der Versionsdatei immer noch nicht $echt"
-          }
-          Write-Host "Selbstupdate auf Windows hat funktioniert."
+          if (-not $fertig) { throw "Nach dem Update steht dort immer noch nicht $echt" }
+          Write-Host "Selbstupdate hat funktioniert."
 
       - name: Wieder deinstallieren
         if: always()

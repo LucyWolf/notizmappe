@@ -58,13 +58,63 @@ const zugeklappt = new Set(JSON.parse(merker.holen('zugeklappt', '[]')));
 
 /* ------------------------------------------------------------------ Hilfen */
 
+/* Ruft das Programm auf - direkt, ohne Netz.
+ *
+ * Frueher ging das per fetch an einen kleinen Webserver auf 127.0.0.1. Den gibt
+ * es nicht mehr: window.pywebview.api sind die Methoden aus bruecke.py, im selben
+ * Prozess. Die Aufrufstellen unten sehen noch aus wie Adressen - das ist Absicht,
+ * so bleibt an einer einzigen Stelle stehen, was wohin geht.
+ *
+ * Fehler kommen als {fehler: "..."} zurueck und werden hier wieder zu Ausnahmen,
+ * damit die try/catch drumherum bleiben koennen wie sie waren. */
+const WEGE = {
+  'GET /api/baum':             (p, b) => b.baum(),
+  'POST /api/notizbuch':       (p, b, r) => b.notizbuch_anlegen(r.name),
+  'POST /api/abschnitt':       (p, b, r) => b.abschnitt_anlegen(r.notizbuch, r.name),
+  'POST /api/seite':           (p, b, r) => b.seite_anlegen(r.notizbuch, r.abschnitt, r.titel || ''),
+  'GET /api/seite':            (p, b) => b.seite_lesen(p.notizbuch, p.abschnitt, p.name),
+  'PUT /api/seite':            (p, b, r) => b.seite_speichern(r),
+  'POST /api/seite/titel':     (p, b, r) => b.seite_umbenennen(r.notizbuch, r.abschnitt, r.name, r.titel),
+  'GET /api/stand':            (p, b) => b.stand(p.notizbuch, p.abschnitt, p.name),
+  'POST /api/loeschen':        (p, b, r) => b.loeschen(r.art, r.pfad),
+  'GET /api/einstellungen':    (p, b) => b.einstellungen(),
+  'POST /api/einstellungen':   (p, b, r) => b.optionen_setzen(r),
+  'POST /api/ordner/waehlen':  (p, b) => b.ordner_waehlen(),
+  'POST /api/ordner':          (p, b, r) => b.ordner_setzen(r),
+  'GET /api/version':          (p, b) => b.version(p.frisch === 'true'),
+  'POST /api/update':          (p, b) => b.update(),
+  'GET /api/update/stand':     (p, b) => b.update_stand(),
+};
+
+/* Das Fenster meldet sich kurz nach dem Laden. Bis dahin warten statt zu scheitern. */
+function bruecke() {
+  if (window.pywebview && window.pywebview.api) return Promise.resolve(window.pywebview.api);
+  return new Promise((fertig, schiefgegangen) => {
+    let versuche = 0;
+    const uhr = setInterval(() => {
+      if (window.pywebview && window.pywebview.api) { clearInterval(uhr); fertig(window.pywebview.api); }
+      else if (++versuche > 100) { clearInterval(uhr); schiefgegangen(new Error('Keine Verbindung zum Programm')); }
+    }, 100);
+  });
+}
+
 async function api(weg, art = 'GET', rumpf = null) {
-  const o = { method: art, headers: {} };
-  if (rumpf) { o.headers['Content-Type'] = 'application/json'; o.body = JSON.stringify(rumpf); }
-  const a = await fetch(weg, o);
-  let daten = null;
-  try { daten = await a.json(); } catch (e) { /* leere Antwort */ }
-  if (!a.ok) { const f = new Error((daten && (daten.fehler || daten.detail)) || a.statusText); f.status = a.status; f.daten = daten; throw f; }
+  const [pfad, abfrage] = weg.split('?');
+  const teile = {};
+  for (const [k, v] of new URLSearchParams(abfrage || '')) teile[k] = v;
+
+  const schluessel = `${art} ${pfad}`;
+  const tun = WEGE[schluessel];
+  if (!tun) throw new Error('Unbekannter Aufruf: ' + schluessel);
+
+  const b = await bruecke();
+  const daten = await tun(teile, b, rumpf || {});
+  if (daten && daten.fehler) {
+    const f = new Error(daten.fehler);
+    f.daten = daten;
+    if (daten.art === 'konflikt') f.status = 409;
+    throw f;
+  }
   return daten;
 }
 
@@ -239,11 +289,20 @@ async function seiteOeffnen(buch, abschnitt, name) {
 
 /* ------------------------------------------------------------------ Kaesten */
 
-function anhangWeg(pfad) {
-  const p = new URLSearchParams({
-    notizbuch: offen.notizbuch, abschnitt: offen.abschnitt, name: offen.name, datei: pfad,
-  });
-  return '/api/anhang?' + p.toString();
+/* Bilddaten holen und als data:-Adresse einsetzen. Es gibt keine Adresse mehr,
+ * unter der die Datei laege - und die Seite soll auch nicht beliebige lokale
+ * Dateien laden duerfen. */
+async function bildEinsetzen(bild, datei) {
+  try {
+    const b = await bruecke();
+    const r = await b.anhang_bild(offen.notizbuch, offen.abschnitt, offen.name, datei);
+    if (r && r.fehler) throw new Error(r.fehler);
+    bild.src = `data:${r.medientyp};base64,${r.daten}`;
+  } catch (f) {
+    bild.replaceWith(Object.assign(document.createElement('div'), {
+      className: 'fehlt', textContent: 'Bild fehlt: ' + datei,
+    }));
+  }
 }
 
 function kastenBauen(e) {
@@ -334,24 +393,35 @@ function kastenBauen(e) {
 function bildBauen(e) {
   const bild = document.createElement('img');
   bild.className = 'bild';
-  bild.src = anhangWeg(e.datei);
   bild.alt = e.beschriftung || e.datei;
   bild.draggable = false;
   bild.addEventListener('load', flaecheMessen);
-  bild.addEventListener('error', () => {
-    bild.replaceWith(Object.assign(document.createElement('div'), {
-      className: 'fehlt', textContent: 'Bild fehlt: ' + e.datei,
-    }));
-  });
+  bildEinsetzen(bild, e.datei);
   return bild;
 }
 
 function dateiBauen(e) {
-  const kachel = document.createElement('a');
+  // Kein Download: die Datei liegt auf dieser Platte. Ein Klick öffnet sie mit
+  // dem Programm, das das System dafür vorsieht.
+  const kachel = document.createElement('button');
+  kachel.type = 'button';
   kachel.className = 'datei';
-  kachel.href = anhangWeg(e.datei);
-  kachel.download = e.datei;
-  kachel.title = 'Herunterladen: ' + e.datei;
+  kachel.title = 'Öffnen: ' + e.datei;
+  kachel.addEventListener('click', async () => {
+    try {
+      const b = await bruecke();
+      const r = await b.anhang_oeffnen(offen.notizbuch, offen.abschnitt, offen.name, e.datei);
+      if (r && r.fehler) melden(r.fehler);
+    } catch (f) { melden('Ließ sich nicht öffnen: ' + f.message); }
+  });
+  kachel.addEventListener('contextmenu', async (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    try {
+      const b = await bruecke();
+      await b.anhang_speichern_unter(offen.notizbuch, offen.abschnitt, offen.name, e.datei);
+    } catch (f) { melden('Speichern ging nicht: ' + f.message); }
+  });
   kachel.append(
     Object.assign(document.createElement('span'), { className: 'zeichen', textContent: '📎' }),
     Object.assign(document.createElement('span'), { className: 'dname', textContent: e.datei }),
@@ -370,54 +440,51 @@ function groesse(bytes) {
 /* Hochladen: die Datei geht zuerst auf die Platte, erst danach entsteht das
  * Element. Andersherum zeigte die Seite kurz auf etwas, das es noch nicht gibt -
  * und bei einem Abbruch für immer. */
-async function hochladen(datei) {
-  if (!offen) { sagen('Erst eine Seite öffnen', 2000); return null; }
-  // Vorher pruefen: sonst laedt eine riesige Datei minutenlang hoch, nur damit
-  // der Server danach "zu gross" sagt.
-  if (datei.size > MAX_ANHANG) {
-    melden(`"${datei.name}" ist ${groesse(datei.size)} groß - mehr als ${groesse(MAX_ANHANG)} gehen nicht.`);
-    return null;
-  }
-  const fd = new FormData();
-  fd.append('notizbuch', offen.notizbuch);
-  fd.append('abschnitt', offen.abschnitt);
-  fd.append('name', offen.name);
+function anhangName(datei) {
   // Aus der Zwischenablage heisst jedes Bild "image.png". Ein Name mit Uhrzeit
-  // ist im Dateimanager lesbarer und kommt dem naechsten Bild nicht in die Quere.
+  // ist im Dateimanager lesbarer und kommt dem nächsten Bild nicht in die Quere.
   const ablage = /^image\.(\w+)$/.exec(datei.name || '');
-  if (ablage) {
-    const z = new Date();
-    const zwei = (n) => String(n).padStart(2, '0');
-    const stempel = `${z.getFullYear()}-${zwei(z.getMonth() + 1)}-${zwei(z.getDate())}`
-      + ` ${zwei(z.getHours())}-${zwei(z.getMinutes())}-${zwei(z.getSeconds())}`;
-    fd.append('datei', datei, `Bild ${stempel}.${ablage[1]}`);
-  } else {
-    fd.append('datei', datei);
+  if (!ablage) return datei.name || 'Datei';
+  const z = new Date();
+  const zwei = (n) => String(n).padStart(2, '0');
+  return `Bild ${z.getFullYear()}-${zwei(z.getMonth() + 1)}-${zwei(z.getDate())}`
+    + ` ${zwei(z.getHours())}-${zwei(z.getMinutes())}-${zwei(z.getSeconds())}.${ablage[1]}`;
+}
+
+async function alsBase64(datei) {
+  const bytes = new Uint8Array(await datei.arrayBuffer());
+  let text = '';
+  // In Stücken: String.fromCharCode mit Hunderttausenden Argumenten sprengt den Stapel.
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    text += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
   }
-  zustandAnzeige.textContent = 'lädt …';
-  let a;
-  try {
-    a = await fetch('/api/anhang', { method: 'POST', body: fd });
-  } catch (f) {
-    melden('Hochladen ging nicht: ' + f.message);
-    return null;
-  }
-  if (!a.ok) {
-    let grund = a.statusText;
-    try { grund = (await a.json()).fehler || grund; } catch (f) { /* egal */ }
-    melden(`"${datei.name}" ging nicht: ${grund}`);
-    zustandAnzeige.textContent = '';
-    return null;
-  }
-  return a.json();
+  return btoa(text);
 }
 
 async function anhangHochladen(datei, x, y) {
-  const r = await hochladen(datei);
-  if (r) anhangHochladenFertig(r, datei, x, y);
-}
-
-function anhangHochladenFertig(r, datei, x, y) {
+  if (!offen) { sagen('Erst eine Seite öffnen', 2000); return; }
+  // Vorher prüfen: sonst wandert eine riesige Datei erst durch die Brücke, nur
+  // damit sie danach abgelehnt wird.
+  if (datei.size > MAX_ANHANG) {
+    melden(`"${datei.name}" ist ${groesse(datei.size)} groß - mehr als ${groesse(MAX_ANHANG)} gehen nicht.`);
+    return;
+  }
+  zustandAnzeige.textContent = 'lädt …';
+  let r;
+  try {
+    const b = await bruecke();
+    r = await b.anhang_ablegen(offen.notizbuch, offen.abschnitt, offen.name,
+                               anhangName(datei), await alsBase64(datei));
+  } catch (f) {
+    melden('Hinzufügen ging nicht: ' + f.message);
+    zustandAnzeige.textContent = '';
+    return;
+  }
+  if (r && r.fehler) {
+    melden(`"${datei.name}" ging nicht: ${r.fehler}`);
+    zustandAnzeige.textContent = '';
+    return;
+  }
   const e = {
     id: Math.random().toString(36).slice(2, 12),
     typ: r.art, x, y,
@@ -428,46 +495,6 @@ function anhangHochladenFertig(r, datei, x, y) {
   flaeche.append(kastenBauen(e));
   $('#leerhinweis').hidden = true;
   flaecheMessen();
-  angefasst();
-}
-
-/* Bilder im Text: im HTML steht nur data-datei, die Adresse kommt beim Anzeigen
- * dazu. So bleibt der Verweis gueltig, wenn die Seite umbenannt wird. */
-function textBilderZeigen(text) {
-  for (const b of text.querySelectorAll('img[data-datei]')) {
-    b.src = anhangWeg(b.dataset.datei);
-    b.addEventListener('load', flaecheMessen, { once: true });
-  }
-}
-
-async function inTextEinsetzen(text, e, dateien, stelle) {
-  for (const d of dateien) {
-    const r = await hochladen(d);
-    if (!r) continue;
-    if (r.art !== 'bild') {
-      // Keine Bilder (PDF, Zip ...) bleiben Kacheln auf der Flaeche.
-      anhangHochladenFertig(r, d, e.x, e.y + text.offsetHeight + 40);
-      continue;
-    }
-    const bild = document.createElement('img');
-    bild.dataset.datei = r.datei;
-    bild.alt = d.name;
-    if (stelle && text.contains(stelle.startContainer)) {
-      stelle.deleteContents();
-      stelle.insertNode(bild);
-      stelle.setStartAfter(bild);
-      stelle.collapse(true);
-    } else {
-      text.append(bild);
-    }
-    textBilderZeigen(text);
-    // Gleich eintragen, nicht erst nach dem letzten Bild - sonst speichert die Uhr
-    // zwischendurch einen Stand, der die schon hochgeladenen nicht kennt.
-    e.html = text.innerHTML;
-    angefasst();
-  }
-  e.html = text.innerHTML;
-  zustandAnzeige.textContent = '';
   angefasst();
 }
 

@@ -1,5 +1,1 @@
-fastapi
-uvicorn
-jinja2
 pywebview
-python-multipart

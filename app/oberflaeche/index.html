@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Notizmappe</title>
-<link rel="icon" href="/static/icon.png" type="image/png">
-<link rel="stylesheet" href="/static/stil.css">
+<link rel="icon" href="icon.png" type="image/png">
+<link rel="stylesheet" href="stil.css">
 <script>
 /* Ganz oben und ohne Abhaengigkeiten: faengt Fehler, die beim Laden von mappe.js
  * auftreten. Ohne das bleibt die Oberflaeche einfach stumm - man klickt, tippt,
@@ -35,13 +35,13 @@ window.addEventListener('unhandledrejection', function (ev) {
   <aside id="leiste">
     <header>
       <strong>Notizmappe</strong>
-      <code id="ordner" title="Datenordner">{{ ordner }}</code>
+      <code id="ordner" title="Datenordner"></code>
     </header>
     <nav id="baum" aria-label="Notizbücher"></nav>
     <footer>
       <button type="button" id="neues-buch">+ Notizbuch</button>
       <span class="fussrechts">
-        <span id="version">v{{ version }}</span>
+        <span id="version"></span>
         <button type="button" id="sperren" title="Sperren" hidden>🔒</button>
         <button type="button" id="zahnrad" title="Einstellungen">⚙</button>
       </span>
@@ -199,6 +199,6 @@ window.addEventListener('unhandledrejection', function (ev) {
   </div>
 
 </div>
-<script src="/static/mappe.js"></script>
+<script src="mappe.js"></script>
 </body>
 </html>

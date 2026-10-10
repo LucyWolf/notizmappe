@@ -41,11 +41,12 @@ pruefe "--version nennt die Nummer" '[ "$(lauf --version)" = "Notizmappe v$VER" 
 echo "--- Installieren ---"
 lauf --install || { echo "FEHLER  Installation abgebrochen"; fehler=$((fehler+1)); }
 Z=$H/.local/share/notizmappe
-pruefe "Programm liegt im Ziel"             "[ -f '$Z/app/main.py' ]"
+pruefe "Programm liegt im Ziel"             "[ -f '$Z/app/fenster.py' ]"
+pruefe "Oberflaeche liegt im Ziel"          "[ -f '$Z/app/oberflaeche/index.html' ]"
 pruefe "Version mitgeschrieben"             "[ \"\$(cat '$Z/app/VERSION')\" = $VER ]"
 pruefe "venv angelegt"                      "[ -x '$Z/.venv/bin/python' ]"
 pruefe "venv sieht die Systempakete"        "grep -q 'include-system-site-packages = true' '$Z/.venv/pyvenv.cfg'"
-pruefe "fastapi aus dem Paket eingerichtet" "'$Z/.venv/bin/python' -c 'import fastapi'"
+pruefe "kein Webserver mehr im venv"        "! '$Z/.venv/bin/python' -c 'import fastapi' 2>/dev/null"
 pruefe "pywebview im venv"                  "'$Z/.venv/bin/python' -c 'import webview'"
 pruefe "Programm (Fenster) ausfuehrbar"     "[ -x '$Z/notizmappe' ]"
 pruefe "kein Hintergrunddienst"             "[ ! -f '$H/.config/systemd/user/notizmappe.service' ]"
@@ -59,17 +60,24 @@ pruefe "Symbol mitinstalliert"              "[ -s '$H/.local/share/icons/hicolor
 pruefe "Menueintrag zeigt aufs eigene Symbol" "grep -q '^Icon=notizmappe$' '$H/.local/share/applications/notizmappe.desktop'"
 pruefe "Nichts im echten Heim gelandet"     "[ ! -e \$HOME/.config/systemd/user/notizmappe.service ]"
 
-echo "--- Installierte Fassung starten und abfragen ---"
-env HOME="$H" NOTIZEN_ORDNER="$H/Notizen" PORT=$PORT NOTIZMAPPE_OHNE_FENSTER=1 \
-  "$Z/notizmappe" > "$H/lauf.log" 2>&1 &
-pid=$!
-for i in $(seq 20); do curl -sf -o /dev/null "http://127.0.0.1:$PORT/" && break; sleep 0.5; done
-pruefe "Startseite antwortet mit 200" "[ \"\$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:$PORT/)\" = 200 ]"
-pruefe "API antwortet"                "curl -sf 'http://127.0.0.1:$PORT/api/baum' | grep -q notizbuecher"
-curl -sf -X POST -H 'Content-Type: application/json' -d '{"name":"Probe"}' "http://127.0.0.1:$PORT/api/notizbuch" >/dev/null
-pruefe "Notizbuch landet im Notizordner" "[ -d '$H/Notizen/Probe' ]"
-kill $pid 2>/dev/null; wait $pid 2>/dev/null
-pruefe "Keine Ausnahme im Log"           "! grep -qi traceback '$H/lauf.log'"
+mkdir -p "$H/Notizen/Probe/Allgemein"
+echo '{"format":1,"titel":"Probe","rev":1,"elemente":[]}' > "$H/Notizen/Probe/Allgemein/Probe.json"
+
+echo "--- Installierte Fassung pruefen ---"
+env HOME="$H" "$Z/notizmappe" --pruefen > "$H/lauf.log" 2>&1
+pruefe "--pruefen laeuft durch"           "[ $? -eq 0 ]" "$H/lauf.log"
+pruefe "findet die Oberflaeche"           "grep -q 'Oberfläche:.*da' '$H/lauf.log'" "$H/lauf.log"
+pruefe "liest die Daten"                  "grep -q 'Daten:' '$H/lauf.log'" "$H/lauf.log"
+pruefe "Keine Ausnahme im Log"            "! grep -qi traceback '$H/lauf.log'" "$H/lauf.log"
+
+echo "--- und macht dabei keinen Port auf ---"
+env HOME="$H" NOTIZMAPPE_OHNE_FENSTER=1 "$Z/notizmappe" > "$H/ohne.log" 2>&1 &
+ohnepid=$!
+sleep 4
+offen=$(ss -tlnp 2>/dev/null | grep -c "pid=$ohnepid," || true)
+kill $ohnepid 2>/dev/null; wait $ohnepid 2>/dev/null
+pruefe "kein offener Port"                "[ \"${offen:-0}\" = 0 ]" "$H/ohne.log"
+pruefe "meldet Version und Ordner"        "grep -q 'Ohne Fenster' '$H/ohne.log'" "$H/ohne.log"
 
 echo "--- Rueckwaerts installieren wird verweigert ---"
 hoeher=$(python3 -c "t='$VER'.split('.'); t[-1]=str(int(t[-1])+1); print('.'.join(t))")
@@ -86,42 +94,21 @@ pruefe "Neu auflegen geht"              "printf '%s' \"\$aus\" | grep -q 'schon 
 pruefe "Notizen beim Update unberuehrt" "[ -d '$H/Notizen/Probe' ]"
 pruefe "Pakete kamen aus dem Paket, nicht aus dem Netz" "! printf '%s' \"\$aus\" | grep -q 'aus dem Netz'"
 
-echo "--- --starten: einrichten, und ohne Desktop sauber melden ---"
+echo "--- --starten: einrichten, und ohne Bildschirm sauber melden ---"
 # Hier gibt es kein Fenstersystem, also kann auch kein Fenster aufgehen. Richtig
-# ist dann: den Grund melden und enden - und gerade nicht heimlich einen Browser
-# aufmachen. Der Server kommt hier nur hoch, wenn man ihn ausdruecklich will.
+# ist dann: den Grund melden und enden.
 Z3=$H/drittes
 env -u XDG_RUNTIME_DIR -u DBUS_SESSION_BUS_ADDRESS -u DISPLAY -u WAYLAND_DISPLAY \
-  HOME="$H" NOTIZMAPPE_ZIEL="$Z3" NOTIZEN_ORDNER="$H/Notizen" PORT=8157 \
+  HOME="$H" NOTIZMAPPE_ZIEL="$Z3" NOTIZEN_ORDNER="$H/Notizen" \
   timeout 120 bash "$PAKET" --starten < /dev/null > "$H/starten.log" 2>&1 &
 startpid=$!
-# Auf das Ende warten, nicht auf eine Uhr: das Einrichten baut ein venv und holt
-# Pakete, das dauert auf einem langsamen Rechner laenger als jede feste Frist -
-# und dann prueft man ein Protokoll, das noch gar nicht geschrieben ist.
 wait $startpid 2>/dev/null
-pruefe "--starten richtet ein, wenn nichts da ist" "[ -f '$Z3/app/main.py' ]"
+pruefe "--starten richtet ein, wenn nichts da ist" "[ -f '$Z3/app/fenster.py' ]"
+pruefe "Programm angelegt"                         "[ -x '$Z3/notizmappe' ]"
 pruefe "ohne Fenster kein heimlicher Browser"      "! grep -qi 'im normalen Browser' '$H/starten.log'" "$H/starten.log"
-pruefe "Grund wird genannt"                        "grep -qi 'fenster' '$H/starten.log'" "$H/starten.log" "$H/.local/share/notizmappe/.fenster.log"
+pruefe "Grund wird genannt"                        "grep -qi 'fenster' '$H/starten.log'" "$H/starten.log"
 pruefe "Menueintrag haengt an TryExec"             "grep -q 'TryExec=$Z3/notizmappe' '$H/.local/share/applications/notizmappe.desktop'"
-# Und jetzt ausdruecklich als Server: dann muss er antworten.
-env NOTIZMAPPE_OHNE_FENSTER=1 PORT=8157 NOTIZEN_ORDNER="$H/Notizen" HOME="$H" \
-  timeout 60 "$Z3/notizmappe" > "$H/nurserver.log" 2>&1 &
-nurpid=$!
-# Den Port aus der Ausgabe lesen, nicht raten: ist der gewuenschte belegt, nimmt
-# das Programm den naechsten freien - genau dafuer ist das gebaut.
-echtport=""
-for i in $(seq 40); do
-  echtport=$(sed -n 's|.*http://127.0.0.1:\([0-9]*\)/.*|\1|p' "$H/nurserver.log" 2>/dev/null | head -1)
-  [ -n "$echtport" ] && curl -sf -o /dev/null "http://127.0.0.1:$echtport/" 2>/dev/null && break
-  sleep 1
-done
-pruefe "mit NOTIZMAPPE_OHNE_FENSTER laeuft der Server" "curl -sf 'http://127.0.0.1:${echtport:-0}/api/baum' | grep -q notizbuecher" "$H/nurserver.log"
-kill $nurpid 2>/dev/null; wait $nurpid 2>/dev/null
-# Vollen Pfad nehmen: ein kurzes Muster traefe auch eine andere Shell, die
-# diesen Text zufaellig in ihrer Kommandozeile stehen hat.
-pkill -f "$Z3/.venv/bin/python" 2>/dev/null
-sleep 2
-pruefe "Server ist mit dem Programm gegangen" "! curl -sf -o /dev/null --max-time 2 'http://127.0.0.1:${echtport:-8157}/'"
+rm -rf "$Z3"
 
 echo "--- Beschaedigte Datei ---"
 kaputt=$H/kaputt.sh

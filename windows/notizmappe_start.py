@@ -30,15 +30,12 @@ def main() -> int:
     ausgabe_absichern()
     ordner = basis() / "app"
     sys.path.insert(0, str(ordner))
-    # Der Datenordner kommt aus den Einstellungen (%APPDATA%\\notizmappe), sonst ~/Notizen.
 
     import fenster
-    # Das Fenster laeuft als eigener Prozess (siehe fenster.mit_pywebview). Im
-    # Buendel ist das wieder diese exe - mit --nur-fenster soll sie dann nur das
-    # Fenster zeigen, nicht noch einmal das ganze Programm starten.
-    if "--nur-fenster" in sys.argv:
-        fenster.fenster_zeigen(sys.argv[sys.argv.index("--nur-fenster") + 1])
-        return 0
+    if "--pruefen" in sys.argv:
+        return fenster.pruefen()
+    if "--update" in sys.argv:
+        return fenster.update_anstossen()
     return fenster.oeffnen()
 
 
@@ -50,7 +47,6 @@ if __name__ == "__main__":
         traceback.print_exc()
         print(f"\nFehler: {fehler}", flush=True)
         # Ohne Konsole (--windowed) sieht das niemand, deshalb zusaetzlich ein Fenster.
-        # Im Buildlauf wuerde ein Meldungsfenster bis zur Zeitueberschreitung stehen.
         if os.environ.get("NOTIZMAPPE_OHNE_FENSTER") != "1":
             try:
                 import ctypes
