@@ -131,6 +131,18 @@ jobs:
             throw "Notizmappe.exe antwortet nicht auf 8112 (beendet: $($p.HasExited))"
           }
           Write-Host "Bis zur ersten Antwort: $([math]::Round($uhr.Elapsed.TotalSeconds, 1)) s"
+
+          # Ein Desktop-Programm darf nur auf dem eigenen Rechner lauschen. Sobald
+          # etwas auf 0.0.0.0 haengt, fragt Windows nach einer Firewall-Freigabe -
+          # und dann ist es eben doch ein Server im Netz.
+          $lauscht = Get-NetTCPConnection -State Listen -OwningProcess $p.Id -ErrorAction SilentlyContinue
+          Write-Host "--- worauf gelauscht wird ---"
+          $lauscht | Select-Object LocalAddress,LocalPort | Format-Table | Out-String | Write-Host
+          $fremd = $lauscht | Where-Object { $_.LocalAddress -notin @("127.0.0.1", "::1") }
+          if ($fremd) {
+            $fremd | ForEach-Object { Write-Host "::error::lauscht auf $($_.LocalAddress):$($_.LocalPort)" }
+            throw "Es wird auf mehr als dem eigenen Rechner gelauscht - das loest die Firewall-Abfrage aus"
+          }
           # Aus einem Ordner gestartet gibt es keinen Auspacker mehr: genau einer.
           $wieviele = (Get-Process -Name Notizmappe -ErrorAction SilentlyContinue).Count
           Write-Host "Prozesse mit diesem Namen: $wieviele"
