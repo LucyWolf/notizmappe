@@ -264,14 +264,25 @@ def einspielen() -> dict:
             #
             # Das Setup beendet uns selbst; der Nachlauf wartet danach und startet
             # die frisch installierte Fassung, sonst steht der Anwender vor nichts.
+            # Ohne "start": das braucht eine Konsole, und dieser Prozess laeuft
+            # bewusst abgekoppelt ohne eine - der Befehl verpufft dann einfach.
+            # Direkt aufgerufen wartet cmd ohnehin auf das Ende.
+            #
+            # Die Datei schreibt ihr eigenes Protokoll: die geerbten Handles sind
+            # weg, sobald wir uns beenden, und das passiert gleich.
             stapel = ziel.with_suffix(".cmd")
+            mitschrift = _eigener_ort() / ("update-lauf.log" if sys.platform == "win32"
+                                           else ".update-lauf.log")
             stapel.write_text(
                 "@echo off\r\n"
-                f'start "" /wait "{ziel}" /SILENT /NORESTART\r\n'
+                f'echo Setup laeuft: {ziel}>"{mitschrift}"\r\n'
+                f'"{ziel}" /SILENT /NORESTART >>"{mitschrift}" 2>&1\r\n'
+                f'echo Rueckgabe %ERRORLEVEL%>>"{mitschrift}"\r\n'
                 "ping -n 4 127.0.0.1 >nul\r\n"
-                f'start "" "{sys.executable}"\r\n',
+                f'echo Starte neu: {sys.executable}>>"{mitschrift}"\r\n'
+                f'"{sys.executable}"\r\n',
                 encoding="ascii", errors="replace")
-            log.write(f"Stapeldatei: {stapel}\n")
+            log.write(f"Stapeldatei: {stapel}\nMitschrift: {mitschrift}\n")
             log.flush()
             subprocess.Popen(["cmd", "/c", str(stapel)],
                              stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
