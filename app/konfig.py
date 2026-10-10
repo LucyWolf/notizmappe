@@ -1,11 +1,10 @@
-"""Einstellungen dieses Rechners: welcher Datenordner, welche Server, Sperre.
+"""Einstellungen dieses Rechners: vor allem, welcher Datenordner benutzt wird.
 
 Liegt bewusst nicht im Datenordner. Der wird mit Nextcloud geteilt und kann
 umgestellt werden - die Angabe, wo er liegt, kann nicht in ihm selbst stehen.
 
     Linux:   ~/.config/notizmappe/einstellungen.json
     Windows: %APPDATA%/notizmappe/einstellungen.json
-    Docker:  NOTIZMAPPE_KONFIG=/konfig
 """
 from __future__ import annotations
 

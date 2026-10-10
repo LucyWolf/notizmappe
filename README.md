@@ -4,9 +4,9 @@ Freie Notizfläche wie OneNote, aber die Daten liegen als Dateien in **deinem**
 Ordner — Nextcloud, NAS-Freigabe oder einfach lokal. Kein Konto, kein Microsoft.
 
 Ein normales Programm: eigenes Fenster, eigener Eintrag im Menü und in der
-Fensterleiste, Schließen beendet es. Dass die Oberfläche innen aus HTML besteht
-und ein kleiner Server dahinter läuft, merkt man nur, wenn man es wissen will —
-der Server hört nur auf `127.0.0.1` und geht mit dem Fenster.
+Fensterleiste, Schließen beendet es. Keine Konten, keine Anmeldung, nichts im
+Netz — es hört ausschließlich auf `127.0.0.1`, und das nur, weil die Oberfläche
+HTML ist und eine Webansicht sie über HTTP laden muss.
 
 Stand: 08.10.2026 — Stufe 1 (Baum, Textkästen, Autosave, Konflikterkennung).
 
@@ -245,10 +245,8 @@ Ohne Root. Es entstehen: `~/.local/share/notizmappe` (Programm und venv),
 `~/Notizen` (Daten) und ein Menüeintrag **Notizmappe**. Läuft schon eine Fassung,
 fragt der Installer: aktualisieren, deinstallieren oder abbrechen.
 
-Standardmäßig läuft **nichts** im Hintergrund. Wer die Notizen auch vom Handy oder
-vom zweiten Rechner aus erreichen will, nimmt `--mit-dienst` — dann läuft zusätzlich
-ein Benutzerdienst auf Port 8099, und das Fenster dockt daran an, statt einen
-zweiten Server zu starten.
+Es läuft **nichts** im Hintergrund: kein Dienst, kein Autostart. Startet man es,
+läuft es; schließt man das Fenster, ist es weg.
 
 ## Das Fenster
 
@@ -289,11 +287,12 @@ wirklich will, deinstalliert erst.
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-NOTIZEN_ORDNER=~/Nextcloud/Notizen ./starten.sh      # Standard: ~/Notizen
+NOTIZEN_ORDNER=~/Nextcloud/Notizen .venv/bin/python app/fenster.py
 ```
 
-`starten.sh` ist nur der nackte Server. Das Programm mit Fenster ist
-`python3 app/fenster.py`. Umgebungsvariablen: `NOTIZEN_ORDNER`, `HOST`, `PORT`.
+Gestartet wird mit `python3 app/fenster.py`. Umgebungsvariablen:
+`NOTIZEN_ORDNER` und `PORT`. Eine Variable für die Adresse gibt es nicht — es
+hört immer nur auf `127.0.0.1`.
 
 ## Bedienung
 
@@ -315,18 +314,6 @@ Aus dem Editor kommendes HTML wird beim **Speichern** gesäubert (`app/reinigen.
 Positivliste). Das passiert absichtlich vor dem Schreiben, nicht erst beim Anzeigen:
 sonst steht der Dreck in der Datei und jeder spätere Weg — Export, Suche, zweite
 Oberfläche — sieht ihn wieder.
-
-## Server für ein Team
-
-Steht **nicht** hier drin. Die Notizmappe ist ein Desktop-Programm: eigenes
-Fenster, hört nur auf `127.0.0.1`, keine Konten, keine Anmeldung. Wer die Notizen
-mit mehreren teilen will, nimmt die Server-Fassung:
-
-**https://github.com/LucyWolf/notizmappe-server**
-
-Eigenes Projekt, eigener Container, eigene Versionen. Sie fasst diese hier nicht an
-und steckt auch nicht im Installationspaket mit drin. Gemeinsam sind nur Herkunft
-und Dateiformat — ein Notizordner lässt sich zwischen beiden hin- und herkopieren.
 
 ## Noch nicht gebaut
 

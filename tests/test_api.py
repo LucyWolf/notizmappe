@@ -23,7 +23,10 @@ sys.path.insert(0, str(WURZEL / "app"))
 from fastapi.testclient import TestClient
 import main
 
-k = TestClient(main.app)
+# base_url auf 127.0.0.1: der Waechter laesst nur den eigenen Rechner durch, und
+# der Testclient meldet sich sonst als "testserver" - also genau als der fremde
+# Hostname, gegen den die Pruefung da ist.
+k = TestClient(main.app, base_url="http://127.0.0.1:8099")
 fehler = []
 
 
@@ -327,7 +330,7 @@ pruefe("Notizbuch geloescht",
        and not (DATEN / "Arbeit").exists())
 
 # --- Datenordner umstellen ---------------------------------------------------
-hier = TestClient(main.app, client=("127.0.0.1", 50000))
+hier = TestClient(main.app, base_url="http://127.0.0.1:8099", client=("127.0.0.1", 50000))
 pruefe("Ordner von fremder Adresse nicht umstellbar",
        k.post("/api/ordner", json={"ordner": "/tmp/x"}).status_code == 403)
 pruefe("Mit NOTIZEN_ORDNER ist der Ordner fest",

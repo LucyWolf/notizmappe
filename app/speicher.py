@@ -45,7 +45,7 @@ def ordner_quelle() -> str:
 
 
 def wurzel() -> Path:
-    # NOTIZEN_ORDNER vor der Einstellung: Tests und Docker muessen sich darauf
+    # NOTIZEN_ORDNER vor der Einstellung: die Tests muessen sich darauf
     # verlassen koennen, dass nichts anderes angefasst wird.
     if not os.environ.get("NOTIZEN_ORDNER"):
         gewaehlt = konfig.lesen().get("ordner")

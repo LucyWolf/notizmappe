@@ -51,7 +51,7 @@ if __name__ == "__main__":
         print(f"\nFehler: {fehler}", flush=True)
         # Ohne Konsole (--windowed) sieht das niemand, deshalb zusaetzlich ein Fenster.
         # Im Buildlauf wuerde ein Meldungsfenster bis zur Zeitueberschreitung stehen.
-        if os.environ.get("NOTIZMAPPE_NUR_SERVER") != "1":
+        if os.environ.get("NOTIZMAPPE_OHNE_FENSTER") != "1":
             try:
                 import ctypes
                 ctypes.windll.user32.MessageBoxW(None, str(fehler), "Notizmappe", 0x10)

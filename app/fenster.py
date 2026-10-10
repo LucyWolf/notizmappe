@@ -43,7 +43,7 @@ def freier_port(wunsch: int = 8099) -> int:
 
 
 def laeuft_schon(port: int) -> bool:
-    """Laeuft dort bereits eine Notizmappe (z.B. als Dienst)? Dann docken wir an,
+    """Laeuft dort schon eine Notizmappe? Dann oeffnen wir nur ein Fenster dazu,
     statt einen zweiten Server auf dieselben Dateien zu setzen."""
     # /api/status antwortet auch, wenn die Notizmappe gesperrt ist; /api/baum fuer
     # aeltere Fassungen, die es noch nicht kennen.
@@ -427,7 +427,7 @@ def mit_browserfenster(adresse: str, profil: Path) -> bool:
 def oeffnen(port: int | None = None, eigener_server: bool = True) -> int:
     port = port or int(os.environ.get("PORT", "8099"))
     if laeuft_schon(port):
-        eigener_server = False         # Dienst ist schon da, nur das Fenster fehlt
+        eigener_server = False         # laeuft schon, nur das Fenster fehlt
     elif eigener_server:
         port = freier_port(port)
         server_starten(port)
@@ -435,10 +435,10 @@ def oeffnen(port: int | None = None, eigener_server: bool = True) -> int:
     adresse = f"http://127.0.0.1:{port}/"
     daten = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / "notizmappe"
 
-    if os.environ.get("NOTIZMAPPE_NUR_SERVER") == "1":
-        # Fuer Buildlaeufe: es gibt keinen Desktop, an dem ein Fenster aufgehen
-        # koennte. Server laeuft, Fenster faellt weg.
-        print(f"Nur-Server-Betrieb: {adresse}", flush=True)
+    if os.environ.get("NOTIZMAPPE_OHNE_FENSTER") == "1":
+        # Fuer Buildlaeufe: dort gibt es keinen Bildschirm, an dem ein Fenster
+        # aufgehen koennte. Alles laeuft, nur das Fenster faellt weg.
+        print(f"Ohne Fenster: {adresse}", flush=True)
         try:
             while True:
                 time.sleep(1)
