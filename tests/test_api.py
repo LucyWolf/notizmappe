@@ -77,23 +77,6 @@ pruefe("img weg", "<img" not in boese, boese)
 pruefe("Text bleibt", "Text" in boese, boese)
 pruefe("Nichts Boeses in der Datei", "onerror" not in (DATEN / "Arbeit/Projekte/Phobos.json").read_text())
 
-# --- Schriftgroesse und -art ueberleben das Speichern ------------------------
-s = k.get("/api/seite", params={"notizbuch": buch, "abschnitt": absch, "name": seite}).json()
-r = k.put("/api/seite", json={
-    "notizbuch": buch, "abschnitt": absch, "name": seite, "rev": s["rev"], "titel": "Phobos",
-    "elemente": [{"id": "f1", "typ": "text", "x": 0, "y": 0, "b": 400,
-                  "html": '<font size="5" face="Georgia, serif">gross und serif</font>'
-                          '<font size="99">unsinnige Groesse</font>'
-                          '<font face="boese; position:fixed">fremde Schrift</font>'}]})
-pruefe("Mit Schriftauszeichnung gespeichert", r.status_code == 200, r.text)
-h = k.get("/api/seite", params={"notizbuch": buch, "abschnitt": absch,
-                                "name": seite}).json()["elemente"][0]["html"]
-pruefe("Groesse bleibt", 'size="5"' in h, h)
-pruefe("Schriftart bleibt", 'face="Georgia, serif"' in h, h)
-pruefe("Unsinnige Groesse weg", 'size="99"' not in h, h)
-pruefe("Fremde Schriftart weg", "position:fixed" not in h and "boese" not in h, h)
-pruefe("Text bleibt trotzdem stehen", "gross und serif" in h and "fremde Schrift" in h, h)
-
 # --- Konflikt ----------------------------------------------------------------
 r = k.put("/api/seite", json={"notizbuch": buch, "abschnitt": absch, "name": seite, "rev": 1,
                               "titel": "Phobos", "geraet": "handy", "elemente": []})
@@ -133,6 +116,23 @@ pruefe("Datei umbenannt", neu == "Phobos v2" and (DATEN / "Arbeit/Projekte/Phobo
 pruefe("Alte Datei weg", not (DATEN / "Arbeit/Projekte/Phobos.json").exists())
 s = k.get("/api/seite", params={"notizbuch": buch, "abschnitt": absch, "name": neu}).json()
 pruefe("Inhalt nach Umbenennen noch da", len(s["elemente"]) == 1, s["elemente"])
+
+# --- Schriftgroesse und -art ueberleben das Speichern ------------------------
+s = k.get("/api/seite", params={"notizbuch": buch, "abschnitt": absch, "name": neu}).json()
+r = k.put("/api/seite", json={
+    "notizbuch": buch, "abschnitt": absch, "name": neu, "rev": s["rev"], "titel": "Phobos",
+    "elemente": [{"id": "f1", "typ": "text", "x": 0, "y": 0, "b": 400,
+                  "html": '<font size="5" face="Georgia, serif">gross und serif</font>'
+                          '<font size="99">unsinnige Groesse</font>'
+                          '<font face="boese; position:fixed">fremde Schrift</font>'}]})
+pruefe("Mit Schriftauszeichnung gespeichert", r.status_code == 200, r.text)
+h = k.get("/api/seite", params={"notizbuch": buch, "abschnitt": absch,
+                                "name": neu}).json()["elemente"][0]["html"]
+pruefe("Groesse bleibt", 'size="5"' in h, h)
+pruefe("Schriftart bleibt", 'face="Georgia, serif"' in h, h)
+pruefe("Unsinnige Groesse weg", 'size="99"' not in h, h)
+pruefe("Fremde Schriftart weg", "position:fixed" not in h and "boese" not in h, h)
+pruefe("Text bleibt trotzdem stehen", "gross und serif" in h and "fremde Schrift" in h, h)
 
 # --- Konfliktkopie vom Sync --------------------------------------------------
 shutil.copy(DATEN / "Arbeit/Projekte/Phobos v2.json",
