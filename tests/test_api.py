@@ -134,6 +134,21 @@ pruefe("Unsinnige Groesse weg", 'size="99"' not in h, h)
 pruefe("Fremde Schriftart weg", "position:fixed" not in h and "boese" not in h, h)
 pruefe("Text bleibt trotzdem stehen", "gross und serif" in h and "fremde Schrift" in h, h)
 
+s2 = k.get("/api/seite", params={"notizbuch": buch, "abschnitt": absch, "name": neu}).json()
+r = k.put("/api/seite", json={
+    "notizbuch": buch, "abschnitt": absch, "name": neu, "rev": s2["rev"], "titel": s2["titel"],
+    "elemente": [{"id": "f2", "typ": "text", "x": 0, "y": 0, "b": 400,
+                  "html": '<font color="#b23b2e">rot</font><mark>wichtig</mark>'
+                          '<font color="#123456">fremde Farbe</font>'
+                          '<mark onclick="boese()">mit Angriff</mark>'}]})
+pruefe("Mit Farbe und Hervorhebung gespeichert", r.status_code == 200, r.text)
+h = k.get("/api/seite", params={"notizbuch": buch, "abschnitt": absch,
+                                "name": neu}).json()["elemente"][0]["html"]
+pruefe("Farbe aus der Palette bleibt", 'color="#b23b2e"' in h, h)
+pruefe("Hervorhebung bleibt", "<mark>wichtig</mark>" in h, h)
+pruefe("Fremde Farbe weg", "#123456" not in h, h)
+pruefe("onclick an der Hervorhebung weg", "onclick" not in h, h)
+
 # --- Konfliktkopie vom Sync --------------------------------------------------
 shutil.copy(DATEN / "Arbeit/Projekte/Phobos v2.json",
             DATEN / "Arbeit/Projekte/Phobos v2 (Konflikt-Kopie 2026-10-08).json")

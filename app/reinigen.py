@@ -14,14 +14,14 @@ from html.parser import HTMLParser
 ERLAUBT = {
     "p", "br", "div", "span", "b", "strong", "i", "em", "u", "s", "strike",
     "ul", "ol", "li", "h1", "h2", "h3", "h4", "blockquote", "code", "pre", "a",
-    "font",
+    "font", "mark", "sub", "sup",
     "img",
 }
 LEER = {"br", "img"}
 # Nur das, was der Editor selbst setzt. Kein style, kein class, kein on*.
 # Bilder im Text zeigen nur auf einen eigenen Anhang (data-datei), nie per src
 # irgendwohin - die Adresse setzt die Oberflaeche beim Anzeigen.
-ATTRIBUTE = {"a": {"href"}, "img": {"data-datei", "alt"}, "font": {"size", "face"}}
+ATTRIBUTE = {"a": {"href"}, "img": {"data-datei", "alt"}, "font": {"size", "face", "color"}}
 
 # <font> ist aus der Mode, aber genau das, was der Editor fuer Groesse und Art
 # erzeugt - und es traegt nur zwei feste Werte statt beliebigem CSS. Ein style-
@@ -33,6 +33,13 @@ ATTRIBUTE = {"a": {"href"}, "img": {"data-datei", "alt"}, "font": {"size", "face
 SCHRIFTEN = {
     "system-ui", "Georgia, serif", "ui-monospace, monospace",
     "Segoe Script, Comic Sans MS, cursive",
+}
+
+# Dieselbe Idee bei den Farben: nur was in der Palette steht. Eine beliebige
+# Farbe waere harmlos, aber die Pruefung kostet nichts und haelt die Liste der
+# erlaubten Werte an einer Stelle.
+FARBEN = {
+    "#1f1d1a", "#b23b2e", "#c2690a", "#2f7d32", "#1565c0", "#7a5cff", "#78736a",
 }
 SCHEMA_OK = ("http://", "https://", "mailto:", "notiz:")
 
@@ -61,6 +68,8 @@ class _Reiniger(HTMLParser):
             if name == "size" and wert not in {"1", "2", "3", "4", "5", "6", "7"}:
                 continue
             if name == "face" and wert not in SCHRIFTEN:
+                continue
+            if name == "color" and wert.lower() not in FARBEN:
                 continue
             gut.append(f' {name}="{escape(wert, quote=True)}"')
         if tag == "img" and not any(g.startswith(" data-datei=") for g in gut):

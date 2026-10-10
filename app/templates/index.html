@@ -91,6 +91,31 @@ window.addEventListener('unhandledrejection', function (ev) {
     </div>
   </main>
 
+  <div id="minileiste" hidden>
+    <select data-befehl="fontName" title="Schriftart">
+      <option value="system-ui">Standard</option>
+      <option value="Georgia, serif">Serife</option>
+      <option value="ui-monospace, monospace">Feste Breite</option>
+      <option value="Segoe Script, Comic Sans MS, cursive">Handschrift</option>
+    </select>
+    <select data-befehl="fontSize" title="Schriftgröße">
+      <option value="1">8</option><option value="2">10</option>
+      <option value="3" selected>12</option><option value="4">14</option>
+      <option value="5">18</option><option value="6">24</option><option value="7">36</option>
+    </select>
+    <span class="trenner"></span>
+    <button type="button" data-befehl="bold" title="Fett (Strg+B)"><b>F</b></button>
+    <button type="button" data-befehl="italic" title="Kursiv (Strg+I)"><i>K</i></button>
+    <button type="button" data-befehl="underline" title="Unterstrichen (Strg+U)"><u>U</u></button>
+    <button type="button" data-befehl="strikeThrough" title="Durchgestrichen"><s>S</s></button>
+    <span class="trenner"></span>
+    <span id="farben" title="Schriftfarbe"></span>
+    <button type="button" data-eigen="mark" title="Hervorheben"><mark>H</mark></button>
+    <span class="trenner"></span>
+    <button type="button" data-befehl="insertUnorderedList" title="Liste">•</button>
+    <button type="button" data-eigen="sauber" title="Formatierung entfernen">✕</button>
+  </div>
+
   <div id="rechtsmenue" hidden>
     <button type="button" data-tun="ausschneiden">Ausschneiden</button>
     <button type="button" data-tun="kopieren">Kopieren</button>

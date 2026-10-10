@@ -735,6 +735,8 @@ for (const b of document.querySelectorAll('#werkzeuge [data-befehl]')) {
   });
 }
 
+let letzterKasten = null;
+
 /* --- Schriftart und -groesse ------------------------------------------------
  *
  * execCommand ist aus der Mode, macht hier aber genau das Richtige: es setzt die
@@ -742,7 +744,8 @@ for (const b of document.querySelectorAll('#werkzeuge [data-befehl]')) {
  * sorgt dafuer, dass dabei <font size> und <font face> entsteht statt beliebigem
  * CSS - nur diese beiden Angaben laesst der Server durch. */
 function aufAuswahl(befehl, wert) {
-  const k = document.activeElement && document.activeElement.closest('.kasten');
+  const k = (document.activeElement && document.activeElement.closest('.kasten'))
+    || letzterKasten;
   if (!k) { sagen('Erst in einen Kasten klicken', 2000); return; }
   try { document.execCommand('styleWithCSS', false, false); } catch (f) { /* egal */ }
   document.execCommand(befehl, false, wert);
@@ -766,6 +769,162 @@ for (const [feld, befehl] of [['#schriftart', 'fontName'], ['#schriftgroesse', '
     }
     aufAuswahl(befehl, w.value);
   });
+}
+
+/* --- Leiste, die beim Markieren aufgeht -------------------------------------
+ *
+ * Markieren und dann nach oben in die Werkzeugleiste fahren ist weit; und wer
+ * unterwegs irgendwo hinklickt, verliert die Markierung. Die Leiste kommt
+ * deshalb dorthin, wo markiert wurde. */
+const minileiste = $('#minileiste');
+const FARBEN = [
+  ['#1f1d1a', 'Standard'], ['#b23b2e', 'Rot'], ['#c2690a', 'Orange'],
+  ['#2f7d32', 'Grün'], ['#1565c0', 'Blau'], ['#7a5cff', 'Violett'], ['#78736a', 'Grau'],
+];
+for (const [farbe, name] of FARBEN) {
+  const k = document.createElement('button');
+  k.type = 'button';
+  k.title = name;
+  k.style.background = farbe;
+  k.dataset.farbe = farbe;
+  $('#farben').append(k);
+}
+
+function minileisteZeigen() {
+  const sel = window.getSelection();
+  if (!sel || sel.isCollapsed || !sel.rangeCount) { minileiste.hidden = true; return; }
+  const knoten = sel.anchorNode;
+  const kasten = (knoten && (knoten.nodeType === 1 ? knoten : knoten.parentElement) || {}).closest
+    ? (knoten.nodeType === 1 ? knoten : knoten.parentElement).closest('.kasten .text')
+    : null;
+  if (!kasten) { minileiste.hidden = true; return; }
+  letzterKasten = kasten.closest('.kasten');
+
+  const r = sel.getRangeAt(0).getBoundingClientRect();
+  minileiste.hidden = false;
+  const b = minileiste.getBoundingClientRect();
+  // Über die Markierung, und wenn dort kein Platz ist, darunter.
+  let oben = r.top - b.height - 8;
+  if (oben < 8) oben = r.bottom + 8;
+  minileiste.style.top = Math.min(oben, window.innerHeight - b.height - 8) + 'px';
+  minileiste.style.left = Math.max(8, Math.min(r.left + r.width / 2 - b.width / 2,
+                                               window.innerWidth - b.width - 8)) + 'px';
+  stand_anzeigen();
+}
+
+/* Zeigen, was an der Markierung schon gesetzt ist. */
+function stand_anzeigen() {
+  for (const knopf of minileiste.querySelectorAll('button[data-befehl]')) {
+    let an = false;
+    try { an = document.queryCommandState(knopf.dataset.befehl); } catch (f) { /* egal */ }
+    knopf.style.background = an ? 'color-mix(in srgb, var(--akzent) 22%, transparent)' : '';
+  }
+  for (const [feld, befehl] of [['fontName', 'fontName'], ['fontSize', 'fontSize']]) {
+    const w = minileiste.querySelector(`select[data-befehl="${befehl}"]`);
+    if (!w) continue;
+    try {
+      const wert = document.queryCommandValue(befehl);
+      if (wert) {
+        const treffer = [...w.options].find((o) => o.value.toLowerCase().startsWith(String(wert).toLowerCase().replace(/^['"]|['"]$/g, '')) || o.value === wert);
+        if (treffer) w.value = treffer.value;
+      }
+    } catch (f) { /* queryCommandValue kennt nicht jede Webansicht */ }
+  }
+}
+
+document.addEventListener('selectionchange', () => {
+  // Nicht bei jedem Zwischenstand springen - erst wenn die Maus losgelassen ist.
+  if (!ziehtMarkierung) minileisteZeigen();
+});
+let ziehtMarkierung = false;
+document.addEventListener('mousedown', (ev) => {
+  if (ev.target.closest('#minileiste')) return;
+  ziehtMarkierung = true;
+  minileiste.hidden = true;
+});
+document.addEventListener('mouseup', () => { ziehtMarkierung = false; setTimeout(minileisteZeigen, 0); });
+document.addEventListener('keyup', (ev) => { if (ev.shiftKey || ev.key === 'Escape') minileisteZeigen(); });
+
+/* Ein Klick in die Leiste darf die Markierung nicht kosten. Bei Knöpfen genügt
+ * preventDefault; ein Auswahlfeld muss den Fokus bekommen, sonst klappt es nicht
+ * auf - dafür wird die Markierung gemerkt und nachher wiederhergestellt. */
+let gemerkteStelle = null;
+minileiste.addEventListener('mousedown', (ev) => {
+  const sel = window.getSelection();
+  gemerkteStelle = sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
+  if (ev.target.tagName !== 'SELECT') ev.preventDefault();
+});
+
+function stelleZurueck() {
+  if (!gemerkteStelle) return;
+  const feld = letzterKasten && letzterKasten.querySelector('.text');
+  if (feld) feld.focus();
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(gemerkteStelle);
+}
+
+minileiste.addEventListener('click', (ev) => {
+  const knopf = ev.target.closest('button');
+  if (!knopf) return;
+  if (knopf.dataset.farbe) { aufAuswahl('foreColor', knopf.dataset.farbe); stand_anzeigen(); return; }
+  if (knopf.dataset.befehl) { aufAuswahl(knopf.dataset.befehl); stand_anzeigen(); return; }
+  if (knopf.dataset.eigen === 'sauber') { aufAuswahl('removeFormat'); hervorhebungWeg(); return; }
+  if (knopf.dataset.eigen === 'mark') hervorheben();
+});
+for (const w of minileiste.querySelectorAll('select[data-befehl]')) {
+  w.addEventListener('change', () => {
+    stelleZurueck();
+    aufAuswahl(w.dataset.befehl, w.value);
+    minileisteZeigen();
+  });
+}
+
+/* <mark> gibt es als Befehl nicht - also von Hand um die Auswahl legen.
+ * Eine Hintergrundfarbe per style waere der uebliche Weg und genau die Art
+ * Freitext-CSS, die hier nicht in die Dateien soll. */
+function hervorheben() {
+  const sel = window.getSelection();
+  if (!sel.rangeCount || sel.isCollapsed) return;
+  const r = sel.getRangeAt(0);
+  const schon = (sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement)
+    .closest('mark');
+  if (schon) { hervorhebungWeg(); return; }
+  const m = document.createElement('mark');
+  try {
+    m.appendChild(r.extractContents());
+    r.insertNode(m);
+    sel.removeAllRanges();
+    const neu = document.createRange();
+    neu.selectNodeContents(m);
+    sel.addRange(neu);
+  } catch (f) {
+    melden('Das ließ sich nicht hervorheben: ' + f.message);
+    return;
+  }
+  gemerkt();
+}
+
+function hervorhebungWeg() {
+  const sel = window.getSelection();
+  if (!sel.rangeCount) return;
+  const knoten = sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement;
+  const m = knoten.closest('mark');
+  if (m) {
+    const eltern = m.parentNode;
+    while (m.firstChild) eltern.insertBefore(m.firstChild, m);
+    m.remove();
+    eltern.normalize();
+  }
+  gemerkt();
+}
+
+/* Den geänderten Kasten übernehmen und zum Speichern vormerken. */
+function gemerkt() {
+  const k = letzterKasten || (document.activeElement && document.activeElement.closest('.kasten'));
+  if (!k) return;
+  const e = elemente.find((x) => x.id === k.dataset.id);
+  if (e) { e.html = k.querySelector('.text').innerHTML; angefasst(); }
 }
 
 /* --- Menü bei der rechten Maustaste ----------------------------------------
