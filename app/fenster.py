@@ -231,12 +231,20 @@ def fenster_zeigen(adresse: str) -> None:
     # offene Seite ueber einen Neustart hinweg erhalten.
     speicher = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / "notizmappe/webansicht"
     speicher.mkdir(parents=True, exist_ok=True)
-    # Das Symbol gilt fuer die Fensterleiste. Aeltere pywebview-Fassungen kennen
-    # den Parameter nicht - dann eben ohne, statt ganz ohne Fenster dazustehen.
-    symbol = Path(__file__).resolve().parent / "static/icon.png"
+    # Das Symbol nur dort mitgeben, wo ein PNG auch eines sein darf. Windows
+    # verlangt eine .ico-Datei und wirft sonst mitten im Fensterbau
+    # "Argument 'picture' must be a picture that can be used as a Icon" - in einem
+    # .NET-Thread, der das ganze Programm mitnimmt. Kein Fenster, keine Meldung,
+    # nichts. Die Windows-Fassung hat ihr Symbol ohnehin aus der exe selbst.
+    zusatz = {}
+    if sys.platform != "win32":
+        symbol = Path(__file__).resolve().parent / "static/icon.png"
+        if symbol.is_file():
+            zusatz["icon"] = str(symbol)
     try:
-        webview.start(private_mode=False, storage_path=str(speicher), icon=str(symbol))
+        webview.start(private_mode=False, storage_path=str(speicher), **zusatz)
     except TypeError:
+        # Aeltere pywebview-Fassungen kennen den Parameter nicht.
         webview.start(private_mode=False, storage_path=str(speicher))
 
 
