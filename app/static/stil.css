@@ -312,3 +312,33 @@ body.anmeldeseite {
 }
 #rechtsmenue button:hover { background: color-mix(in srgb, var(--akzent) 18%, transparent); }
 #rechtsmenue button:disabled { color: var(--matt); cursor: default; background: none; }
+
+/* --- Leiste, die beim Markieren aufgeht --- */
+#minileiste {
+  position: fixed; z-index: 25; display: flex; align-items: center; gap: 2px;
+  padding: 4px 6px; background: var(--papier); border: 1px solid var(--linie);
+  border-radius: 8px; box-shadow: 0 6px 20px rgba(0, 0, 0, .28);
+}
+#minileiste button {
+  min-width: 26px; height: 26px; border: 1px solid transparent; border-radius: 5px;
+  background: transparent; color: var(--schrift); cursor: pointer; font-size: 13px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+#minileiste button:hover { border-color: var(--akzent); background: color-mix(in srgb, var(--akzent) 12%, transparent); }
+#minileiste select {
+  height: 26px; border: 1px solid var(--linie); border-radius: 5px;
+  background: var(--papier); color: var(--schrift); font-size: 12px; max-width: 108px;
+}
+#minileiste .trenner { width: 1px; height: 18px; background: var(--linie); margin: 0 4px; }
+#minileiste #farben { display: inline-flex; gap: 3px; }
+#minileiste #farben button {
+  min-width: 16px; width: 16px; height: 16px; padding: 0; border-radius: 50%;
+  border: 1px solid var(--linie);
+}
+#minileiste #farben button:hover { outline: 2px solid var(--akzent); outline-offset: 1px; }
+
+/* Hervorhebung und Farben in den Kästen */
+.kasten .text mark { background: #ffe680; color: #1f1d1a; border-radius: 2px; padding: 0 1px; }
+@media (prefers-color-scheme: dark) {
+  .kasten .text mark { background: #b59000; color: #fff; }
+}
