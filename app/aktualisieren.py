@@ -15,6 +15,7 @@ import os
 import re
 import subprocess
 import sys
+import threading
 import tempfile
 import time
 import urllib.error
@@ -46,8 +47,19 @@ def installierte_version() -> str:
 
 def aus_installation() -> bool:
     """Laeuft das hier aus einer Installation (dann koennen wir aktualisieren) oder
-    aus dem Quellordner (dann macht man das mit git)?"""
+    aus dem Quellordner (dann macht man das mit git)?
+
+    Auf Windows gibt es keine .einrichtung - dort ist das Merkmal, dass wir als
+    gebuendelte exe laufen. Aktualisiert wird dann mit der setup.exe.
+    """
+    if sys.platform == "win32":
+        return bool(getattr(sys, "frozen", False))
     return (ORDNER / ".einrichtung").is_file()
+
+
+def _windows_setup(r: dict) -> tuple[str | None, str | None]:
+    """Setup-Datei und Pruefsumme am Release heraussuchen."""
+    return r.get("setup"), r.get("setup_pruefsumme")
 
 
 # --- Einstellungen zum Update ------------------------------------------------
@@ -122,7 +134,12 @@ def neuestes_release() -> dict:
     paket = (next((a for n, a in anhaenge.items() if re.search(r"-v[\d.]+-installer\.sh$", n)), None)
              or next((a for n, a in anhaenge.items() if n.endswith("-installer.sh")), None))
     pruef = next((a for n, a in anhaenge.items() if n.endswith("-installer.sh.sha256")), None)
+    setup = next((a for n, a in anhaenge.items() if n.endswith("setup.exe")), None)
+    setup_summe = next((a for n, a in anhaenge.items() if n.endswith("setup.exe.sha256")), None)
     return {
+        "setup": setup and setup.get("url"),
+        "setup_name": setup and setup.get("name"),
+        "setup_pruefsumme": setup_summe and setup_summe.get("url"),
         "version": re.sub(r"^v", "", r.get("tag_name") or ""),
         "marke": r.get("tag_name") or "",
         "notizen": (r.get("body") or "")[:4000],
@@ -159,7 +176,8 @@ def pruefen(frisch: bool = False) -> dict:
         stand["verfuegbar"] = r["version"] or None
         stand["notizen"] = r["notizen"]
         stand["neuer"] = version_tupel(r["version"]) > version_tupel(stand["installiert"])
-        if stand["neuer"] and not r["paket"]:
+        noetig = r["setup"] if sys.platform == "win32" else r["paket"]
+        if stand["neuer"] and not noetig:
             stand["fehler"] = "Am Release hängt keine Installationsdatei"
             stand["neuer"] = False
     except urllib.error.HTTPError as f:
@@ -197,23 +215,41 @@ def einspielen() -> dict:
     if version_tupel(r["version"]) <= version_tupel(installierte_version()):
         raise RuntimeError(f"Nichts Neueres da (installiert {installierte_version()}, "
                            f"im Release {r['version'] or '?'})")
-    if not r["paket"]:
+    fenster = sys.platform == "win32"
+    quelle = r["setup"] if fenster else r["paket"]
+    summenquelle = r["setup_pruefsumme"] if fenster else r["pruefsumme"]
+    name = (r["setup_name"] if fenster else r["paket_name"]) or ("setup.exe" if fenster else "installer.sh")
+    if not quelle:
         raise RuntimeError("Am Release hängt keine Installationsdatei")
 
-    rohdaten = _abrufen(r["paket"], roh=True)
+    rohdaten = _abrufen(quelle, roh=True)
     echt = hashlib.sha256(rohdaten).hexdigest()
-    soll = _erwartete_summe(r["pruefsumme"]) if r["pruefsumme"] else None
+    soll = _erwartete_summe(summenquelle) if summenquelle else None
     if soll and soll != echt:
         raise RuntimeError(f"Prüfsumme passt nicht (erwartet {soll}, geladen {echt})")
 
-    ziel = Path(tempfile.mkdtemp(prefix="notizmappe-update-")) / (r["paket_name"] or "installer.sh")
+    ziel = Path(tempfile.mkdtemp(prefix="notizmappe-update-")) / name
     ziel.write_bytes(rohdaten)
-    ziel.chmod(0o700)
+    if not fenster:
+        ziel.chmod(0o700)
 
     with PROTOKOLL.open("w", encoding="utf-8") as log:
         log.write(f"{time.strftime('%d.%m.%Y %H:%M:%S')}  "
                   f"{installierte_version()} -> {r['version']}  ({echt[:12]})\n")
         log.flush()
+
+        if fenster:
+            # Das Setup beendet die laufende Notizmappe selbst und startet sie
+            # danach wieder. Wir haengen uns ab, damit es nicht auf uns wartet -
+            # und beenden uns gleich darauf, sonst sieht der Anwender ein Fenster,
+            # das waehrend der Installation weggeraeumt wird.
+            subprocess.Popen([str(ziel), "/SILENT", "/NORESTART"],
+                             stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
+                             creationflags=0x00000008 | 0x00000200,   # DETACHED | NEW_GROUP
+                             cwd=str(ziel.parent))
+            threading.Timer(1.5, lambda: os._exit(0)).start()
+            return {"von": installierte_version(), "nach": r["version"], "pruefsumme": echt}
+
         subprocess.Popen(
             ["bash", str(ziel), "--update"],
             stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,

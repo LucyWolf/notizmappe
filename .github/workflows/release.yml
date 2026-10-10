@@ -262,6 +262,9 @@ jobs:
           Write-Host "Setup-Rueckgabe: $($p.ExitCode)"
           if ($p.ExitCode -ne 0) { throw "Setup ueber eine laufende Fassung endete mit $($p.ExitCode)" }
           if (-not (Test-Path "$env:EXE")) { throw "Nach dem Ueberinstallieren fehlt die exe" }
+          # Das Setup startet die Notizmappe nach der stillen Installation wieder -
+          # gewollt, damit ein Update aus dem Programm heraus nicht im Nichts endet.
+          Start-Sleep -Seconds 5
           Get-Process -Name "Notizmappe" -ErrorAction SilentlyContinue | Stop-Process -Force
           Write-Host "Ueberinstallieren hat funktioniert."
 
