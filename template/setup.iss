@@ -42,6 +42,16 @@ begin
   Result := True;
 end;
 
+// Dasselbe beim Entfernen: laeuft das Programm noch, sind seine Dateien gesperrt
+// und die Deinstallation bleibt daran haengen.
+function InitializeUninstall(): Boolean;
+var Rueckgabe: Integer;
+begin
+  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM "{#AppExe}" /T',
+       '', SW_HIDE, ewWaitUntilTerminated, Rueckgabe);
+  Result := True;
+end;
+
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "german"; MessagesFile: "compiler:Languages\German.isl"
@@ -60,6 +70,4 @@ Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
 
 [Run]
-; Ohne skipifsilent: beim stillen Update aus dem Programm heraus soll es danach
-; von selbst wiederkommen, sonst steht der Anwender vor nichts.
-Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall shellexec
+Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent shellexec
