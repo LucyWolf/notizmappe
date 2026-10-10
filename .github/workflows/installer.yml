@@ -59,7 +59,7 @@ jobs:
         shell: bash
         run: |
           [ -f output/setup.iss ] || { echo "No Windows setup wanted"; exit 0; }
-          file=$(tr -d '\r' < output/setup.iss | sed -n 's/^#define AppExe "\(.*\)"$/\1/p')
+          file=$(tr -d '\r' < output/setup.iss | sed -n 's/^#define WindowsFile "\(.*\)"$/\1/p')
           mkdir -p output/program
           # If another workflow uploads the file later, wait up to 10 minutes
           for i in $(seq 1 40); do
@@ -67,6 +67,12 @@ jobs:
             echo "waiting for $file in the release …"; sleep 15
           done
           [ -f "output/program/$file" ] || { echo "$file is missing in release $TAG"; exit 1; }
+          # Ein ZIP ist ein Buendel aus mehreren Dateien: auspacken, damit das
+          # Setup den ganzen Ordner einpacken kann.
+          case "$file" in
+            *.zip) ( cd output/program && unzip -q "$file" && rm -f "$file" )
+                   echo "ausgepackt:"; ls output/program | head ;;
+          esac
       - name: Build setup
         shell: pwsh
         run: |

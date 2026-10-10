@@ -92,7 +92,11 @@ def windows(conf, repo, tag):
         return
     icon = conf.get("ICON_ICO", "")
     values = {"APP_NAME": conf["APP_NAME"].replace('"', "'"), "APP_ID": conf["APP_ID"], "VERSION": version(conf, tag),
-              "WINDOWS_FILE": conf["WINDOWS_FILE"], "REPO": repo,
+              # WINDOWS_FILE kann ein ZIP sein (ein Buendel aus mehreren Dateien).
+              # WINDOWS_EXE sagt dann, was davon gestartet wird; ohne Angabe ist
+              # es die Datei selbst.
+              "WINDOWS_FILE": conf["WINDOWS_FILE"],
+              "WINDOWS_EXE": conf.get("WINDOWS_EXE") or conf["WINDOWS_FILE"], "REPO": repo,
               "APP_GUID": str(uuid.uuid5(uuid.NAMESPACE_URL, f"https://github.com/{repo}")).upper(),
               "SETUP_ICON": f"SetupIconFile=..\\{icon.replace('/', chr(92))}" if icon else ""}
     with open(os.path.join(OUT, "setup.iss"), "w", encoding="utf-8-sig", newline="\r\n") as f:

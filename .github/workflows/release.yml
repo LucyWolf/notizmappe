@@ -85,7 +85,7 @@ jobs:
       # Laufzeit nach Namen, das sieht keine statische Analyse.
       - name: Buendeln
         run: >
-          pyinstaller --onefile --name Notizmappe --icon icon.ico
+          pyinstaller --onedir --name Notizmappe --icon icon.ico
           --paths app
           --add-data "app;app"
           --collect-all uvicorn --collect-all fastapi --collect-all starlette
@@ -97,15 +97,23 @@ jobs:
 
       # Die Ausgabe der exe in Dateien umleiten und hinterher zeigen - sonst
       # verschluckt Start-Process den Grund, warum sie nicht hochkommt.
+      - name: Als ZIP packen
+        shell: pwsh
+        run: |
+          $gesamt = (Get-ChildItem dist\Notizmappe -Recurse | Measure-Object -Property Length -Sum).Sum
+          Write-Host "Programmordner: $([math]::Round($gesamt / 1MB, 1)) MB, $((Get-ChildItem dist\Notizmappe -Recurse -File).Count) Dateien"
+          Compress-Archive -Path dist\Notizmappe\* -DestinationPath Notizmappe-windows.zip -CompressionLevel Optimal
+          Write-Host "ZIP: $([math]::Round((Get-Item Notizmappe-windows.zip).Length / 1MB, 1)) MB"
+
       - name: Buendel wirklich starten
         shell: pwsh
         run: |
-          Write-Host "Groesse: $([math]::Round((Get-Item dist\Notizmappe.exe).Length / 1MB, 1)) MB"
+          $exe = "dist\Notizmappe\Notizmappe.exe"
           $uhr = [Diagnostics.Stopwatch]::StartNew()
           $env:PORT = "8112"
           # Der Buildlauf hat keinen Desktop - also Server ohne Fenster pruefen.
           $env:NOTIZMAPPE_NUR_SERVER = "1"
-          $p = Start-Process -FilePath dist\Notizmappe.exe -PassThru -NoNewWindow `
+          $p = Start-Process -FilePath $exe -PassThru -NoNewWindow `
                  -RedirectStandardOutput out.txt -RedirectStandardError err.txt
           $ok = $false
           foreach ($i in 1..30) {
@@ -123,20 +131,43 @@ jobs:
             throw "Notizmappe.exe antwortet nicht auf 8112 (beendet: $($p.HasExited))"
           }
           Write-Host "Bis zur ersten Antwort: $([math]::Round($uhr.Elapsed.TotalSeconds, 1)) s"
-          # --onefile hat immer zwei: den Auspacker und das ausgepackte Programm.
-          # Mehr waeren ein zweites Buendel - genau das soll auf Windows nicht sein.
+          # Aus einem Ordner gestartet gibt es keinen Auspacker mehr: genau einer.
           $wieviele = (Get-Process -Name Notizmappe -ErrorAction SilentlyContinue).Count
           Write-Host "Prozesse mit diesem Namen: $wieviele"
-          if ($wieviele -gt 2) { throw "Es laufen $wieviele Prozesse - das Buendel packt sich mehrfach aus" }
+          if ($wieviele -gt 1) { throw "Es laufen $wieviele Prozesse - erwartet war einer" }
           $baum = Invoke-WebRequest "http://127.0.0.1:8112/api/baum" -UseBasicParsing
           if ($baum.Content -notmatch "notizbuecher") { throw "API antwortet nicht wie erwartet" }
           Stop-Process -Id $p.Id -Force
           Write-Host "Buendel läuft."
 
+      # Bisher lief die exe im Buildlauf immer nur als Server - der Weg zum
+      # Fenster wurde nie geprueft. Genau dort klemmt es aber: oeffnet sich keins,
+      # beendet sich das Programm, und man sieht nichts.
+      - name: Fenster wirklich oeffnen
+        shell: pwsh
+        run: |
+          $env:PORT = "8115"
+          Remove-Item Env:\NOTIZMAPPE_NUR_SERVER -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath dist\Notizmappe\Notizmappe.exe -PassThru `
+                 -RedirectStandardOutput fenster-out.txt -RedirectStandardError fenster-err.txt
+          Start-Sleep -Seconds 35
+          $log = Join-Path $env:LOCALAPPDATA "notizmappe\fenster.log"
+          Write-Host "--- fenster.log ---"
+          if (Test-Path $log) { Get-Content $log } else { Write-Host "(kein Protokoll geschrieben)" }
+          Write-Host "--- Ausgabe ---"; if (Test-Path fenster-out.txt) { Get-Content fenster-out.txt }
+          Write-Host "--- Fehler ---";  if (Test-Path fenster-err.txt) { Get-Content fenster-err.txt }
+          Write-Host "--- Prozesse ---"
+          Get-Process -Name Notizmappe,msedge,chrome -ErrorAction SilentlyContinue |
+            Select-Object Name,Id | Format-Table | Out-String | Write-Host
+          $lebt = -not $p.HasExited
+          Get-Process -Name Notizmappe,msedge -ErrorAction SilentlyContinue | Stop-Process -Force
+          if (-not $lebt) { throw "Das Programm hat sich beendet, statt ein Fenster offen zu halten" }
+          Write-Host "Das Programm läuft mit Fenster."
+
       - uses: actions/upload-artifact@v4
         with:
           name: windows
-          path: dist/Notizmappe.exe
+          path: Notizmappe-windows.zip
 
   release:
     needs: [linux, windows]

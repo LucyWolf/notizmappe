@@ -2,7 +2,8 @@
 ; Installs per user without admin rights, with start menu entry, desktop shortcut and uninstaller.
 #define AppName "@APP_NAME@"
 #define AppVersion "@VERSION@"
-#define AppExe "@WINDOWS_FILE@"
+#define AppExe "@WINDOWS_EXE@"
+#define WindowsFile "@WINDOWS_FILE@"
 
 [Setup]
 AppId={{@APP_GUID@}
@@ -22,14 +23,24 @@ SolidCompression=yes
 WizardStyle=modern
 @SETUP_ICON@
 UninstallDisplayIcon={app}\{#AppExe}
-; "force" statt "yes": Inno schickt zum Schliessen eine Nachricht an das Fenster
-; einer Anwendung. Die Notizmappe besteht aus zwei Prozessen, und der mit dem Server
-; hat gar kein Fenster - er bekommt die Aufforderung nie, haelt die Datei weiter und
-; das Setup bricht ab. Mit "force" werden sie beendet.
-CloseApplications=force
-; Nach der Installation nicht selbst wieder starten: das Setup bietet das am Ende
-; ohnehin an, sonst stuenden zwei Fassungen gleichzeitig da.
+; Kein Restart Manager. Er schickt laufenden Anwendungen eine Nachricht an ihr
+; Fenster und wartet dann auf eine Frist - ein Programm ohne Fenster bekommt sie
+; nie, und die Installation steht minutenlang bei "Anwendungen werden geschlossen".
+; Stattdessen beendet InitializeSetup die Prozesse unten selbst, das geht sofort.
+CloseApplications=no
 RestartApplications=no
+
+[Code]
+// Vor der Installation die eigenen Prozesse beenden. Der Restart Manager wuerde
+// dafuer erst auf eine Antwort warten, die ein Programm ohne Fenster nie gibt.
+// Die Notizmappe speichert von selbst, sobald man eine Sekunde nicht tippt.
+function InitializeSetup(): Boolean;
+var Rueckgabe: Integer;
+begin
+  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM "{#AppExe}" /T',
+       '', SW_HIDE, ewWaitUntilTerminated, Rueckgabe);
+  Result := True;
+end;
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -39,7 +50,9 @@ Name: "german"; MessagesFile: "compiler:Languages\German.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
-Source: "program\{#AppExe}"; DestDir: "{app}"; Flags: ignoreversion
+; Alles aus program\ - bei einem Buendel aus einem Ordner (PyInstaller --onedir)
+; sind das viele Dateien, bei einer einzelnen exe eben nur diese eine.
+Source: "program\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExe}"
