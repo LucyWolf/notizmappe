@@ -243,7 +243,16 @@ def einspielen() -> dict:
             # danach wieder. Wir haengen uns ab, damit es nicht auf uns wartet -
             # und beenden uns gleich darauf, sonst sieht der Anwender ein Fenster,
             # das waehrend der Installation weggeraeumt wird.
-            subprocess.Popen([str(ziel), "/SILENT", "/NORESTART"],
+            # Das Setup laeuft still und startet danach nichts von selbst (sonst
+            # wuerde es auch in Buildlaeufen Fenster aufmachen). Also haengen wir
+            # einen Nachlauf an, der wartet und dann die frisch installierte
+            # Fassung startet - wir selbst sind zu dem Zeitpunkt laengst beendet,
+            # das Setup raeumt uns weg.
+            wieder = sys.executable
+            befehl = (f'"{ziel}" /SILENT /NORESTART & '
+                      f'ping -n 6 127.0.0.1 >nul & '
+                      f'start "" "{wieder}"')
+            subprocess.Popen(["cmd", "/c", befehl],
                              stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
                              creationflags=0x00000008 | 0x00000200,   # DETACHED | NEW_GROUP
                              cwd=str(ziel.parent))
