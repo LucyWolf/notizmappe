@@ -265,6 +265,60 @@ jobs:
           Get-Process -Name "Notizmappe" -ErrorAction SilentlyContinue | Stop-Process -Force
           Write-Host "Ueberinstallieren hat funktioniert."
 
+      # Das Selbstupdate auf Windows: von der vorigen Fassung aus den Knopf
+      # druecken und nachsehen, ob danach wirklich die neue installiert ist.
+      # Bisher wurde genau dieser Weg nie geprueft.
+      - name: Update von der vorigen Fassung aus
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $vorher = (gh release list --repo ${{ github.repository }} --limit 5 --json tagName `
+                     | ConvertFrom-Json | Where-Object { $_.tagName -ne "${{ github.ref_name }}" } |
+                     Select-Object -First 1).tagName
+          if (-not $vorher) { Write-Host "keine Vorversion zum Testen"; exit 0 }
+          Write-Host "Vorversion: $vorher"
+          gh release download $vorher --repo ${{ github.repository }} -p "notizmappe-setup.exe" -D alt --clobber
+          $p = Start-Process alt\notizmappe-setup.exe -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "Alte Fassung liess sich nicht installieren" }
+
+          $env:PORT = "8116"
+          $env:NOTIZMAPPE_NUR_SERVER = "1"
+          $lauf = Start-Process "$env:EXE" -PassThru -NoNewWindow -RedirectStandardOutput u1.txt -RedirectStandardError u2.txt
+          foreach ($i in 1..20) {
+            Start-Sleep -Seconds 2
+            try { if ((Invoke-WebRequest "http://127.0.0.1:8116/api/einstellungen" -UseBasicParsing).StatusCode -eq 200) { break } } catch {}
+          }
+          $vor = (Invoke-WebRequest "http://127.0.0.1:8116/api/einstellungen" -UseBasicParsing | ConvertFrom-Json)
+          Write-Host "laeuft als $($vor.version), aktualisierbar: $($vor.aus_installation)"
+          if (-not $vor.aus_installation) { throw "Die installierte Fassung haelt sich nicht fuer aktualisierbar - der Knopf erscheint nie" }
+
+          $v = Invoke-WebRequest "http://127.0.0.1:8116/api/version?frisch=true" -UseBasicParsing | ConvertFrom-Json
+          Write-Host "sieht im Release: $($v.verfuegbar), neuer: $($v.neuer)"
+          if (-not $v.neuer) { throw "Die neue Fassung wird nicht als neuer erkannt" }
+
+          $a = Invoke-WebRequest "http://127.0.0.1:8116/api/update" -Method POST -UseBasicParsing
+          Write-Host "Update angestossen: $($a.Content)"
+
+          $erwartet = "${{ github.ref_name }}".TrimStart("v")
+          $fertig = $false
+          foreach ($i in 1..40) {
+            Start-Sleep -Seconds 3
+            $datei = Join-Path (Split-Path $env:EXE) "_internal\app\VERSION"
+            if (Test-Path $datei) {
+              $jetzt = (Get-Content $datei -Raw).Trim()
+              if ($jetzt -eq $erwartet) { $fertig = $true; break }
+            }
+          }
+          Write-Host "--- Protokoll ---"
+          $log = Join-Path $env:LOCALAPPDATA "notizmappe\update.log"
+          foreach ($k in @($log, (Join-Path $env:LOCALAPPDATA "notizmappe\fenster.log"))) {
+            if (Test-Path $k) { Write-Host "[$k]"; Get-Content $k }
+          }
+          Get-Process -Name Notizmappe -ErrorAction SilentlyContinue | Stop-Process -Force
+          if (-not $fertig) { throw "Nach dem Update steht dort immer noch nicht $erwartet" }
+          Write-Host "Selbstupdate auf Windows hat funktioniert."
+
       - name: Wieder deinstallieren
         if: always()
         shell: pwsh
