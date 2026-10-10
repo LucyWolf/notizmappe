@@ -37,7 +37,10 @@ RestartApplications=no
 function InitializeSetup(): Boolean;
 var Rueckgabe: Integer;
 begin
-  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM "{#AppExe}" /T',
+  // Ohne /T! Das wuerde den ganzen Prozessbaum beenden - und wenn das Programm
+  // sich selbst aktualisiert, haengt dieses Setup genau in diesem Baum: es
+  // schiesst sich dann mitten im Lauf selbst ab.
+  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM "{#AppExe}"',
        '', SW_HIDE, ewWaitUntilTerminated, Rueckgabe);
   Result := True;
 end;
@@ -47,7 +50,7 @@ end;
 function InitializeUninstall(): Boolean;
 var Rueckgabe: Integer;
 begin
-  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM "{#AppExe}" /T',
+  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM "{#AppExe}"',
        '', SW_HIDE, ewWaitUntilTerminated, Rueckgabe);
   Result := True;
 end;

@@ -276,7 +276,8 @@ def einspielen() -> dict:
             stapel.write_text(
                 "@echo off\r\n"
                 f'echo Setup laeuft: {ziel}>"{mitschrift}"\r\n'
-                f'"{ziel}" /SILENT /NORESTART >>"{mitschrift}" 2>&1\r\n'
+                f'"{ziel}" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART '
+                f'/LOG="{mitschrift.with_name("update-setup.log")}" >>"{mitschrift}" 2>&1\r\n'
                 f'echo Rueckgabe %ERRORLEVEL%>>"{mitschrift}"\r\n'
                 "ping -n 4 127.0.0.1 >nul\r\n"
                 f'echo Starte neu: {sys.executable}>>"{mitschrift}"\r\n'
