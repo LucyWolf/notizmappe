@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Syntax aller Quellen prüfen. Als .git/hooks/pre-commit verlinkbar.
 
-Prüft Python per ast, die Jinja-Vorlagen per Jinja-Parser und das JS per esprima,
-falls installiert. Klammern zählen reicht nicht: ein Parser sieht, was ein
-Zählwerk nicht sieht.
+Prüft Python per ast und das JS per esprima, falls installiert. Klammern zählen
+reicht nicht: ein Parser sieht, was ein Zählwerk nicht sieht.
 """
 import ast
 import sys
@@ -19,19 +18,8 @@ for p in sorted((WURZEL / "app").rglob("*.py")) + sorted((WURZEL / "tools").rglo
         fehler.append(f"{p.relative_to(WURZEL)}:{f.lineno}: {f.msg}")
 
 try:
-    from jinja2 import Environment
-    umgebung = Environment()
-    for p in sorted((WURZEL / "app/templates").rglob("*.html")):
-        try:
-            umgebung.parse(p.read_text(encoding="utf-8"), filename=str(p))
-        except Exception as f:
-            fehler.append(f"{p.relative_to(WURZEL)}: {f}")
-except ImportError:
-    print("jinja2 fehlt - Vorlagen nicht geprüft")
-
-try:
     import esprima
-    for p in sorted((WURZEL / "app/static").rglob("*.js")):
+    for p in sorted((WURZEL / "app/oberflaeche").rglob("*.js")):
         try:
             esprima.parseScript(p.read_text(encoding="utf-8"))
         except Exception as f:

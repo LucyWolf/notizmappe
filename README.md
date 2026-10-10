@@ -4,9 +4,10 @@ Freie Notizfläche wie OneNote, aber die Daten liegen als Dateien in **deinem**
 Ordner — Nextcloud, NAS-Freigabe oder einfach lokal. Kein Konto, kein Microsoft.
 
 Ein normales Programm: eigenes Fenster, eigener Eintrag im Menü und in der
-Fensterleiste, Schließen beendet es. Keine Konten, keine Anmeldung, nichts im
-Netz — es hört ausschließlich auf `127.0.0.1`, und das nur, weil die Oberfläche
-HTML ist und eine Webansicht sie über HTTP laden muss.
+Fensterleiste, Schließen beendet es. **Kein Netz, kein Port, keine Adresse** —
+die Oberfläche wird als Datei geladen und ruft das Programm direkt auf
+(`app/bruecke.py`). Dadurch gibt es nichts, was ein anderes Programm auf dem
+Rechner ansprechen könnte, und die Firewall hat nichts zu fragen.
 
 Stand: 08.10.2026 — Stufe 1 (Baum, Textkästen, Autosave, Konflikterkennung).
 
@@ -98,6 +99,23 @@ darin und wäre im Fenster dasselbe Loch wie fremdes HTML. Hochladen geht, angez
 wird es nicht, es kommt als Download — mit `nosniff`, damit der Browser nicht doch
 selbst entscheidet.
 
+## Wie es innen aussieht
+
+```
+app/fenster.py       das Fenster (pywebview) und die Diagnose
+app/bruecke.py       was die Oberfläche aufrufen darf - statt HTTP-Routen
+app/speicher.py      Dateien: Notizbuch/Abschnitt/Seite, Anhänge, Papierkorb
+app/reinigen.py      HTML säubern, Bilder erkennen
+app/aktualisieren.py Updates von GitHub
+app/konfig.py        Einstellungen dieses Rechners
+app/oberflaeche/     index.html, mappe.js, stil.css - wird als Datei geladen
+```
+
+Die einzige Abhängigkeit ist `pywebview`. Früher lag zwischen Fenster und
+Programm ein kleiner Webserver (FastAPI, uvicorn); das Paket ist seit dem Wegfall
+von 14 MB auf gut 1 MB geschrumpft, und der Start dauert spürbar kürzer, weil
+pydantic und uvicorn nicht mehr geladen werden.
+
 ## Tests
 
 ```bash
@@ -107,7 +125,7 @@ tests/alle.sh --schnell    # nur API und Update
 
 | | |
 |---|---|
-| `tests/test_api.py` | Seiten, Anhänge, Konflikte, XSS, Pfadausbruch, Papierkorb |
+| `tests/test_bruecke.py` | Seiten, Anhänge, Konflikte, XSS, Pfadausbruch, Papierkorb |
 | `tests/test_konten.py` | Sperre, Anmeldung, Projekte, Gerätschlüssel, Passwortraten |
 | `tests/test_update.py` | Selbstupdate gegen einen nachgemachten GitHub-Server |
 | `tests/test_installer.sh` | Installationsdatei in einem Wegwerf-Heim durchspielen |
@@ -290,9 +308,8 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 NOTIZEN_ORDNER=~/Nextcloud/Notizen .venv/bin/python app/fenster.py
 ```
 
-Gestartet wird mit `python3 app/fenster.py`. Umgebungsvariablen:
-`NOTIZEN_ORDNER` und `PORT`. Eine Variable für die Adresse gibt es nicht — es
-hört immer nur auf `127.0.0.1`.
+Gestartet wird mit `python3 app/fenster.py`. `app/fenster.py --pruefen` sagt, was
+für das Fenster vorhanden ist und wo die Daten liegen.
 
 ## Bedienung
 
