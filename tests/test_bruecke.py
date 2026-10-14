@@ -236,10 +236,13 @@ for name, erlaubt in [("Arial", True), ("Comic Sans MS", True), ("Noto Sans CJK 
 s5 = b.seite_lesen(buch, absch, neu)
 r = b.seite_speichern({"notizbuch": buch, "abschnitt": absch, "name": neu, "rev": s5["rev"],
                        "titel": s5["titel"],
-                       "elemente": [{"id": "s1", "typ": "text", "x": 0, "y": 0, "b": 400,
-                                     "html": '<font face="Fira Sans">eigene Schrift</font>'
-                                             '<font face="x&quot; onload=&quot;boese()">Angriff</font>'}]})
-h = b.seite_lesen(buch, absch, neu)["elemente"][0]["html"]
+                       # Die vorhandenen Elemente behalten: sonst gelten die Anhänge
+                       # als verwaist und werden weggeräumt.
+                       "elemente": s5["elemente"] + [
+                           {"id": "s1", "typ": "text", "x": 0, "y": 0, "b": 400,
+                            "html": '<font face="Fira Sans">eigene Schrift</font>'
+                                    '<font face="x&quot; onload=&quot;boese()">Angriff</font>'}]})
+h = "".join(e.get("html", "") for e in b.seite_lesen(buch, absch, neu)["elemente"])
 pruefe("Schrift vom Rechner bleibt", 'face="Fira Sans"' in h, h)
 pruefe("Schriftname mit Anfuehrungszeichen weg", "onload" not in h, h)
 
