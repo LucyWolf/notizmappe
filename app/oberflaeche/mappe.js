@@ -86,16 +86,43 @@ const WEGE = {
   'GET /api/update/stand':     (p, b) => b.update_stand(),
 };
 
-/* Das Fenster meldet sich kurz nach dem Laden. Bis dahin warten statt zu scheitern. */
+/* Das Fenster meldet sich kurz nach dem Laden.
+ *
+ * Nicht nur auf window.pywebview.api warten: das Objekt ist schon da, bevor die
+ * Methoden daran hängen - dann gibt es ein "b.baum is not a function". Deshalb
+ * auf das Ereignis "pywebviewready" hören und zusätzlich nachsehen, ob wirklich
+ * eine der Methoden angekommen ist. */
+let bruecke_bereit = null;
+
+function bruecke_da() {
+  const a = window.pywebview && window.pywebview.api;
+  return a && typeof a.baum === 'function' ? a : null;
+}
+
 function bruecke() {
-  if (window.pywebview && window.pywebview.api) return Promise.resolve(window.pywebview.api);
-  return new Promise((fertig, schiefgegangen) => {
+  const jetzt = bruecke_da();
+  if (jetzt) return Promise.resolve(jetzt);
+  if (bruecke_bereit) return bruecke_bereit;
+
+  bruecke_bereit = new Promise((fertig, schiefgegangen) => {
     let versuche = 0;
+    const nachsehen = () => {
+      const a = bruecke_da();
+      if (a) { clearInterval(uhr); window.removeEventListener('pywebviewready', nachsehen); fertig(a); return true; }
+      return false;
+    };
+    window.addEventListener('pywebviewready', nachsehen);
     const uhr = setInterval(() => {
-      if (window.pywebview && window.pywebview.api) { clearInterval(uhr); fertig(window.pywebview.api); }
-      else if (++versuche > 100) { clearInterval(uhr); schiefgegangen(new Error('Keine Verbindung zum Programm')); }
+      if (nachsehen()) return;
+      if (++versuche > 300) {        // 30 Sekunden
+        clearInterval(uhr);
+        window.removeEventListener('pywebviewready', nachsehen);
+        bruecke_bereit = null;       // beim nächsten Versuch neu warten
+        schiefgegangen(new Error('Keine Verbindung zum Programm'));
+      }
     }, 100);
   });
+  return bruecke_bereit;
 }
 
 async function api(weg, art = 'GET', rumpf = null) {

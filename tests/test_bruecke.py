@@ -50,6 +50,18 @@ js = (WURZEL / "app/oberflaeche/mappe.js").read_text(encoding="utf-8")
 pruefe("Oberflaeche ruft die Bruecke", "pywebview.api" in js)
 pruefe("kein fetch mehr in der Oberflaeche", "fetch(" not in js)
 
+# Jeder Aufruf in der Oberfläche muss drüben auch ankommen. "b.baum is not a
+# function" gab es genau deshalb - ein Name, den niemand gegengeprüft hat.
+import inspect
+import re as _re
+angeboten = {n for n, v in inspect.getmembers(b, inspect.ismethod) if not n.startswith("_")}
+gerufen = set(_re.findall(r"\bb\.([a-z_]+)\s*\(", js)) | set(_re.findall(r"\bbruecke\(\)\)\.([a-z_]+)\s*\(", js))
+for name in sorted(gerufen):
+    pruefe(f"Oberflaeche ruft b.{name}() - gibt es", name in angeboten,
+           f"vorhanden: {', '.join(sorted(angeboten))}")
+pruefe("die Oberflaeche ruft ueberhaupt etwas auf", len(gerufen) >= 5, gerufen)
+pruefe("wartet auf pywebviewready", "pywebviewready" in js)
+
 # --- Baum --------------------------------------------------------------------
 pruefe("Baum anfangs leer", b.baum()["notizbuecher"] == [])
 buch = b.notizbuch_anlegen("Arbeit")["name"]
