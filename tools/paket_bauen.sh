@@ -88,7 +88,7 @@ cat > "$AUSGABE" <<KOPFEOF
 #   bash notizmappe-v$VERSION-installer.sh --hilfe
 #
 # Installiert ohne Root nach ~/.local/share/notizmappe, Notizen nach ~/Notizen.
-# Andere Orte: NOTIZMAPPE_ZIEL=… NOTIZEN_ORDNER=… PORT=… davor setzen.
+# Andere Orte: NOTIZMAPPE_ZIEL=… NOTIZEN_ORDNER=… davor setzen.
 set -euo pipefail
 
 VERSION="$VERSION"

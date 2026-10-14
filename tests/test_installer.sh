@@ -13,7 +13,6 @@ PAKET=${1:-$(ls -t "$WURZEL"/dist/notizmappe-v*-installer.sh 2>/dev/null | head 
 [ -f "$PAKET" ] || { echo "Keine Installationsdatei gefunden - erst ./tools/paket_bauen.sh" >&2; exit 2; }
 VER=$(tr -d ' \n' < "$WURZEL/app/VERSION")
 H=$(mktemp -d /tmp/notizmappe-probe-XXXX)
-PORT=8155
 fehler=0
 
 # Bei einem Fehlschlag die genannten Dateien zeigen - sonst steht im Buildlauf nur
@@ -33,7 +32,7 @@ pruefe() {
 }
 lauf() { env -u XDG_RUNTIME_DIR -u DBUS_SESSION_BUS_ADDRESS \
            HOME="$H" PATH="$PATH" NOTIZMAPPE_ZIEL="$H/.local/share/notizmappe" \
-           NOTIZEN_ORDNER="$H/Notizen" PORT="$PORT" bash "$PAKET" "$@" < /dev/null; }
+           NOTIZEN_ORDNER="$H/Notizen" bash "$PAKET" "$@" < /dev/null; }
 
 echo "Paket: $(basename "$PAKET")  Probe-Heim: $H"
 pruefe "--version nennt die Nummer" '[ "$(lauf --version)" = "Notizmappe v$VER" ]'

@@ -44,6 +44,7 @@ jobs:
 
       - name: Tests
         run: |
+          python tests/test_kein_server.py
           python tests/test_bruecke.py
           python tests/test_update.py
 

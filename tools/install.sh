@@ -10,7 +10,6 @@ HIER=$(cd "$(dirname "$0")" && pwd)
 NEU=$(tr -d ' \n' < "$HIER/app/VERSION")
 ZIEL=${NOTIZMAPPE_ZIEL:-$HOME/.local/share/notizmappe}
 DATEN=${NOTIZEN_ORDNER:-$HOME/Notizen}
-PORT=${PORT:-8099}
 MENUE=$HOME/.local/share/applications/notizmappe.desktop
 SYMBOL=$HOME/.local/share/icons/hicolor/512x512/apps/notizmappe.png
 UNIT=$HOME/.config/systemd/user/notizmappe.service
@@ -58,7 +57,6 @@ Wenn du das wirklich willst: erst deinstallieren (--deinstallieren)."
   sagen "  Python:       $($py -V 2>&1)"
   sagen "  Programm:     $ZIEL"
   sagen "  Notizen:      $DATEN"
-  sagen "  Adresse:      http://127.0.0.1:$PORT"
 
   mkdir -p "$ZIEL" "$DATEN"
   # Alte Programmdateien weg, Notizen anfassen wir nicht.
@@ -98,8 +96,7 @@ Wenn du das wirklich willst: erst deinstallieren (--deinstallieren)."
   cat > "$ZIEL/notizmappe" <<EOF
 #!/usr/bin/env bash
 set -uo pipefail
-exec env PYTHONPATH="$ZIEL/app" \
-  PORT="\${PORT:-$PORT}" "$ZIEL/.venv/bin/python" "$ZIEL/app/fenster.py" "\$@"
+exec env PYTHONPATH="$ZIEL/app" "$ZIEL/.venv/bin/python" "$ZIEL/app/fenster.py" "\$@"
 EOF
   chmod +x "$ZIEL/notizmappe"
 
@@ -125,7 +122,7 @@ EINTRAG
   fi
 
   printf '%s\n' "$NEU" > "$ZIEL/.version"
-  printf 'ZIEL=%s\nDATEN=%s\nPORT=%s\n' "$ZIEL" "$DATEN" "$PORT" > "$ZIEL/.einrichtung"
+  printf 'ZIEL=%s\nDATEN=%s\n' "$ZIEL" "$DATEN" > "$ZIEL/.einrichtung"
 
   # Denselben Dateinamen benutzt auch der Doppelklick-Installer (APP_ID=notizmappe),
   # es entsteht also kein zweiter Eintrag - wer zuletzt schreibt, gewinnt, und beide
@@ -227,7 +224,7 @@ case "${1:-}" in
     sagen "  --install / --update   einrichten oder aktualisieren"
     sagen "  --deinstallieren       Programm entfernen (Notizen bleiben)"
     sagen "                         damit Handy und andere Rechner drankommen"
-    sagen "Variablen: NOTIZMAPPE_ZIEL, NOTIZEN_ORDNER, PORT"
+    sagen "Variablen: NOTIZMAPPE_ZIEL, NOTIZEN_ORDNER"
     exit 0 ;;
 esac
 

@@ -40,9 +40,9 @@ Den Dateitransport macht der Nextcloud-Client bzw. die NAS-Freigabe. Das Program
 kümmert sich nur um die zwei Stellen, an denen das wehtut:
 
 * **Verlorene Änderungen.** Jede Seite hat einen Zähler `rev`. Wer mit einem
-  veralteten `rev` speichert, bekommt HTTP 409 und die aktuelle Fassung zurück —
-  statt die fremde Änderung stillschweigend zu überschreiben. Im Browser kommt
-  dann die Frage „meine behalten / fremde laden".
+  veralteten `rev` speichert, bekommt die aktuelle Fassung zurück statt die fremde
+  Änderung stillschweigend zu überschreiben — im Fenster kommt dann die Frage
+  „meine behalten / fremde laden".
 * **Konfliktkopien.** Legt der Sync-Client `Seite (Konflikt-Kopie …).json` daneben,
   taucht die im Baum mit ⚠ auf, statt unbemerkt herumzuliegen.
 
@@ -103,7 +103,7 @@ selbst entscheidet.
 
 ```
 app/fenster.py       das Fenster (pywebview) und die Diagnose
-app/bruecke.py       was die Oberfläche aufrufen darf - statt HTTP-Routen
+app/bruecke.py       was die Oberfläche aufrufen darf - direkt, ohne Netz
 app/speicher.py      Dateien: Notizbuch/Abschnitt/Seite, Anhänge, Papierkorb
 app/reinigen.py      HTML säubern, Bilder erkennen
 app/aktualisieren.py Updates von GitHub
@@ -127,7 +127,8 @@ tests/alle.sh --schnell    # nur API und Update
 |---|---|
 | `tests/test_bruecke.py` | Seiten, Anhänge, Konflikte, XSS, Pfadausbruch, Papierkorb |
 | `tests/test_konten.py` | Sperre, Anmeldung, Projekte, Gerätschlüssel, Passwortraten |
-| `tests/test_update.py` | Selbstupdate gegen einen nachgemachten GitHub-Server |
+| `tests/test_update.py` | Selbstupdate gegen eine nachgemachte GitHub-Antwort |
+| `tests/test_kein_server.py` | dass nirgends ein Webserver, Port oder HTTP-Aufruf steckt |
 | `tests/test_installer.sh` | Installationsdatei in einem Wegwerf-Heim durchspielen |
 
 Sie liegen **im Repo**, nicht im Scratchpad einer Sitzung: der wird geleert, und
@@ -173,9 +174,8 @@ Gibt es eine höhere Nummer, erscheint in der Kopfzeile *„Version x.y.z laden"
 ein Klick lädt das Paket, vergleicht die SHA256-Summe und spielt es ein. Der Dienst
 startet dabei neu, die Seite lädt sich von selbst wieder. Die Notizen bleiben unberührt.
 
-Das Einspielen geht **nur direkt an dem Rechner**, auf dem die Notizmappe läuft
-(`127.0.0.1`) — solange es keine Anmeldung gibt, soll niemand aus dem Netz Code
-einspielen können. Protokoll des letzten Updates:
+Angestoßen wird es nur aus dem Programm selbst — von außen gibt es keinen Weg
+hinein, weil nichts lauscht. Protokoll des letzten Updates:
 `~/.local/share/notizmappe/.update.log`.
 
 Ist das Repo **privat**, kommt die Update-Prüfung nicht an die GitHub-API (404) und
@@ -231,7 +231,7 @@ der Menüeintrag verschwindet mit dem Programm (`TryExec`).
 Die fertige Datei hängt am jeweiligen Release. Der Link zeigt immer auf die neueste:
 
 ```
-https://github.com/LucyWolf/notizmappe/releases/latest/download/notizmappe-v1.0.1-installer.sh
+https://github.com/LucyWolf/notizmappe/releases/latest/download/notizmappe-installer.sh
 ```
 
 (Der Dateiname trägt die Version, also wechselt der Link mit jedem Release —
@@ -252,11 +252,11 @@ als Rückfalllösung aus dem Netz und sagt das.
 Auf dem Zielrechner:
 
 ```bash
-bash notizmappe-v1.0.1-installer.sh                   # einrichten / aktualisieren
-bash notizmappe-v1.0.1-installer.sh --deinstallieren  # Programm weg, Notizen bleiben
-bash notizmappe-v1.0.1-installer.sh --version
-NOTIZMAPPE_ZIEL=/opt/nm NOTIZEN_ORDNER=/mnt/nas/Notizen PORT=9000 \
-  bash notizmappe-v1.0.1-installer.sh                 # andere Orte
+bash notizmappe-installer.sh                   # einrichten / aktualisieren
+bash notizmappe-installer.sh --deinstallieren  # Programm weg, Notizen bleiben
+bash notizmappe-installer.sh --version
+NOTIZMAPPE_ZIEL=/opt/nm NOTIZEN_ORDNER=/mnt/nas/Notizen \
+  bash notizmappe-installer.sh                 # andere Orte
 ```
 
 Ohne Root. Es entstehen: `~/.local/share/notizmappe` (Programm und venv),
