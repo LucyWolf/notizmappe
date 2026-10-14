@@ -289,7 +289,44 @@ class Bruecke:
 
         sauber = sorted({n for n in gefunden
                          if n and reinigen.schriftname_ok(n)}, key=str.lower)
-        return {"schriften": sauber, "vorschlaege": reinigen.SCHRIFT_GRUPPEN}
+        vorhanden = {n.lower() for n in sauber}
+
+        # Nur vorschlagen, was es hier auch gibt - eine Schrift, die nicht
+        # installiert ist, sieht im Auswahlfeld aus wie ein Angebot und waere
+        # beim Anklicken wirkungslos.
+        empfohlen = {}
+        for fach, namen in reinigen.EMPFEHLUNGEN.items():
+            da = [n for n in namen if n.lower() in vorhanden]
+            if da:
+                empfohlen[fach] = {"name": reinigen.FACHNAMEN[fach], "schriften": da}
+
+        return {
+            "schriften": sauber,
+            "vorschlaege": reinigen.SCHRIFT_GRUPPEN,
+            "empfohlen": empfohlen,
+            "favoriten": self.favoriten_lesen(),
+        }
+
+    @staticmethod
+    def favoriten_lesen() -> list:
+        roh = konfig.lesen().get("schrift_favoriten")
+        if not isinstance(roh, list):
+            return []
+        return [n for n in roh if isinstance(n, str) and reinigen.schriftname_ok(n)]
+
+    @_gefasst
+    def favorit_setzen(self, name: str, an: bool) -> dict:
+        """Einen Stern setzen oder wegnehmen. Favoriten stehen oben im Auswahlfeld."""
+        name = str(name or "").strip()
+        if not reinigen.schriftname_ok(name):
+            raise Abbruch("Das ist kein gültiger Schriftname")
+        liste = self.favoriten_lesen()
+        if an and name not in liste:
+            liste.append(name)
+        elif not an and name in liste:
+            liste.remove(name)
+        konfig.aendern(schrift_favoriten=liste)
+        return {"favoriten": liste}
 
     # --- Einstellungen, Ordner, Updates -----------------------------------
 

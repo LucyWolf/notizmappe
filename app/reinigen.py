@@ -39,6 +39,33 @@ SCHRIFT_GRUPPEN = [
     ["Segoe Script, Comic Sans MS, cursive", "Handschrift"],
 ]
 
+# Vorschlaege: Schriften, die auf vielen Rechnern liegen und sich fuer das
+# jeweilige Fach bewaehrt haben. Angeboten wird davon nur, was wirklich
+# installiert ist - der Rest steht hier nur als Wunschliste.
+EMPFEHLUNGEN = {
+    "schreiben": [
+        "Segoe UI", "Calibri", "Arial", "Helvetica", "Helvetica Neue", "Verdana",
+        "Tahoma", "Trebuchet MS", "Open Sans", "Roboto", "Noto Sans", "Lato",
+        "Source Sans Pro", "Source Sans 3", "Inter", "DejaVu Sans",
+        "Liberation Sans", "Ubuntu", "Cantarell", "Segoe UI Variable",
+    ],
+    "lesen": [
+        "Georgia", "Times New Roman", "Cambria", "Constantia", "Garamond",
+        "EB Garamond", "Palatino Linotype", "Book Antiqua", "Merriweather",
+        "Noto Serif", "Source Serif Pro", "Liberation Serif", "DejaVu Serif",
+        "Charis SIL", "Bitstream Charter",
+    ],
+    "code": [
+        "JetBrains Mono", "Fira Code", "FiraCode Nerd Font", "Cascadia Code",
+        "Cascadia Mono", "Consolas", "Source Code Pro", "IBM Plex Mono", "Hack",
+        "Inconsolata", "Courier New", "DejaVu Sans Mono", "Liberation Mono",
+        "Noto Sans Mono", "Ubuntu Mono", "Roboto Mono", "Monaco", "Menlo",
+        "SF Mono", "Iosevka", "Victor Mono", "Anonymous Pro",
+    ],
+}
+
+FACHNAMEN = {"schreiben": "Zum Schreiben", "lesen": "Zum Lesen", "code": "Zum Programmieren"}
+
 # Statt einer festen Liste ein strenges Muster: Schriftnamen bestehen aus
 # Buchstaben, Ziffern, Leerzeichen und ein paar Satzzeichen. Alles, womit sich
 # aus einem face="..." etwas anderes machen liesse - Anfuehrungszeichen,

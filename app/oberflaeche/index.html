@@ -180,6 +180,21 @@ window.addEventListener('unhandledrejection', function (ev) {
 
 
       <section>
+        <h3>Schriften</h3>
+        <p class="hinweis">Mit dem Stern kommt eine Schrift nach oben in die Auswahl,
+          damit du sie nicht jedes Mal suchen musst.</p>
+        <div id="e-schrift-favoriten" class="schriftliste"></div>
+        <details id="e-schriften-auf">
+          <summary>Alle Schriften auf diesem Rechner</summary>
+          <p class="ordnerzeile">
+            <input type="search" id="e-schrift-suche" placeholder="Suchen …" autocomplete="off" spellcheck="false">
+          </p>
+          <div id="e-schriftliste" class="schriftliste lang"></div>
+        </details>
+        <p class="hinweis" id="e-schrift-hinweis"></p>
+      </section>
+
+      <section>
         <h3>Fenster</h3>
         <p class="zeile2"><span>Darstellung</span><span id="e-zoom">100 %</span></p>
         <p class="knoepfe">

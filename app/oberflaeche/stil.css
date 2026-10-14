@@ -327,3 +327,31 @@ body {
   border: 1px solid var(--linie); background: var(--leiste); color: var(--schrift);
   border-radius: 6px; padding: 5px 12px; cursor: pointer;
 }
+
+/* --- Schriftenliste in den Einstellungen --- */
+.schriftliste { display: flex; flex-direction: column; gap: 1px; margin: 6px 0; }
+.schriftliste.lang { max-height: 260px; overflow: auto; padding-right: 4px; }
+.schriftliste .gruppe {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--matt); margin: 8px 0 2px;
+}
+.schriftliste .zeile {
+  display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 5px;
+}
+.schriftliste .zeile:hover { background: color-mix(in srgb, var(--akzent) 10%, transparent); }
+.schriftliste .stern {
+  border: 0; background: transparent; cursor: pointer; font-size: 15px; line-height: 1;
+  color: var(--linie); padding: 0 2px;
+}
+.schriftliste .stern.an { color: #e8b000; }
+.schriftliste .stern:hover { color: var(--akzent); }
+.schriftliste .probe { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.schriftliste .name { color: var(--matt); font-size: 11px; font-family: system-ui; }
+#einstellungen details summary {
+  cursor: pointer; font-size: 13px; color: var(--schrift); padding: 4px 0;
+}
+#einstellungen details[open] summary { margin-bottom: 4px; }
+#einstellungen input[type="search"] {
+  width: 100%; height: 28px; border: 1px solid var(--linie); border-radius: 6px;
+  background: var(--papier); color: var(--schrift); padding: 0 8px;
+}

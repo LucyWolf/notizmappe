@@ -233,6 +233,19 @@ for name, erlaubt in [("Arial", True), ("Comic Sans MS", True), ("Noto Sans CJK 
     pruefe(f"Schriftname {name!r} {'erlaubt' if erlaubt else 'abgelehnt'}",
            reinigen.schriftname_ok(name) is erlaubt)
 
+pruefe("Empfehlungen nach Fach getrennt",
+       set(sch.get("empfohlen", {})) <= {"schreiben", "lesen", "code"}, sch.get("empfohlen"))
+pruefe("nur vorhandene Schriften werden empfohlen",
+       all(n in sch["schriften"] for g in sch.get("empfohlen", {}).values() for n in g["schriften"]))
+pruefe("anfangs keine Favoriten", sch["favoriten"] == [], sch["favoriten"])
+pruefe("Stern setzen geht", b.favorit_setzen("Fira Code", True)["favoriten"] == ["Fira Code"])
+pruefe("Favorit bleibt gespeichert", b.schriften()["favoriten"] == ["Fira Code"])
+pruefe("zweimal setzen legt nicht doppelt an",
+       b.favorit_setzen("Fira Code", True)["favoriten"] == ["Fira Code"])
+pruefe("Stern wegnehmen geht", b.favorit_setzen("Fira Code", False)["favoriten"] == [])
+pruefe("erfundener Schriftname wird abgelehnt", "fehler" in b.favorit_setzen('x"; y', True))
+pruefe("danach immer noch keine Favoriten", b.schriften()["favoriten"] == [])
+
 s5 = b.seite_lesen(buch, absch, neu)
 r = b.seite_speichern({"notizbuch": buch, "abschnitt": absch, "name": neu, "rev": s5["rev"],
                        "titel": s5["titel"],

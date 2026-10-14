@@ -901,40 +901,142 @@ for (const [feld, befehl] of [['#schriftart', 'fontName'], ['#schriftgroesse', '
  *
  * Eine feste Liste im Programm waere immer falsch: sie enthielte Schriften, die
  * hier fehlen, und kennte die nicht, die installiert sind. */
+let schriftstand = null;
+
 async function schriftenLaden() {
-  let d;
   try {
     const b = await bruecke();
-    d = await b.schriften();
+    schriftstand = await b.schriften();
   } catch (f) { return; }
-  if (!d || d.fehler) return;
+  if (!schriftstand || schriftstand.fehler) { schriftstand = null; return; }
+  auswahlfelderFuellen();
+}
 
+function eintrag(feld, wert, beschriftung) {
+  const o = document.createElement('option');
+  o.value = wert;
+  o.textContent = beschriftung;
+  o.style.fontFamily = wert.includes(',') ? wert : `"${wert}"`;
+  feld.append(o);
+  return o;
+}
+
+function auswahlfelderFuellen() {
+  const d = schriftstand;
+  if (!d) return;
   for (const feld of document.querySelectorAll('select[data-befehl="fontName"], #schriftart')) {
     const vorher = feld.value;
     feld.textContent = '';
-    for (const [wert, name] of (d.vorschlaege || [])) {
-      const o = document.createElement('option');
-      o.value = wert;
-      o.textContent = name;
-      o.style.fontFamily = wert;
-      feld.append(o);
+
+    // Favoriten zuerst - dafür sind sie da.
+    if (d.favoriten && d.favoriten.length) {
+      const g = document.createElement('optgroup');
+      g.label = '★ Favoriten';
+      feld.append(g);
+      for (const name of d.favoriten) eintrag(g, name, name);
+    }
+    for (const [wert, name] of (d.vorschlaege || [])) eintrag(feld, wert, name);
+    for (const fach of Object.keys(d.empfohlen || {})) {
+      const g = document.createElement('optgroup');
+      g.label = d.empfohlen[fach].name;
+      feld.append(g);
+      for (const name of d.empfohlen[fach].schriften) eintrag(g, name, name);
     }
     if (d.schriften && d.schriften.length) {
-      const gruppe = document.createElement('optgroup');
-      gruppe.label = `Auf diesem Rechner (${d.schriften.length})`;
-      for (const name of d.schriften) {
-        const o = document.createElement('option');
-        o.value = name;
-        o.textContent = name;
-        // Vorschau: jeder Eintrag in seiner eigenen Schrift
-        o.style.fontFamily = `"${name}"`;
-        gruppe.append(o);
-      }
-      feld.append(gruppe);
+      const g = document.createElement('optgroup');
+      g.label = `Alle auf diesem Rechner (${d.schriften.length})`;
+      feld.append(g);
+      for (const name of d.schriften) eintrag(g, name, name);
     }
     if (vorher) feld.value = vorher;
   }
 }
+
+/* --- Schriftenliste in den Einstellungen ---------------------------------- */
+function schriftzeile(name, istFavorit) {
+  const zeile = document.createElement('div');
+  zeile.className = 'zeile';
+
+  const stern = document.createElement('button');
+  stern.type = 'button';
+  stern.className = 'stern' + (istFavorit ? ' an' : '');
+  stern.textContent = istFavorit ? '★' : '☆';
+  stern.title = istFavorit ? 'Nicht mehr bevorzugen' : 'Nach oben in die Auswahl';
+  stern.addEventListener('click', () => sternUmlegen(name, !istFavorit));
+
+  const probe = document.createElement('span');
+  probe.className = 'probe';
+  probe.style.fontFamily = `"${name}"`;
+  probe.textContent = 'Hallo Welt – 123';
+
+  const beschriftung = document.createElement('span');
+  beschriftung.className = 'name';
+  beschriftung.textContent = name;
+
+  zeile.append(stern, probe, beschriftung);
+  return zeile;
+}
+
+async function sternUmlegen(name, an) {
+  try {
+    const b = await bruecke();
+    const r = await b.favorit_setzen(name, an);
+    if (r && r.fehler) { $('#e-schrift-hinweis').textContent = r.fehler; return; }
+    if (schriftstand) schriftstand.favoriten = r.favoriten;
+    schriftenTafelFuellen();
+    auswahlfelderFuellen();
+  } catch (f) {
+    $('#e-schrift-hinweis').textContent = 'Ging nicht: ' + f.message;
+  }
+}
+
+function schriftenTafelFuellen() {
+  const d = schriftstand;
+  const oben = $('#e-schrift-favoriten');
+  const alle = $('#e-schriftliste');
+  if (!oben || !alle) return;
+  oben.textContent = '';
+  alle.textContent = '';
+  if (!d) {
+    $('#e-schrift-hinweis').textContent = 'Die Schriften ließen sich nicht lesen.';
+    return;
+  }
+  const favoriten = d.favoriten || [];
+
+  if (favoriten.length) {
+    for (const name of favoriten) oben.append(schriftzeile(name, true));
+  } else {
+    oben.append(Object.assign(document.createElement('p'), {
+      className: 'hinweis',
+      textContent: 'Noch keine Favoriten. Unten eine Schrift mit ☆ markieren.',
+    }));
+  }
+
+  const suche = ($('#e-schrift-suche').value || '').toLowerCase();
+  const gezeigt = new Set();
+
+  for (const fach of Object.keys(d.empfohlen || {})) {
+    const treffer = d.empfohlen[fach].schriften.filter((n) => n.toLowerCase().includes(suche));
+    if (!treffer.length) continue;
+    alle.append(Object.assign(document.createElement('div'), {
+      className: 'gruppe', textContent: d.empfohlen[fach].name,
+    }));
+    for (const name of treffer) { alle.append(schriftzeile(name, favoriten.includes(name))); gezeigt.add(name); }
+  }
+
+  const rest = (d.schriften || []).filter((n) => !gezeigt.has(n) && n.toLowerCase().includes(suche));
+  if (rest.length) {
+    alle.append(Object.assign(document.createElement('div'), {
+      className: 'gruppe', textContent: `Alle weiteren (${rest.length})`,
+    }));
+    for (const name of rest) alle.append(schriftzeile(name, favoriten.includes(name)));
+  }
+  $('#e-schrift-hinweis').textContent = (d.schriften || []).length
+    ? `${d.schriften.length} Schriften gefunden.`
+    : 'Es ließen sich keine Schriften vom System lesen.';
+}
+
+$('#e-schrift-suche').addEventListener('input', schriftenTafelFuellen);
 
 /* --- Leiste, die beim Markieren aufgeht -------------------------------------
  *
@@ -1395,6 +1497,8 @@ async function einstellungenLaden() {
                 : 'Installierte Fassung, von einem anderen Rechner geöffnet - Updates gehen nur direkt dort.')
       : 'Läuft aus dem Quellordner - hier wird mit git aktualisiert, nicht über den Knopf.';
     $('#e-zoom').textContent = Math.round(zoom * 100) + ' %';
+    if (!schriftstand) await schriftenLaden();
+    schriftenTafelFuellen();
     $('#e-start-pruefen').checked = !!(e.optionen && e.optionen.beim_start_pruefen);
     $('#e-auto').checked = !!(e.optionen && e.optionen.automatisch_einspielen);
     for (const kasten of [$('#e-start-pruefen'), $('#e-auto')]) kasten.disabled = !e.hier;
