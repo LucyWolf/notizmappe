@@ -73,6 +73,62 @@ FACHNAMEN = {"schreiben": "Zum Schreiben", "lesen": "Zum Lesen", "code": "Zum Pr
 SCHRIFT_MUSTER = re.compile(r"^[A-Za-z0-9 ,.\-_()\u00c0-\u024f]{1,80}$")
 
 
+# --- Striche vom Stift -------------------------------------------------------
+#
+# Eine Zeichnung ist eine Liste von Strichen, ein Strich eine flache Liste aus
+# x, y, Druck. Flach, weil das in der Datei etwa die Haelfte spart gegenueber
+# einer Liste von Woerterbuechern - und eine Seite voller Handschrift hat
+# schnell hunderttausend Zahlen.
+MAX_STRICHE = 4000
+MAX_PUNKTE = 1400                   # je Strich
+WEIT = 50000                        # weiter als so kann keine Seite sein
+FARBE_MUSTER = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+
+def striche(roh) -> list[dict]:
+    """Nur Zahlen, nur bekannte Felder, mit Deckel.
+
+    Was hier durchgeht, landet unveraendert in der Seite und wird beim naechsten
+    Oeffnen gezeichnet. Eine Liste mit einer Million Punkten wuerde die Datei
+    aufblaehen und das Zeichnen zaeh machen, also wird abgeschnitten statt
+    abgelehnt: lieber ein gekuerzter Strich als eine verlorene Seite.
+    """
+    if not isinstance(roh, list):
+        return []
+    aus = []
+    for strich in roh[:MAX_STRICHE]:
+        if not isinstance(strich, dict):
+            continue
+        p = strich.get("p")
+        if not isinstance(p, list) or len(p) < 3:
+            continue
+        punkte = []
+        for i in range(0, min(len(p), MAX_PUNKTE * 3) - 2, 3):
+            try:
+                x, y, druck = float(p[i]), float(p[i + 1]), float(p[i + 2])
+            except (TypeError, ValueError):
+                continue                    # einzelner kaputter Punkt: ueberspringen
+            if x != x or y != y:            # NaN
+                continue
+            punkte.append(round(max(-WEIT, min(WEIT, x)), 1))
+            punkte.append(round(max(-WEIT, min(WEIT, y)), 1))
+            punkte.append(round(max(0.0, min(1.0, druck)), 2))
+        if len(punkte) < 3:
+            continue
+        farbe = str(strich.get("f") or "")
+        try:
+            dicke = float(strich.get("d") or 4)
+        except (TypeError, ValueError):
+            dicke = 4
+        aus.append({
+            "f": farbe.lower() if FARBE_MUSTER.match(farbe) else "#1d1d1f",
+            "d": round(max(1.0, min(60.0, dicke)), 1),
+            "a": "marker" if strich.get("a") == "marker" else "stift",
+            "p": punkte,
+        })
+    return aus
+
+
 def schriftname_ok(name: str) -> bool:
     name = str(name or "").strip()
     if not name or not SCHRIFT_MUSTER.match(name):

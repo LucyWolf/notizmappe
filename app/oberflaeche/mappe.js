@@ -333,8 +333,10 @@ async function seiteOeffnen(buch, abschnitt, name) {
   $('#titel').value = s.titel || '';
   $('#titel').disabled = false;
   flaeche.textContent = '';
-  for (const e of elemente) flaeche.append(kastenBauen(e));
-  $('#leerhinweis').hidden = elemente.length > 0;
+  // Striche sind kein Kasten - sie kommen auf die Zeichenebene darueber.
+  for (const e of elemente) if (e.typ !== 'stift') flaeche.append(kastenBauen(e));
+  zeichnungLaden();
+  $('#leerhinweis').hidden = elemente.some((e) => e.typ !== 'stift' || (e.striche || []).length);
   schmutzig = false;
   flaecheMessen();
   baumZeichnen();
@@ -687,8 +689,14 @@ function flaecheMessen() {
     b = Math.max(b, k.offsetLeft + k.offsetWidth);
     h = Math.max(h, k.offsetTop + k.offsetHeight);
   }
+  // Auch die Striche zaehlen: sonst hoert die Flaeche dort auf, wo der letzte
+  // Kasten steht, und man kann nicht weitermalen.
+  const rand = strichRand();
+  b = Math.max(b, rand.b);
+  h = Math.max(h, rand.h);
   flaeche.style.width = Math.max(b + 600, buehne.clientWidth / zoom) + 'px';
   flaeche.style.height = Math.max(h + 600, buehne.clientHeight / zoom) + 'px';
+  malblattMessen();
 }
 
 /* --------------------------------------------------------------- Speichern */
@@ -1610,6 +1618,480 @@ $('#e-zoom-rein').addEventListener('click', () => { zoomen(0.1); $('#e-zoom').te
 $('#e-zoom-raus').addEventListener('click', () => { zoomen(-0.1); $('#e-zoom').textContent = Math.round(zoom * 100) + ' %'; });
 $('#e-zoom-zurueck').addEventListener('click', () => { zoomSetzen(1); $('#e-zoom').textContent = '100 %'; });
 
+/* ----------------------------------------------------------------- Zeichnen
+ *
+ * Striche liegen als Linien in der Seite, nicht als Bild: beim Zoomen bleiben
+ * sie scharf, die Datei bleibt klein, und ein einzelner Strich lässt sich
+ * wieder entfernen. Alle Striche einer Seite stehen in **einem** Element vom
+ * Typ "stift" - sonst wäre nach ein paar Minuten Malen die Grenze von 500
+ * Elementen erreicht.
+ *
+ * Ein Strich: { f: Farbe, d: Dicke, a: 'stift'|'marker', p: [x, y, Druck, …] }
+ * Die Punkte stehen flach hintereinander, das spart in der Datei etwa die
+ * Hälfte gegenüber einer Liste von Objekten.
+ */
+
+const STIFTE = [
+  { name: 'Bleistift',     f: '#1d1d1f', d: 2,  a: 'stift'  },
+  { name: 'Kugelschreiber', f: '#1f4fd8', d: 4,  a: 'stift'  },
+  { name: 'Rot',           f: '#d13232', d: 4,  a: 'stift'  },
+  { name: 'Grün',          f: '#1a8f4a', d: 4,  a: 'stift'  },
+  { name: 'Filzstift',     f: '#7c3aed', d: 8,  a: 'stift'  },
+  { name: 'Marker gelb',   f: '#ffd84d', d: 22, a: 'marker' },
+  { name: 'Marker türkis', f: '#4dd8d8', d: 22, a: 'marker' },
+];
+const MAX_STRICHE = 4000;
+const MAX_PUNKTE = 1400;            // je Strich; danach faengt ein neuer an
+
+let malblatt = null;                // das <canvas>
+let malstift = null;                // sein 2d-Kontext
+let zeichnung = null;               // das Element "stift" der offenen Seite
+let werkzeug = 'auswahl';
+let stiftnummer = 0;
+let stifte = STIFTE.map((s) => ({ ...s }));
+let laufend = null;                 // der Strich, der gerade gezogen wird
+let lasso = null;                   // die Schlinge, waehrend sie gezogen wird
+let gewaehlt = [];                  // ausgewaehlte Striche
+let zurueckgenommen = [];           // fuer Wiederholen
+let zieht = null;
+
+function zeichnungHolen() {
+  if (!elemente) return null;
+  let e = elemente.find((x) => x && x.typ === 'stift');
+  // Noch nicht in die Seite haengen: sonst bekaeme jede Seite, die man nur
+  // anschaut, ein leeres Zeichnungs-Element in die Datei geschrieben.
+  if (!e) e = { id: 'zeichnung', typ: 'stift', x: 0, y: 0, b: 0, striche: [] };
+  if (!Array.isArray(e.striche)) e.striche = [];
+  return e;
+}
+
+function zeichnungSichern() {
+  if (zeichnung && elemente && !elemente.includes(zeichnung)) elemente.push(zeichnung);
+}
+
+function malblattBauen() {
+  malblatt = document.createElement('canvas');
+  malblatt.id = 'malblatt';
+  flaeche.append(malblatt);
+  malstift = malblatt.getContext('2d');
+  for (const art of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) {
+    malblatt.addEventListener(art, zeiger, { passive: false });
+  }
+}
+
+/* Das Blatt wird mit der Fläche skaliert. Die Zeichenfläche selbst darf dabei
+ * nicht beliebig groß werden: Breite × Höhe × Zoom² × Bildschirmdichte wäre bei
+ * einer großen Seite schnell eine halbe Milliarde Punkte. Deshalb ein Deckel -
+ * notfalls wird es bei starkem Zoom etwas weicher, statt dass der Speicher
+ * vollläuft. */
+function malblattMessen() {
+  if (!malblatt) return;
+  const b = flaeche.clientWidth || parseInt(flaeche.style.width, 10) || 1000;
+  const h = flaeche.clientHeight || parseInt(flaeche.style.height, 10) || 1000;
+  const dichte = window.devicePixelRatio || 1;
+  let s = Math.min(zoom * dichte, 2.5);
+  const DECKEL = 24e6;
+  if (b * h * s * s > DECKEL) s = Math.sqrt(DECKEL / (b * h));
+  malblatt.style.width = b + 'px';
+  malblatt.style.height = h + 'px';
+  malblatt.width = Math.max(1, Math.round(b * s));
+  malblatt.height = Math.max(1, Math.round(h * s));
+  malstift.setTransform(s, 0, 0, s, 0, 0);
+  allesMalen();
+}
+
+function strichMalen(st, hervor) {
+  const p = st.p;
+  if (!p || p.length < 3) return;
+  malstift.save();
+  malstift.lineCap = 'round';
+  malstift.lineJoin = 'round';
+  malstift.strokeStyle = st.f;
+  // Der Marker ist durchscheinend, damit Text darunter lesbar bleibt - sonst
+  // waere es kein Marker, sondern Farbe.
+  malstift.globalAlpha = st.a === 'marker' ? 0.35 : 1;
+  if (p.length === 3) {
+    malstift.fillStyle = st.f;
+    malstift.beginPath();
+    malstift.arc(p[0], p[1], Math.max(0.6, st.d / 2), 0, 6.2832);
+    malstift.fill();
+    malstift.restore();
+    if (hervor) rahmenMalen(st);
+    return;
+  }
+  for (let i = 3; i < p.length; i += 3) {
+    // Druck des Stifts: dünner, wenn leicht aufgesetzt wird. Eine Maus meldet
+    // 0.5, damit sieht ein Mausstrich aus wie ein normaler Strich.
+    const druck = p[i + 2] == null ? 0.5 : p[i + 2];
+    malstift.lineWidth = st.a === 'marker' ? st.d : Math.max(0.4, st.d * (0.45 + druck));
+    malstift.beginPath();
+    malstift.moveTo(p[i - 3], p[i - 2]);
+    malstift.lineTo(p[i], p[i + 1]);
+    malstift.stroke();
+  }
+  malstift.restore();
+  if (hervor) rahmenMalen(st);
+}
+
+function rahmenMalen(st) {
+  const g = strichGrenzen(st);
+  malstift.save();
+  malstift.strokeStyle = '#2f6fed';
+  malstift.setLineDash([4, 3]);
+  malstift.lineWidth = 1;
+  malstift.strokeRect(g.x1 - 3, g.y1 - 3, g.x2 - g.x1 + 6, g.y2 - g.y1 + 6);
+  malstift.restore();
+}
+
+function allesMalen() {
+  if (!malstift) return;
+  malstift.save();
+  malstift.setTransform(1, 0, 0, 1, 0, 0);
+  malstift.clearRect(0, 0, malblatt.width, malblatt.height);
+  malstift.restore();
+  if (!zeichnung) return;
+  for (const st of zeichnung.striche) strichMalen(st, gewaehlt.includes(st));
+  if (laufend) strichMalen(laufend, false);
+  if (lasso && lasso.length > 3) {
+    malstift.save();
+    malstift.strokeStyle = '#2f6fed';
+    malstift.setLineDash([5, 4]);
+    malstift.lineWidth = 1;
+    malstift.beginPath();
+    malstift.moveTo(lasso[0], lasso[1]);
+    for (let i = 2; i < lasso.length; i += 2) malstift.lineTo(lasso[i], lasso[i + 1]);
+    malstift.closePath();
+    malstift.stroke();
+    malstift.restore();
+  }
+}
+
+function strichGrenzen(st) {
+  let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+  for (let i = 0; i < st.p.length; i += 3) {
+    x1 = Math.min(x1, st.p[i]); x2 = Math.max(x2, st.p[i]);
+    y1 = Math.min(y1, st.p[i + 1]); y2 = Math.max(y2, st.p[i + 1]);
+  }
+  const rand = st.d;
+  return { x1: x1 - rand, y1: y1 - rand, x2: x2 + rand, y2: y2 + rand };
+}
+
+/* Wie weit reichen die Striche? Die Fläche muss mitwachsen, sonst malt man an
+ * den Rand und kann nicht weiter. */
+function strichRand() {
+  if (!zeichnung || !zeichnung.striche.length) return { b: 0, h: 0 };
+  let b = 0, h = 0;
+  for (const st of zeichnung.striche) {
+    const g = strichGrenzen(st);
+    b = Math.max(b, g.x2); h = Math.max(h, g.y2);
+  }
+  return { b, h };
+}
+
+function stelle(ev) {
+  const r = flaeche.getBoundingClientRect();
+  return { x: (ev.clientX - r.left) / zoom, y: (ev.clientY - r.top) / zoom };
+}
+
+function inSchlinge(st, punkte) {
+  // Ein Strich gilt als gewählt, wenn irgendein Punkt in der Schlinge liegt -
+  // so bekommt man auch lange Striche zu fassen, ohne sie ganz zu umkreisen.
+  for (let i = 0; i < st.p.length; i += 3) {
+    if (punktDrin(st.p[i], st.p[i + 1], punkte)) return true;
+  }
+  return false;
+}
+
+function punktDrin(x, y, p) {
+  let drin = false;
+  for (let i = 0, j = p.length - 2; i < p.length; j = i, i += 2) {
+    const xi = p[i], yi = p[i + 1], xj = p[j], yj = p[j + 1];
+    if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) drin = !drin;
+  }
+  return drin;
+}
+
+function wegwischen(x, y) {
+  if (!zeichnung) return false;
+  const vorher = zeichnung.striche.length;
+  zeichnung.striche = zeichnung.striche.filter((st) => {
+    const r = Math.max(6, st.d);
+    for (let i = 0; i < st.p.length; i += 3) {
+      if (Math.abs(st.p[i] - x) < r && Math.abs(st.p[i + 1] - y) < r) {
+        zurueckgenommen = [];
+        geloescht.push(st);
+        return false;
+      }
+    }
+    return true;
+  });
+  return zeichnung.striche.length !== vorher;
+}
+
+let geloescht = [];                 // was der Radierer in einem Zug weggenommen hat
+
+function zeiger(ev) {
+  if (!zeichnung) return;
+  // Auf dem Tablet liegt der Handballen auf. Mit dem Haken zählt nur der Stift -
+  // ohne ihn malt auch der Finger, sonst ginge es auf einem Handy gar nicht.
+  if ($('#m-nurstift').checked && ev.pointerType !== 'pen') return;
+  const p = stelle(ev);
+
+  if (ev.type === 'pointerdown') {
+    malblatt.setPointerCapture(ev.pointerId);
+    ev.preventDefault();
+    if (werkzeug === 'hand') {
+      zieht = { x: ev.clientX, y: ev.clientY, l: buehne.scrollLeft, o: buehne.scrollTop };
+      return;
+    }
+    if (werkzeug === 'radierer') {
+      geloescht = [];
+      if (wegwischen(p.x, p.y)) { allesMalen(); angefasst(); }
+      return;
+    }
+    if (werkzeug === 'lasso') {
+      const treffer = gewaehlt.length && gewaehlt.some((st) => {
+        const g = strichGrenzen(st);
+        return p.x >= g.x1 && p.x <= g.x2 && p.y >= g.y1 && p.y <= g.y2;
+      });
+      if (treffer) { zieht = { x: p.x, y: p.y, art: 'striche' }; return; }
+      gewaehlt = [];
+      lasso = [p.x, p.y];
+      allesMalen();
+      return;
+    }
+    const s = stifte[stiftnummer] || stifte[0];
+    laufend = { f: s.f, d: s.d, a: s.a, p: [p.x, p.y, ev.pressure || 0.5] };
+    return;
+  }
+
+  if (ev.type === 'pointermove') {
+    if (zieht && zieht.art === 'striche') {
+      const dx = p.x - zieht.x, dy = p.y - zieht.y;
+      zieht.x = p.x; zieht.y = p.y;
+      for (const st of gewaehlt) {
+        for (let i = 0; i < st.p.length; i += 3) { st.p[i] += dx; st.p[i + 1] += dy; }
+      }
+      allesMalen();
+      return;
+    }
+    if (zieht) {
+      buehne.scrollLeft = zieht.l - (ev.clientX - zieht.x);
+      buehne.scrollTop = zieht.o - (ev.clientY - zieht.y);
+      return;
+    }
+    if (werkzeug === 'radierer' && ev.buttons) {
+      if (wegwischen(p.x, p.y)) { allesMalen(); angefasst(); }
+      return;
+    }
+    if (lasso) { lasso.push(p.x, p.y); allesMalen(); return; }
+    if (!laufend) return;
+    const n = laufend.p.length;
+    // Punkte, die kaum auseinanderliegen, bringen nichts und blähen die Datei auf.
+    if (Math.abs(laufend.p[n - 3] - p.x) < 0.7 && Math.abs(laufend.p[n - 2] - p.y) < 0.7) return;
+    laufend.p.push(p.x, p.y, ev.pressure || 0.5);
+    if (laufend.p.length > MAX_PUNKTE * 3) { strichAblegen(); return; }
+    allesMalen();
+    return;
+  }
+
+  // pointerup / pointercancel
+  if (zieht) {
+    if (zieht.art === 'striche') angefasst();
+    zieht = null;
+    return;
+  }
+  if (lasso) {
+    const schlinge = lasso;
+    lasso = null;
+    if (schlinge.length > 7) {
+      gewaehlt = zeichnung.striche.filter((st) => inSchlinge(st, schlinge));
+      hinweis(gewaehlt.length ? `${gewaehlt.length} Striche gewählt - Entf löscht, Ziehen verschiebt` : '');
+    }
+    allesMalen();
+    return;
+  }
+  if (werkzeug === 'radierer') { geloescht = []; return; }
+  strichAblegen();
+}
+
+function strichAblegen() {
+  if (!laufend) return;
+  if (laufend.p.length >= 3 && zeichnung.striche.length < MAX_STRICHE) {
+    zeichnungSichern();
+    // Runden spart in der Datei viel: zwei Nachkommastellen sind feiner, als
+    // ein Bildschirm darstellen kann.
+    laufend.p = laufend.p.map((w, i) => (i % 3 === 2 ? Math.round(w * 100) / 100
+                                                     : Math.round(w * 10) / 10));
+    zeichnung.striche.push(laufend);
+    zurueckgenommen = [];
+    angefasst();
+  } else if (zeichnung.striche.length >= MAX_STRICHE) {
+    hinweis(`Mehr als ${MAX_STRICHE} Striche auf einer Seite gehen nicht.`);
+  }
+  laufend = null;
+  allesMalen();
+  flaecheMessen();
+}
+
+function hinweis(text) {
+  $('#m-hinweis').textContent = text;
+  if (text) setTimeout(() => { if ($('#m-hinweis').textContent === text) $('#m-hinweis').textContent = ''; }, 5000);
+}
+
+/* --- Werkzeuge --- */
+
+function stiftknoepfeBauen() {
+  const wo = $('#m-stifte');
+  wo.textContent = '';
+  stifte.forEach((s, i) => {
+    const k = document.createElement('button');
+    k.type = 'button';
+    k.className = 'malwerkzeug stift';
+    k.dataset.werkzeug = 'stift';
+    k.dataset.nummer = String(i);
+    k.title = `${s.name} (${s.d} px)`;
+    k.textContent = s.a === 'marker' ? '▬' : '✎';
+    k.style.setProperty('--stiftfarbe', s.f);
+    wo.append(k);
+  });
+}
+
+function werkzeugSetzen(name, nummer) {
+  werkzeug = name;
+  if (name === 'stift' && nummer != null) stiftnummer = nummer;
+  if (name !== 'lasso') { gewaehlt = []; }
+  for (const k of document.querySelectorAll('#malzeug .malwerkzeug')) {
+    const dran = k.dataset.werkzeug === name
+      && (name !== 'stift' || Number(k.dataset.nummer) === stiftnummer);
+    k.classList.toggle('an', dran);
+  }
+  if (malblatt) {
+    malblatt.classList.toggle('malt', name === 'stift' || name === 'lasso');
+    malblatt.classList.toggle('wischt', name === 'radierer');
+    malblatt.classList.toggle('zieht', name === 'hand');
+  }
+  if (name === 'stift') {
+    const s = stifte[stiftnummer];
+    $('#m-farbe').value = s.f;
+    $('#m-dicke').value = String(s.d);
+  }
+  allesMalen();
+}
+
+function reiterSetzen(name) {
+  for (const k of document.querySelectorAll('#reiter .reiter')) {
+    k.setAttribute('aria-selected', String(k.dataset.reiter === name));
+  }
+  $('#werkzeuge').hidden = name !== 'start';
+  $('#malzeug').hidden = name !== 'zeichnen';
+  merker.legen('reiter', name);
+  // Beim Verlassen des Reiters nicht weitermalen: sonst fängt der nächste Klick
+  // in den Text einen Strich an.
+  werkzeugSetzen(name === 'zeichnen' ? (werkzeug === 'auswahl' ? 'stift' : werkzeug) : 'auswahl',
+                 stiftnummer);
+}
+
+$('#reiter').addEventListener('click', (ev) => {
+  const k = ev.target.closest('.reiter');
+  if (k) reiterSetzen(k.dataset.reiter);
+});
+
+$('#malzeug').addEventListener('click', (ev) => {
+  const k = ev.target.closest('.malwerkzeug');
+  if (!k) return;
+  werkzeugSetzen(k.dataset.werkzeug, k.dataset.nummer == null ? null : Number(k.dataset.nummer));
+});
+
+$('#m-farbe').addEventListener('input', (ev) => {
+  if (werkzeug !== 'stift') werkzeugSetzen('stift', stiftnummer);
+  stifte[stiftnummer].f = ev.target.value;
+  stiftknoepfeBauen();
+  werkzeugSetzen('stift', stiftnummer);
+  stifteMerken();
+});
+
+$('#m-dicke').addEventListener('change', (ev) => {
+  if (werkzeug !== 'stift') werkzeugSetzen('stift', stiftnummer);
+  stifte[stiftnummer].d = Number(ev.target.value) || 4;
+  stiftknoepfeBauen();
+  werkzeugSetzen('stift', stiftnummer);
+  stifteMerken();
+});
+
+$('#m-nurstift').addEventListener('change', (ev) => merker.legen('nurstift', ev.target.checked ? '1' : ''));
+
+function stifteMerken() {
+  try { merker.legen('stifte', JSON.stringify(stifte)); } catch (f) { /* dann eben nicht */ }
+}
+
+function stifteHolen() {
+  try {
+    const roh = JSON.parse(merker.holen('stifte', 'null'));
+    if (Array.isArray(roh) && roh.length === STIFTE.length) {
+      stifte = roh.map((s, i) => ({
+        name: STIFTE[i].name,
+        f: /^#[0-9a-fA-F]{6}$/.test(s.f) ? s.f : STIFTE[i].f,
+        d: Math.min(60, Math.max(1, Number(s.d) || STIFTE[i].d)),
+        a: s.a === 'marker' ? 'marker' : 'stift',
+      }));
+    }
+  } catch (f) { /* dann die eingebauten */ }
+}
+
+/* --- Rückgängig --- */
+
+function strichZurueck() {
+  if (!zeichnung || !zeichnung.striche.length) return;
+  zurueckgenommen.push(zeichnung.striche.pop());
+  gewaehlt = [];
+  angefasst();
+  allesMalen();
+}
+
+function strichVor() {
+  if (!zurueckgenommen.length) return;
+  zeichnungSichern();
+  zeichnung.striche.push(zurueckgenommen.pop());
+  angefasst();
+  allesMalen();
+  flaecheMessen();
+}
+
+$('#m-zurueck').addEventListener('click', strichZurueck);
+$('#m-vor').addEventListener('click', strichVor);
+
+document.addEventListener('keydown', (ev) => {
+  if ($('#malzeug').hidden) return;
+  if (ev.target.closest('.text, input, select, textarea')) return;
+  if ((ev.key === 'Delete' || ev.key === 'Backspace') && gewaehlt.length) {
+    ev.preventDefault();
+    zeichnung.striche = zeichnung.striche.filter((st) => !gewaehlt.includes(st));
+    gewaehlt = [];
+    angefasst();
+    allesMalen();
+    return;
+  }
+  if (ev.key === 'Escape') { gewaehlt = []; werkzeugSetzen('auswahl'); allesMalen(); return; }
+  if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z') { ev.preventDefault(); strichZurueck(); }
+  if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'y') { ev.preventDefault(); strichVor(); }
+});
+
+/* Beim Öffnen einer Seite: Blatt neu aufspannen und die Striche hinmalen. */
+function zeichnungLaden() {
+  zeichnung = zeichnungHolen();
+  gewaehlt = [];
+  zurueckgenommen = [];
+  laufend = null;
+  lasso = null;
+  malblattBauen();
+  malblattMessen();
+  // Das Blatt ist neu - ohne das hier hat es die Klasse nicht, die Zeiger
+  // durchlaesst oder faengt. Nach einem Seitenwechsel haette man im Reiter
+  // Zeichnen gemalt und es waere nichts passiert.
+  werkzeugSetzen(werkzeug, stiftnummer);
+}
+
 /* ------------------------------------------------------------------ Sperre */
 
 let sperreStand = { eingerichtet: false, offen: true, minuten: 0 };
@@ -1858,6 +2340,10 @@ $('#e-sperre-aus').addEventListener('click', async () => {
 
 (async () => {
   zoomSetzen(parseFloat(merker.holen('zoom', '1')));
+  stifteHolen();
+  stiftknoepfeBauen();
+  $('#m-nurstift').checked = !!merker.holen('nurstift', '');
+  reiterSetzen(merker.holen('reiter', 'start') === 'zeichnen' ? 'zeichnen' : 'start');
   // Vor allem anderen: ist zugesperrt, wird hier gewartet, bis das Passwort
   // stimmt. Kein Baum, keine Seite, nichts.
   if (!await sperreAufmachen()) return;

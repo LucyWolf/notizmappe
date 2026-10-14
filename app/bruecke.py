@@ -119,7 +119,7 @@ def _elemente(roh) -> list[dict]:
         if not isinstance(e, dict):
             continue
         art = e.get("typ")
-        if art not in {"text", "bild", "datei"}:
+        if art not in {"text", "bild", "datei", "stift"}:
             continue
         gemein = {
             "id": reinigen.text(e.get("id"), 40) or speicher.uuid.uuid4().hex[:12],
@@ -130,6 +130,12 @@ def _elemente(roh) -> list[dict]:
         }
         if art == "text":
             gemein["html"] = reinigen.html(e.get("html") or "")
+        elif art == "stift":
+            # Die Zeichenebene der Seite. Steht einmal pro Seite da und hat
+            # keine Groesse - sie liegt ueber allem.
+            gemein["striche"] = reinigen.striche(e.get("striche"))
+            if not gemein["striche"]:
+                continue                    # leere Zeichnung nicht mitschleppen
         else:
             # Der Dateiname kommt von der Oberflaeche zurueck. Beim Ablegen hat ihn
             # slug() schon geformt und genau so zurueckgegeben - kommt er veraendert

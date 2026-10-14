@@ -125,6 +125,10 @@ tests/alle.sh              # alles, baut auch das Paket (~3 Minuten)
 tests/alle.sh --schnell    # nur API und Update
 ```
 
+`tests/test_stift.py` prüft die Striche: was durch die Reinigung geht (Farben,
+Deckel, kaputte Punkte) und dass eine gemalte Seite Speichern und Wiederöffnen
+heil übersteht.
+
 `tests/test_sperre.py` prüft die Sperre am Ergebnis: steht der Notiztext nach
 dem Einschalten noch in der Datei, ist der Test rot. Dazu: falsches Passwort,
 Wiederherstellungsschlüssel, Passwortwechsel, Zeitsperre, Abschalten und der
@@ -158,6 +162,49 @@ direkt an dem Rechner, auf dem die Notizmappe läuft.
 Die Wahl steht in `~/.config/notizmappe/einstellungen.json` (Windows:
 `%APPDATA%\notizmappe`), nicht im Datenordner selbst. Ist `NOTIZEN_ORDNER` gesetzt,
 gewinnt das und die Wahl ist gesperrt — Tests und Docker verlassen sich darauf.
+
+## Zeichnen
+
+Oben gibt es zwei Reiter: **Start** (Text, Schrift, Anhänge, Zoom) und
+**Zeichnen**. Im Zeichnen-Reiter liegt eine Ebene über der ganzen Seite, wie das
+Transparentpapier in OneNote — die Striche liegen über den Textkästen, nicht
+darin.
+
+Werkzeuge: Auswahl (schreiben wie sonst), Lasso, fünf Stifte und zwei Marker,
+Radierer, Hand zum Schieben, Rückgängig/Wiederholen. Farbe und Strichstärke
+gelten für den gerade gewählten Stift und werden gemerkt.
+
+* **Tablet und Stift**: Die Strichstärke folgt dem Druck. Mit dem Haken
+  **„nur Stift"** zählt nur der Stift — dann malt der Handballen nicht mit.
+  Ohne den Haken malt auch der Finger, sonst ginge es auf einem Handy gar nicht.
+* **Radierer** nimmt ganze Striche weg, keine Pixel. Vorhersehbar, und ein
+  Strich bleibt ein Strich.
+* **Lasso** wählt Striche aus (ein Punkt darin genügt, damit man lange Striche
+  nicht ganz umkreisen muss). Danach verschiebt Ziehen, `Entf` löscht.
+
+### Wie die Striche gespeichert werden
+
+Als **Linien**, nicht als Bild: beim Zoomen bleiben sie scharf, die Datei bleibt
+klein, und ein einzelner Strich lässt sich wieder entfernen. Alle Striche einer
+Seite stehen in **einem** Element vom Typ `stift` — sonst wäre die Grenze von
+500 Elementen pro Seite nach ein paar Minuten Malen erreicht.
+
+```json
+{"typ": "stift", "striche": [
+  {"f": "#d13232", "d": 4, "a": "stift", "p": [10, 10, 0.5, 20, 30, 0.8]}
+]}
+```
+
+Die Punkte stehen flach hintereinander (x, y, Druck) — das spart gegenüber einer
+Liste von Objekten etwa die Hälfte, und eine Seite voller Handschrift hat
+schnell hunderttausend Zahlen. Gedeckelt wird bei 4000 Strichen je Seite und
+1400 Punkten je Strich; Koordinaten auf eine Nachkommastelle gerundet.
+
+Eine **leere** Zeichnung wird nicht mitgeschrieben — sonst bekäme jede Seite,
+die man nur anschaut, ein Element dazu.
+
+**Noch nicht dabei** (aus dem OneNote-Band): Formerkennung, Freihand in Text,
+Mathe, Wiedergabe der Striche, Hintergrund formatieren, Ganzseitenansicht.
 
 ## Sperre (Passwort und Verschlüsselung)
 

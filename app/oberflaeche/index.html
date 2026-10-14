@@ -50,7 +50,15 @@ window.addEventListener('unhandledrejection', function (ev) {
 
   <main id="haupt">
     <div id="kopf">
-      <input id="titel" type="text" placeholder="Seitentitel" autocomplete="off" disabled>
+      <div class="kopfzeile">
+        <input id="titel" type="text" placeholder="Seitentitel" autocomplete="off" disabled>
+        <nav id="reiter" aria-label="Werkzeuge">
+          <button type="button" class="reiter" data-reiter="start" aria-selected="true">Start</button>
+          <button type="button" class="reiter" data-reiter="zeichnen" aria-selected="false">Zeichnen</button>
+        </nav>
+        <button type="button" id="update" hidden></button>
+        <span id="zustand"></span>
+      </div>
       <div id="werkzeuge">
         <button type="button" data-befehl="bold" title="Fett (Strg+B)"><b>B</b></button>
         <button type="button" data-befehl="italic" title="Kursiv (Strg+I)"><i>I</i></button>
@@ -76,8 +84,40 @@ window.addEventListener('unhandledrejection', function (ev) {
         <span id="zoomwert">100%</span>
         <button type="button" id="rein" title="Größer (Strg++)">+</button>
       </div>
-      <button type="button" id="update" hidden></button>
-      <span id="zustand"></span>
+
+      <!-- Zeichnen. Die Striche liegen als Linien in der Seite, nicht als Bild:
+           beim Zoomen bleiben sie scharf, die Datei bleibt klein, und ein
+           einzelner Strich laesst sich wieder loeschen. -->
+      <div id="malzeug" hidden>
+        <button type="button" id="m-zurueck" title="Rückgängig (Strg+Z)">↶</button>
+        <button type="button" id="m-vor" title="Wiederholen (Strg+Y)">↷</button>
+        <span class="trenner"></span>
+        <button type="button" class="malwerkzeug" data-werkzeug="auswahl"
+                title="Auswählen und schreiben wie sonst">⬉</button>
+        <button type="button" class="malwerkzeug" data-werkzeug="lasso"
+                title="Striche mit einer Schlinge auswählen">◌</button>
+        <span class="trenner"></span>
+        <span id="m-stifte"></span>
+        <span class="trenner"></span>
+        <button type="button" class="malwerkzeug" data-werkzeug="radierer"
+                title="Ganze Striche wegwischen">🧽</button>
+        <button type="button" class="malwerkzeug" data-werkzeug="hand"
+                title="Seite schieben">✋</button>
+        <span class="trenner"></span>
+        <input type="color" id="m-farbe" title="Farbe des gewählten Stifts" value="#1d1d1f">
+        <select id="m-dicke" title="Strichstärke">
+          <option value="1">sehr fein</option>
+          <option value="2">fein</option>
+          <option value="4" selected>mittel</option>
+          <option value="8">dick</option>
+          <option value="16">sehr dick</option>
+          <option value="28">riesig</option>
+        </select>
+        <span class="trenner"></span>
+        <label class="haken" id="m-nurstift-feld" title="Damit malt der Handballen auf dem Tablet nicht mit">
+          <input type="checkbox" id="m-nurstift"> nur Stift</label>
+        <span id="m-hinweis"></span>
+      </div>
     </div>
 
     <div id="meldung" hidden></div>

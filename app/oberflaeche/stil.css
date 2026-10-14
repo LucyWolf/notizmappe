@@ -79,9 +79,10 @@ body {
 /* --- Kopfzeile --- */
 #haupt { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 #kopf {
-  display: flex; align-items: center; gap: 12px;
+  display: flex; flex-direction: column; align-items: stretch; gap: 6px;
   padding: 8px 14px; border-bottom: 1px solid var(--linie);
 }
+#kopf .kopfzeile { display: flex; align-items: center; gap: 12px; }
 #titel {
   flex: 1; min-width: 0; font-size: 19px; font-weight: 600;
   border: 0; background: transparent; color: var(--schrift); padding: 4px 2px;
@@ -412,3 +413,61 @@ body {
   letter-spacing: .06em; word-break: break-all; user-select: all;
 }
 #leiste footer #sperren { padding: 2px 5px; }
+
+
+/* --- Reiter und Zeichnen --------------------------------------------------- */
+
+#reiter { display: flex; gap: 2px; }
+#reiter .reiter {
+  border: 1px solid transparent; background: transparent; color: var(--matt);
+  font: inherit; font-size: 13px; padding: 4px 12px; border-radius: 6px 6px 0 0;
+  cursor: pointer;
+}
+#reiter .reiter:hover { color: var(--schrift); }
+#reiter .reiter[aria-selected="true"] {
+  color: var(--schrift); border-color: var(--linie); border-bottom-color: transparent;
+  background: var(--papier); font-weight: 600;
+}
+
+#malzeug { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+#malzeug button {
+  min-width: 28px; height: 28px; border: 1px solid var(--linie);
+  background: var(--papier); color: var(--schrift); border-radius: 6px; cursor: pointer;
+}
+#malzeug button:hover { border-color: var(--akzent); }
+/* Das gewaehlte Werkzeug muss man sehen, ohne zu suchen - sonst malt man in die
+   Seite, weil man den Radierer fuer ausgewaehlt hielt. */
+#malzeug button.an {
+  border-color: var(--akzent); background: color-mix(in srgb, var(--akzent) 20%, var(--papier));
+}
+#malzeug .trenner { width: 1px; height: 20px; background: var(--linie); margin: 0 6px; }
+#malzeug select {
+  height: 28px; border: 1px solid var(--linie); border-radius: 6px;
+  background: var(--papier); color: var(--schrift); font-size: 13px;
+}
+#malzeug input[type="color"] {
+  width: 32px; height: 28px; padding: 2px; border: 1px solid var(--linie);
+  border-radius: 6px; background: var(--papier); cursor: pointer;
+}
+#malzeug .haken { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--matt); }
+#malzeug .haken input { accent-color: var(--akzent); }
+#m-hinweis { font-size: 12px; color: var(--matt); margin-left: 8px; }
+#m-stifte { display: flex; align-items: center; gap: 2px; }
+/* Ein Stift zeigt seine eigene Farbe als Strich darunter - wie im Becher. */
+#malzeug button.stift {
+  position: relative; overflow: hidden;
+}
+#malzeug button.stift::after {
+  content: ""; position: absolute; left: 3px; right: 3px; bottom: 2px;
+  height: 3px; border-radius: 2px; background: var(--stiftfarbe, currentColor);
+}
+
+/* Die Zeichenebene liegt ueber den Kaesten, laesst aber alles durch, solange
+   nicht gemalt wird - sonst koennte man keinen Text mehr anklicken. */
+#malblatt {
+  position: absolute; left: 0; top: 0; z-index: 2;
+  pointer-events: none; touch-action: none;
+}
+#malblatt.malt { pointer-events: auto; cursor: crosshair; }
+#malblatt.wischt { pointer-events: auto; cursor: cell; }
+#malblatt.schiebt { pointer-events: auto; cursor: grab; }
