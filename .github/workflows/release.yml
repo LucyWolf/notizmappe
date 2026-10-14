@@ -185,7 +185,13 @@ jobs:
   # der Unterschied zwischen "installiert" und "tut was".
   windows_probe:
     needs: doppelklick
-    if: startsWith(github.ref, 'refs/tags/')
+    # Auch von Hand startbar: so laesst sich der Installer nachpruefen, ohne
+    # dafuer eine Versionsnummer zu verbrennen.
+    if: ${{ always() && (needs.doppelklick.result == 'success' || github.event_name == 'workflow_dispatch') }}
+    # Der Schritt wartet selbst schon begrenzt; das hier ist der Deckel darueber.
+    # Ohne ihn laeuft ein haengender Lauf bis zur Sechs-Stunden-Grenze weiter -
+    # und Windows-Minuten zaehlen doppelt.
+    timeout-minutes: 25
     runs-on: windows-latest
     steps:
       - name: Setup aus dem Release holen
@@ -252,11 +258,21 @@ jobs:
           Set-Content -Path $vdatei -Value "1.0.0" -NoNewline
           Write-Host "Versionsdatei von $echt auf 1.0.0 gesetzt"
 
+          # Kein -Wait. Der Updater startet das Setup und danach das Programm neu,
+          # und beide erben die umgeleitete Ausgabe. -Wait wartet dann nicht auf
+          # den Updater, sondern darauf, dass niemand mehr diese Leitung offen
+          # hat - also bis ans Ende der Laufzeit. Genau daran haben vier Laeufe
+          # je drei Stunden gehangen, ohne dass etwas kaputt war.
           $p = Start-Process -FilePath "$env:EXE" -ArgumentList "--update" -PassThru -NoNewWindow `
-                 -RedirectStandardOutput u.txt -RedirectStandardError u-err.txt -Wait
-          Write-Host "--- Antwort ---"; Get-Content u.txt
+                 -RedirectStandardOutput u.txt -RedirectStandardError u-err.txt
+          if (-not $p.WaitForExit(120000)) {
+            Write-Host "Der Updater laeuft nach 2 Minuten noch - wird beendet."
+            $p | Stop-Process -Force
+          }
+          Start-Sleep -Seconds 1
+          Write-Host "--- Antwort ---"; Get-Content u.txt -ErrorAction SilentlyContinue
           if (Test-Path u-err.txt) { Get-Content u-err.txt }
-          if ($p.ExitCode -ne 0) { throw "Das Update liess sich nicht anstossen" }
+          if ($p.HasExited -and $p.ExitCode -ne 0) { throw "Das Update liess sich nicht anstossen ($($p.ExitCode))" }
 
           $fertig = $false
           foreach ($i in 1..60) {
