@@ -276,6 +276,13 @@ pruefe("Version abfragbar", v["installiert"] == e["version"], v)
 pruefe("ohne GitHub kein Update angeboten", v["neuer"] is False, v)
 pruefe("Quellordner meldet nicht aktualisierbar", v["aktualisierbar"] is False, v)
 pruefe("Update verweigert sich im Quellordner", "fehler" in b.update())
+# Ohne Netz meldet die Pruefung einen Hinweis - und trotzdem die installierte
+# Fassung. Die Oberflaeche muss das anzeigen koennen, statt daran zu scheitern.
+pruefe("ohne Netz: Hinweis, aber Antwort bleibt brauchbar",
+       v.get("fehler") and v.get("installiert"), v)
+js_api = (WURZEL / "app/oberflaeche/mappe.js").read_text(encoding="utf-8")
+pruefe("Oberflaeche behandelt den Hinweis nicht als Abbruch",
+       "schluessel !== 'GET /api/version'" in js_api)
 
 # --- Löschen -----------------------------------------------------------------
 pruefe("Seite geloescht", "fehler" not in b.loeschen("seite", [buch, absch, neu]))

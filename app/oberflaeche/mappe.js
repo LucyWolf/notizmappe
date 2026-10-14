@@ -135,7 +135,10 @@ async function api(weg, art = 'GET', rumpf = null) {
 
   const b = await bruecke();
   const daten = await tun(teile, b, rumpf || {});
-  if (daten && daten.fehler) {
+  // Bei der Versionsprüfung ist "fehler" ein Feld der Antwort ("GitHub nicht
+  // erreichbar"), kein Abbruch - der Rest der Antwort gilt trotzdem. Würde hier
+  // geworfen, bliebe in den Einstellungen für immer "wird geprüft …" stehen.
+  if (daten && daten.fehler && schluessel !== 'GET /api/version') {
     const f = new Error(daten.fehler);
     f.daten = daten;
     if (daten.art === 'konflikt') f.status = 409;
@@ -1360,7 +1363,14 @@ async function versionPruefen(frisch = false) {
     updateKnopf.textContent = `Update auf ${v.verfuegbar}`;
     updateKnopf.title = `Installiert ist ${v.installiert}.` + (v.notizen ? '\n\n' + v.notizen.slice(0, 500) : '');
     return v;
-  } catch (f) { updateKnopf.hidden = true; }
+  } catch (f) {
+    // Nicht stillschweigend aufgeben: wer auf "Nach Updates suchen" gedrückt hat,
+    // sieht sonst für immer "wird geprüft …". Der Fehler gehört dorthin, wo
+    // gefragt wurde.
+    updateKnopf.hidden = true;
+    return { installiert: null, verfuegbar: null, neuer: false,
+             aktualisierbar: false, fehler: f.message || String(f) };
+  }
 }
 
 updateKnopf.addEventListener('click', async () => {
@@ -1527,7 +1537,11 @@ async function einstellungenLaden() {
 }
 
 function updateAnzeigen(v) {
-  if (!v) return;
+  if (!v) {
+    $('#e-updatehinweis').textContent = 'Die Prüfung hat nichts zurückgegeben.';
+    return;
+  }
+  if (v.installiert) $('#e-version').textContent = v.installiert;
   $('#e-verfuegbar').textContent = v.fehler ? '—' : (v.verfuegbar || 'unbekannt');
   $('#e-notizen').hidden = !v.notizen || !v.neuer;
   if (v.notizen) $('#e-notizen').textContent = v.notizen;
@@ -1550,8 +1564,14 @@ $('#e-start-pruefen').addEventListener('change', (ev) => optionSetzen('beim_star
 $('#e-auto').addEventListener('change', (ev) => optionSetzen('automatisch_einspielen', ev.target.checked));
 
 $('#e-pruefen').addEventListener('click', async () => {
+  const knopf = $('#e-pruefen');
+  knopf.disabled = true;
   $('#e-updatehinweis').textContent = 'wird geprüft …';
-  updateAnzeigen(await versionPruefen(true));
+  try {
+    updateAnzeigen(await versionPruefen(true));
+  } finally {
+    knopf.disabled = false;
+  }
 });
 
 $('#e-einspielen').addEventListener('click', () => $('#update').click());
