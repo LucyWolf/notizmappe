@@ -1068,9 +1068,21 @@ function kastenVonAuswahl() {
   return knoten.closest('.kasten');
 }
 
+/* Liegt der Schreibzeiger gerade in einem Textkasten - oder in der Leiste selbst?
+ *
+ * Die Markierung allein genügt nicht: die Webansicht lässt sie stehen, auch wenn
+ * man längst woandershin geklickt hat. Dann bliebe die Leiste über einem Text
+ * schweben, mit dem man gar nicht mehr arbeitet. */
+function schreibtGerade() {
+  const a = document.activeElement;
+  if (!a) return false;
+  if (a.closest && a.closest('#minileiste')) return true;
+  return !!(a.closest && a.closest('.kasten .text'));
+}
+
 function minileisteZeigen() {
   const kasten = kastenVonAuswahl();
-  if (!kasten) { minileiste.hidden = true; return; }
+  if (!kasten || !schreibtGerade()) { minileiste.hidden = true; return; }
   const sel = window.getSelection();
   letzterKasten = kasten;
 
@@ -1117,6 +1129,12 @@ document.addEventListener('mousedown', (ev) => {
   minileiste.hidden = true;
 });
 document.addEventListener('mouseup', () => { ziehtMarkierung = false; setTimeout(minileisteZeigen, 0); });
+
+/* Verlässt der Schreibzeiger den Kasten, geht die Leiste mit - es sei denn, er
+ * wandert in die Leiste selbst (Knopf, Auswahlfeld). */
+document.addEventListener('focusout', () => {
+  setTimeout(() => { if (!schreibtGerade()) minileiste.hidden = true; }, 0);
+});
 document.addEventListener('touchend', () => { ziehtMarkierung = false; setTimeout(minileisteZeigen, 30); });
 document.addEventListener('dblclick', () => setTimeout(minileisteZeigen, 0));
 document.addEventListener('keyup', (ev) => {
