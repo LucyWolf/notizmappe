@@ -149,6 +149,34 @@ s = modul_laden(ARBEIT / "h", "1.0.1", True, quelle="http://127.0.0.1:1").pruefe
 pruefe("kein Netz: Fehler statt Absturz", s["fehler"] and not s["neuer"], s)
 pruefe("kein Netz: Knopf bleibt aus", s["neuer"] is False)
 
+# --- Ohne Konsole (so ist die Windows-Fassung gebaut) ------------------------
+#
+# Dort ist sys.stdout leer. Eine Funktion, die ihr Ergebnis druckt, faellt damit
+# um - und von aussen sieht das aus wie "Update ging nicht": Rueckgabe 1, keine
+# Zeile Text. Genau das hat im Buildlauf eine Weile gekostet.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "app"))
+import fenster                                                      # noqa: E402
+
+ohne_konsole = Path(tempfile.mkdtemp(prefix="notizen-ohne-konsole-"))
+os.environ["LOCALAPPDATA"] = str(ohne_konsole)
+echt, sys.stdout = sys.stdout, None
+try:
+    rueckgabe = fenster.update_anstossen()
+except Exception as f:                                              # noqa: BLE001
+    sys.stdout = echt
+    rueckgabe = f"Absturz: {type(f).__name__}"
+finally:
+    sys.stdout = echt
+pruefe("--update faellt ohne Konsole nicht um", rueckgabe in (0, 1), rueckgabe)
+
+import aktualisieren as akt_fuer_protokoll                          # noqa: E402
+
+pruefe("und schreibt seine Antwort ins Protokoll",
+       akt_fuer_protokoll.PROTOKOLL.exists()
+       and "--update:" in akt_fuer_protokoll.PROTOKOLL.read_text(encoding="utf-8"),
+       str(akt_fuer_protokoll.PROTOKOLL))
+shutil.rmtree(ohne_konsole, ignore_errors=True)
+
 print()
 print("alles gruen" if not fehler else f"{len(fehler)} FEHLER: " + ", ".join(fehler))
 server.shutdown()

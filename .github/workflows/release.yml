@@ -280,19 +280,27 @@ jobs:
           Start-Sleep -Seconds 1
           Write-Host "--- Antwort ---"; Get-Content u.txt -ErrorAction SilentlyContinue
           if (Test-Path u-err.txt) { Get-Content u-err.txt }
-          if ($p.HasExited -and $p.ExitCode -ne 0) { throw "Das Update liess sich nicht anstossen ($($p.ExitCode))" }
+          $rueckgabe = if ($p.HasExited) { $p.ExitCode } else { "laeuft noch" }
+          Write-Host "Rueckgabe des Updaters: $rueckgabe"
 
           $fertig = $false
-          foreach ($i in 1..60) {
-            Start-Sleep -Seconds 2
-            if ((Test-Path $vdatei) -and ((Get-Content $vdatei -Raw).Trim() -eq $echt)) { $fertig = $true; break }
+          if ($p.HasExited -and $p.ExitCode -eq 0) {
+            foreach ($i in 1..60) {
+              Start-Sleep -Seconds 2
+              if ((Test-Path $vdatei) -and ((Get-Content $vdatei -Raw).Trim() -eq $echt)) { $fertig = $true; break }
+            }
           }
+
+          # Erst die Protokolle, dann der Abbruch. Umgekehrt stand im Lauf nur
+          # "ging nicht" und nirgends warum - und die Windows-Fassung hat keine
+          # Konsole, also steht in der Ausgabe ohnehin nichts.
           Write-Host "--- Protokolle ---"
           foreach ($k in @("update.log", "update-lauf.log", "update-setup.log", "fenster.log")) {
             $d = Join-Path $env:LOCALAPPDATA "notizmappe\$k"
-            if (Test-Path $d) { Write-Host "[$k]"; Get-Content $d }
+            if (Test-Path $d) { Write-Host "[$k]"; Get-Content $d } else { Write-Host "[$k] gibt es nicht" }
           }
           Get-Process -Name Notizmappe -ErrorAction SilentlyContinue | Stop-Process -Force
+          if ($p.HasExited -and $p.ExitCode -ne 0) { throw "Das Update liess sich nicht anstossen ($($p.ExitCode))" }
           if (-not $fertig) { throw "Nach dem Update steht dort immer noch nicht $echt" }
           Write-Host "Selbstupdate hat funktioniert."
 

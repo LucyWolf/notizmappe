@@ -323,11 +323,35 @@ def pruefen() -> int:
 
 def update_anstossen() -> int:
     """Update ohne Fenster anstossen - fuer Buildlaeufe und fuer den Fall, dass
-    die Oberflaeche nicht mehr aufgeht."""
+    die Oberflaeche nicht mehr aufgeht.
+
+    Die Windows-Fassung ist ohne Konsole gebaut: dort ist sys.stdout leer, und
+    ein print() faellt entweder ins Nichts oder bringt das Programm zu Fall.
+    Beides sieht von aussen gleich aus - Rueckgabe 1 und keine Zeile Text. Nach
+    genau dem habe ich im Buildlauf eine Weile gesucht. Deshalb geht die Antwort
+    zuerst ins Protokoll und erst danach, wenn es geht, auf die Ausgabe.
+    """
     import json
     import bruecke as bruecke_modul
-    ergebnis = bruecke_modul.Bruecke().update()
-    print(json.dumps(ergebnis, ensure_ascii=False))
+    import aktualisieren
+
+    try:
+        ergebnis = bruecke_modul.Bruecke().update()
+    except Exception as f:                      # noqa: BLE001 - nichts soll stumm sterben
+        import traceback
+        ergebnis = {"fehler": f"{type(f).__name__}: {f}", "spur": traceback.format_exc()}
+
+    zeile = json.dumps(ergebnis, ensure_ascii=False)
+    try:
+        aktualisieren.PROTOKOLL.parent.mkdir(parents=True, exist_ok=True)
+        with aktualisieren.PROTOKOLL.open("a", encoding="utf-8") as f:
+            f.write(f"--update: {zeile}\n")
+    except OSError:
+        pass
+    try:
+        print(zeile)
+    except (AttributeError, ValueError, OSError):
+        pass                                    # ohne Konsole gibt es nichts zu drucken
     return 1 if ergebnis.get("fehler") else 0
 
 
