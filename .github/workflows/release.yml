@@ -197,7 +197,15 @@ jobs:
       - name: Setup aus dem Release holen
         shell: pwsh
         run: |
+          # Bei einem Release ist der Tag der Anlass. Von Hand gestartet gibt es
+          # keinen - dann wird das neueste Release geprueft, denn genau das hat
+          # der Benutzer gerade installiert.
           $tag = "${{ github.ref_name }}"
+          if ("${{ github.ref_type }}" -ne "tag") {
+            $tag = (Invoke-RestMethod "https://api.github.com/repos/${{ github.repository }}/releases/latest").tag_name
+            Write-Host "Von Hand gestartet - geprueft wird das neueste Release: $tag"
+          }
+          "PROBE_TAG=$tag" | Out-File -FilePath $env:GITHUB_ENV -Append
           Invoke-WebRequest -UseBasicParsing -OutFile setup.exe `
             "https://github.com/${{ github.repository }}/releases/download/$tag/notizmappe-setup.exe"
           Write-Host "geladen: $((Get-Item setup.exe).Length) Bytes"
@@ -224,7 +232,7 @@ jobs:
           if ((Get-Content i.txt -Raw) -match "cryptography: FEHLT") {
             throw "Im Buendel fehlt cryptography - die Sperre koennte nicht verschluesseln"
           }
-          $erwartet = "${{ github.ref_name }}".TrimStart("v")
+          $erwartet = "$env:PROBE_TAG".TrimStart("v")
           $vdatei = Join-Path (Split-Path $env:EXE) "_internal\app\VERSION"
           $drin = (Get-Content $vdatei -Raw).Trim()
           Write-Host "installierte Version: $drin"
