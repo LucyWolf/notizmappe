@@ -48,6 +48,19 @@ pruefe("keine Jinja-Platzhalter mehr", "{{" not in html and "{%" not in html)
 pruefe("keine Serveradressen in der Seite", "/static/" not in html and "127.0.0.1" not in html)
 js = (WURZEL / "app/oberflaeche/mappe.js").read_text(encoding="utf-8")
 pruefe("Oberflaeche ruft die Bruecke", "pywebview.api" in js)
+
+# Die Seite wird als Inhalt uebergeben, nicht als Datei: pywebview reicht seine
+# Schnittstelle nachtraeglich hinein, und bei einer Datei-Adresse geht das je
+# nach Webansicht daneben - dann antwortet das Programm dem Fenster nie.
+sys.path.insert(0, str(WURZEL / "app"))
+import fenster as fenster_modul
+seite_fertig = fenster_modul.oberflaeche_bauen()
+pruefe("Stil ist eingebettet", "<style>" in seite_fertig and "stil.css" not in seite_fertig)
+pruefe("Skript ist eingebettet", "pywebview.api" in seite_fertig and "<script src" not in seite_fertig)
+pruefe("Symbol ist eingebettet", "data:image/png" in seite_fertig)
+pruefe("die Flaeche ist drin", 'id="flaeche"' in seite_fertig)
+pruefe("kein Verweis auf eine Datei mehr",
+       'href="icon.png"' not in seite_fertig and "file://" not in seite_fertig)
 pruefe("kein fetch mehr in der Oberflaeche", "fetch(" not in js)
 
 # Jeder Aufruf in der Oberfläche muss drüben auch ankommen. "b.baum is not a

@@ -12,6 +12,8 @@ Adresse, und genau die gibt es hier nicht mehr.
 from __future__ import annotations
 
 import os
+import re
+import base64
 import socket
 import subprocess
 import sys
@@ -24,6 +26,36 @@ TITEL = "Notizmappe"
 
 def _oberflaeche() -> Path:
     return Path(__file__).resolve().parent / "oberflaeche/index.html"
+
+
+def oberflaeche_bauen() -> str:
+    """Die Seite als ein Stueck Text, mit Stil und Skript darin.
+
+    Nicht als Datei uebergeben: pywebview reicht seine Schnittstelle nachtraeglich
+    in die geladene Seite hinein, und bei einer Datei-Adresse geht das je nach
+    Webansicht daneben - dann steht das Fenster da und das Programm antwortet ihm
+    nie. Als Inhalt uebergeben gibt es diesen Zwischenschritt nicht.
+    """
+    ordner = _oberflaeche().parent
+    html = _oberflaeche().read_text(encoding="utf-8")
+
+    # Mit str.replace, nicht mit re.sub: im Skript stehen Backslashes (\d, \n in
+    # regulaeren Ausdruecken), und re.sub wuerde sie im Ersatztext deuten.
+    stil = (ordner / "stil.css").read_text(encoding="utf-8")
+    html = html.replace('<link rel="stylesheet" href="stil.css">',
+                        f"<style>\n{stil}\n</style>", 1)
+
+    skript = (ordner / "mappe.js").read_text(encoding="utf-8")
+    # Ein "</script>" im Text wuerde den Block hier vorzeitig schliessen.
+    skript = skript.replace("</script>", "<\\/script>")
+    html = html.replace('<script src="mappe.js"></script>',
+                        f"<script>\n{skript}\n</script>", 1)
+
+    symbol = ordner / "icon.png"
+    if symbol.is_file():
+        daten = base64.b64encode(symbol.read_bytes()).decode("ascii")
+        html = html.replace('href="icon.png"', f'href="data:image/png;base64,{daten}"')
+    return html
 
 
 def _datenort() -> Path:
@@ -161,7 +193,7 @@ def fenster_zeigen() -> bool:
         notieren(f"Windows: {webview2_lage()}")
 
     fenster = webview.create_window(
-        TITEL, url=seite.as_uri(), js_api=verbindung,
+        TITEL, html=oberflaeche_bauen(), js_api=verbindung,
         width=1280, height=840, min_size=(640, 480),
     )
     verbindung.fenster = fenster       # fuer die Ordner- und Speichern-Dialoge
