@@ -213,6 +213,11 @@ jobs:
                  -RedirectStandardOutput i.txt -RedirectStandardError i-err.txt -Wait
           Get-Content i.txt
           if ($p.ExitCode -ne 0) { throw "Die installierte Fassung meldet $($p.ExitCode)" }
+          # Fehlt cryptography im Buendel, laeuft das Programm - nur die Sperre
+          # liesse sich nie einschalten. Das soll hier auffallen, nicht bei ihr.
+          if ((Get-Content i.txt -Raw) -match "cryptography: FEHLT") {
+            throw "Im Buendel fehlt cryptography - die Sperre koennte nicht verschluesseln"
+          }
           $erwartet = "${{ github.ref_name }}".TrimStart("v")
           $vdatei = Join-Path (Split-Path $env:EXE) "_internal\app\VERSION"
           $drin = (Get-Content $vdatei -Raw).Trim()
