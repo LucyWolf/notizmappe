@@ -283,12 +283,15 @@ jobs:
           $rueckgabe = if ($p.HasExited) { $p.ExitCode } else { "laeuft noch" }
           Write-Host "Rueckgabe des Updaters: $rueckgabe"
 
+          # Die Rueckgabe sagt hier nichts: das Update beendet das laufende
+          # Programm, bevor es installiert - und das laufende Programm ist genau
+          # dieser Prozess. Rueckgabe 1 heisst also "wurde abgeschossen", nicht
+          # "ging schief". Gewertet wird deshalb nur das Ergebnis: steht hinterher
+          # wieder die richtige Fassung da?
           $fertig = $false
-          if ($p.HasExited -and $p.ExitCode -eq 0) {
-            foreach ($i in 1..60) {
-              Start-Sleep -Seconds 2
-              if ((Test-Path $vdatei) -and ((Get-Content $vdatei -Raw).Trim() -eq $echt)) { $fertig = $true; break }
-            }
+          foreach ($i in 1..60) {
+            Start-Sleep -Seconds 2
+            if ((Test-Path $vdatei) -and ((Get-Content $vdatei -Raw).Trim() -eq $echt)) { $fertig = $true; break }
           }
 
           # Erst die Protokolle, dann der Abbruch. Umgekehrt stand im Lauf nur
@@ -300,7 +303,6 @@ jobs:
             if (Test-Path $d) { Write-Host "[$k]"; Get-Content $d } else { Write-Host "[$k] gibt es nicht" }
           }
           Get-Process -Name Notizmappe -ErrorAction SilentlyContinue | Stop-Process -Force
-          if ($p.HasExited -and $p.ExitCode -ne 0) { throw "Das Update liess sich nicht anstossen ($($p.ExitCode))" }
           if (-not $fertig) { throw "Nach dem Update steht dort immer noch nicht $echt" }
           Write-Host "Selbstupdate hat funktioniert."
 
