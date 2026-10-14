@@ -418,24 +418,61 @@ class Bruecke:
         _minuten_geholt = (0.0, 0)
         return {"minuten": minuten}
 
+    RETTUNGSDATEI = "notizmappe-wiederherstellungsschluessel.txt"
+
+    @_gefasst
+    def rettung_ziel(self) -> dict:
+        """Wo die Schluesseldatei vorgeschlagen wird: Dokumente im eigenen Ordner.
+        Nicht der Datenordner - ein Schluessel neben dem Schloss ist keiner."""
+        return {"pfad": str(speicher.dokumentenordner() / self.RETTUNGSDATEI)}
+
     @_gefasst
     def rettung_speichern(self, rumpf: dict) -> dict:
-        """Den Wiederherstellungsschluessel in eine Datei legen - dorthin, wo der
-        Benutzer sie haben will. Nicht in den Datenordner vorschlagen: ein
-        Schluessel neben dem Schloss ist keiner."""
-        schluessel = str((rumpf or {}).get("rettung") or "").strip()
+        """Den Wiederherstellungsschluessel in eine Datei legen.
+
+        Mit "pfad" genau dorthin, sonst ueber den Dialog des Systems."""
+        d = rumpf or {}
+        schluessel = str(d.get("rettung") or "").strip()
         if not schluessel:
             raise Abbruch("Kein Schlüssel übergeben")
-        ziel = self._dialog_speichern("notizmappe-wiederherstellungsschluessel.txt")
-        if not ziel:
-            return {"abgebrochen": True}
-        Path(ziel).write_text(
-            "Notizmappe - Wiederherstellungsschlüssel\n\n"
-            f"{schluessel}\n\n"
-            "Damit lässt sich das Passwort neu setzen, wenn es verloren ist.\n"
-            "Nicht im selben Ordner aufbewahren wie die Notizen.\n",
-            encoding="utf-8")
-        return {"ok": True, "ziel": str(ziel)}
+
+        roh = str(d.get("pfad") or "").strip()
+        if roh:
+            ziel = Path(roh).expanduser()
+            if ziel.is_dir():
+                ziel = ziel / self.RETTUNGSDATEI          # Ordner angegeben: Name dran
+            if not ziel.name:
+                raise Abbruch("Da fehlt ein Dateiname")
+            if not ziel.parent.is_dir():
+                # Nicht stillschweigend anlegen: ein Tippfehler im Pfad legt sonst
+                # einen Ordner an, und die Datei liegt irgendwo, wo niemand sucht.
+                raise Abbruch(f"Den Ordner gibt es nicht: {ziel.parent}")
+        else:
+            gewaehlt = self._dialog_speichern(self.RETTUNGSDATEI)
+            if not gewaehlt:
+                return {"abgebrochen": True}
+            ziel = Path(gewaehlt)
+
+        warnung = ""
+        try:
+            # Liegt die Datei im Datenordner, nuetzt sie nichts: wer dorthin kommt,
+            # hat ohnehin alles. Nicht verbieten - sagen.
+            ziel.resolve().relative_to(speicher.wurzel().resolve())
+            warnung = ("Achtung: Die Datei liegt im Notizordner selbst. "
+                       "Wer dorthin kommt, hat damit auch den Schlüssel.")
+        except (ValueError, speicher.SpeicherFehler, OSError):
+            pass
+
+        try:
+            ziel.write_text(
+                "Notizmappe - Wiederherstellungsschlüssel\n\n"
+                f"{schluessel}\n\n"
+                "Damit lässt sich das Passwort neu setzen, wenn es verloren ist.\n"
+                "Nicht im selben Ordner aufbewahren wie die Notizen.\n",
+                encoding="utf-8")
+        except OSError as f:
+            raise Abbruch(f"Ließ sich nicht schreiben: {f}")
+        return {"ok": True, "ziel": str(ziel), "warnung": warnung}
 
     @_gefasst
     def schriften(self) -> dict:

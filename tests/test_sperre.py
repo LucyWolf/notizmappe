@@ -179,6 +179,29 @@ pruefe("Danach ist offen und lesbar",
 b.sperren()
 pruefe("Das neu gesetzte Passwort öffnet", "fehler" not in b.entsperren({"geheim": "dochnicht1"}))
 
+print("\nSchlüsseldatei")
+vorschlag = b.rettung_ziel()
+pruefe("Vorschlag steht in den eigenen Dokumenten",
+       vorschlag.get("pfad", "").endswith("notizmappe-wiederherstellungsschluessel.txt")
+       and str(Path.home()) in vorschlag["pfad"], vorschlag)
+irgendwo = Path(tempfile.mkdtemp(prefix="notizen-schluessel-"))
+g = b.rettung_speichern({"rettung": "ABCDE-FGHIJ", "pfad": str(irgendwo / "mein schluessel.txt")})
+pruefe("Speichert an den eingegebenen Pfad", "fehler" not in g, g)
+pruefe("Der Schlüssel steht wirklich in der Datei",
+       "ABCDE-FGHIJ" in (irgendwo / "mein schluessel.txt").read_text(encoding="utf-8"))
+g2 = b.rettung_speichern({"rettung": "ABCDE-FGHIJ", "pfad": str(irgendwo)})
+pruefe("Nur ein Ordner angegeben: Dateiname kommt dran",
+       g2.get("ziel", "").endswith("notizmappe-wiederherstellungsschluessel.txt"), g2)
+g3 = b.rettung_speichern({"rettung": "ABCDE-FGHIJ", "pfad": str(irgendwo / "tippfehler" / "k.txt")})
+pruefe("Ordner, den es nicht gibt, wird gemeldet statt angelegt",
+       "fehler" in g3 and not (irgendwo / "tippfehler").exists(), g3)
+g4 = b.rettung_speichern({"rettung": "ABCDE-FGHIJ", "pfad": str(DATEN / "k.txt")})
+pruefe("Im Notizordner selbst gibt es eine Warnung", bool(g4.get("warnung")), g4)
+pruefe("Gespeichert wird trotzdem - ihre Entscheidung", (DATEN / "k.txt").is_file())
+(DATEN / "k.txt").unlink()
+pruefe("Ohne Schlüssel wird nichts geschrieben", "fehler" in b.rettung_speichern({"pfad": str(irgendwo)}))
+shutil.rmtree(irgendwo, ignore_errors=True)
+
 print("\nZeitsperre und Abschalten")
 pruefe("Minuten lassen sich setzen", b.sperre_minuten({"minuten": 15}).get("minuten") == 15)
 pruefe("Minuten stehen in den Einstellungen dieses Rechners",

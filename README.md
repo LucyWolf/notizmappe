@@ -188,7 +188,10 @@ verschlossen in `.tresor.json` im Datenordner: einmal mit dem Passwort
   angefasst.
 * Der Wiederherstellungsschlüssel ist der Ersatzweg („Backup-Code“), wenn das
   Passwort weg ist. Er lässt sich kopieren oder als Datei ablegen und jederzeit
-  neu ausgeben; der alte gilt dann nicht mehr.
+  neu ausgeben; der alte gilt dann nicht mehr. Für die Datei steht ein Pfad zum
+  Eintippen da, vorgeschlagen wird `Dokumente/notizmappe-wiederherstellungsschluessel.txt`
+  im eigenen Ordner. Zeigt der Pfad in den Notizordner, kommt eine Warnung —
+  gespeichert wird trotzdem, das ist deine Entscheidung.
 
 Einen festen Hauptcode im Programm gibt es **nicht**, und das ist Absicht: wer ihn
 kennt oder aus dem Programm liest, käme in jede Notizmappe. Sind Passwort **und**

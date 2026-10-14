@@ -308,9 +308,14 @@ window.addEventListener('unhandledrejection', function (ev) {
         ihn als Datei an einen Ort, der nicht derselbe ist wie die Notizen. Er steht
         nirgends im Programm — wird er verloren und das Passwort auch, sind die Notizen zu.</p>
       <code id="r-schluessel" class="schluessel">…</code>
+      <p class="ordnerzeile">
+        <input type="text" id="r-pfad" placeholder="Pfad für die Schlüsseldatei"
+               autocomplete="off" spellcheck="false">
+        <button type="button" id="r-durchsuchen">Durchsuchen …</button>
+      </p>
       <p class="knoepfe">
         <button type="button" id="r-kopieren">Kopieren</button>
-        <button type="button" id="r-datei">Als Datei speichern …</button>
+        <button type="button" id="r-datei">Als Datei speichern</button>
         <button type="button" id="r-fertig">Hab ich notiert</button>
       </p>
       <p class="hinweis" id="r-hinweis"></p>

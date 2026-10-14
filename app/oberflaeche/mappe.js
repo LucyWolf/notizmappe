@@ -91,6 +91,7 @@ const WEGE = {
   'POST /api/sperre/zuruecksetzen': (p, b, r) => b.sperre_zuruecksetzen(r),
   'POST /api/sperre/rettung':       (p, b, r) => b.sperre_rettung_neu(r),
   'POST /api/sperre/rettung/datei': (p, b, r) => b.rettung_speichern(r),
+  'GET /api/sperre/rettung/ziel':   (p, b) => b.rettung_ziel(),
   'POST /api/sperre/aus':      (p, b, r) => b.sperre_aus(r),
   'POST /api/sperre/minuten':  (p, b, r) => b.sperre_minuten(r),
 };
@@ -1710,12 +1711,31 @@ setInterval(() => {
 
 let rettungText = '';
 
-function rettungZeigen(schluessel) {
+async function rettungZeigen(schluessel) {
   rettungText = schluessel;
   $('#r-schluessel').textContent = schluessel;
   $('#r-hinweis').textContent = '';
   $('#rettungfenster').hidden = false;
+  // Vorschlag: Dokumente im eigenen Ordner. Überschreibbar - deshalb ein Feld
+  // und nicht nur der Dialog des Systems.
+  if (!$('#r-pfad').value) {
+    try {
+      const z = await api('/api/sperre/rettung/ziel');
+      $('#r-pfad').value = z.pfad || '';
+    } catch (f) { /* dann tippt man ihn eben selbst */ }
+  }
 }
+
+$('#r-durchsuchen').addEventListener('click', async () => {
+  try {
+    const r = await api('/api/sperre/rettung/datei', 'POST', { rettung: rettungText });
+    if (r.abgebrochen) return;
+    $('#r-pfad').value = r.ziel || '';
+    $('#r-hinweis').textContent = (r.warnung ? r.warnung + ' ' : '') + 'Gespeichert: ' + r.ziel;
+  } catch (f) {
+    $('#r-hinweis').textContent = f.message;
+  }
+});
 
 $('#r-fertig').addEventListener('click', () => { $('#rettungfenster').hidden = true; });
 
@@ -1737,9 +1757,12 @@ $('#r-kopieren').addEventListener('click', async () => {
 });
 
 $('#r-datei').addEventListener('click', async () => {
+  const pfad = $('#r-pfad').value.trim();
   try {
-    const r = await api('/api/sperre/rettung/datei', 'POST', { rettung: rettungText });
-    $('#r-hinweis').textContent = r.abgebrochen ? '' : 'Gespeichert: ' + r.ziel;
+    const r = await api('/api/sperre/rettung/datei', 'POST', { rettung: rettungText, pfad });
+    if (r.abgebrochen) return;
+    if (r.ziel) $('#r-pfad').value = r.ziel;
+    $('#r-hinweis').textContent = (r.warnung ? r.warnung + ' ' : '') + 'Gespeichert: ' + r.ziel;
   } catch (f) {
     $('#r-hinweis').textContent = f.message;
   }
