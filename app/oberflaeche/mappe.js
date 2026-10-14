@@ -83,6 +83,16 @@ const WEGE = {
   'GET /api/version':          (p, b) => b.version(p.frisch === 'true'),
   'POST /api/update':          (p, b) => b.update(),
   'GET /api/update/stand':     (p, b) => b.update_stand(),
+  'GET /api/sperre':           (p, b) => b.sperre_stand(),
+  'POST /api/sperre/an':       (p, b, r) => b.sperre_einrichten(r),
+  'POST /api/sperre/auf':      (p, b, r) => b.entsperren(r),
+  'POST /api/sperre/zu':       (p, b) => b.sperren(),
+  'POST /api/sperre/passwort':      (p, b, r) => b.sperre_passwort(r),
+  'POST /api/sperre/zuruecksetzen': (p, b, r) => b.sperre_zuruecksetzen(r),
+  'POST /api/sperre/rettung':       (p, b, r) => b.sperre_rettung_neu(r),
+  'POST /api/sperre/rettung/datei': (p, b, r) => b.rettung_speichern(r),
+  'POST /api/sperre/aus':      (p, b, r) => b.sperre_aus(r),
+  'POST /api/sperre/minuten':  (p, b, r) => b.sperre_minuten(r),
 };
 
 /* Das Fenster meldet sich kurz nach dem Laden.
@@ -146,6 +156,12 @@ async function api(weg, art = 'GET', rumpf = null) {
   // Bei der Versionsprüfung ist "fehler" ein Feld der Antwort ("GitHub nicht
   // erreichbar"), kein Abbruch - der Rest der Antwort gilt trotzdem. Würde hier
   // geworfen, bliebe in den Einstellungen für immer "wird geprüft …" stehen.
+  // Zugesperrt waehrend der Arbeit (Zeitsperre): nicht einen roten Balken ueber
+  // halb geladene Notizen legen, sondern neu laden - dann kommt der Sperrschirm.
+  if (daten && daten.art === 'zu' && !laeuftZu) {
+    laeuftZu = true;
+    location.reload();
+  }
   if (daten && daten.fehler && schluessel !== 'GET /api/version') {
     const f = new Error(daten.fehler);
     f.daten = daten;
@@ -1537,6 +1553,7 @@ async function einstellungenLaden() {
                 : 'Installierte Fassung, von einem anderen Rechner geöffnet - Updates gehen nur direkt dort.')
       : 'Läuft aus dem Quellordner - hier wird mit git aktualisiert, nicht über den Knopf.';
     $('#e-zoom').textContent = Math.round(zoom * 100) + ' %';
+    await sperreTafelFuellen();
     if (!schriftstand) await schriftenLaden();
     schriftenTafelFuellen();
     $('#e-start-pruefen').checked = !!(e.optionen && e.optionen.beim_start_pruefen);
@@ -1592,10 +1609,235 @@ $('#e-zoom-rein').addEventListener('click', () => { zoomen(0.1); $('#e-zoom').te
 $('#e-zoom-raus').addEventListener('click', () => { zoomen(-0.1); $('#e-zoom').textContent = Math.round(zoom * 100) + ' %'; });
 $('#e-zoom-zurueck').addEventListener('click', () => { zoomSetzen(1); $('#e-zoom').textContent = '100 %'; });
 
+/* ------------------------------------------------------------------ Sperre */
+
+let sperreStand = { eingerichtet: false, offen: true, minuten: 0 };
+let laeuftZu = false;            /* zusperren laeuft - keine zweite Runde */
+let aufgeschlossen = null;       /* loest den Anlauf aus, sobald es offen ist */
+
+async function sperreHolen() {
+  try { sperreStand = await api('/api/sperre'); } catch (f) { /* dann wie offen */ }
+  $('#sperren').hidden = !sperreStand.eingerichtet;
+  return sperreStand;
+}
+
+/* Steht die Sperre, kommt hier nichts durch, bis das Passwort stimmt: erst
+ * danach wird überhaupt ein Baum geladen. Der Schirm ist deckend - hinter ihm
+ * steht nichts, was man lesen könnte. */
+async function sperreAufmachen() {
+  const s = await sperreHolen();
+  if (!s.eingerichtet || s.offen) return true;
+  $('#sperrschirm').hidden = false;
+  setTimeout(() => $('#s-pw').focus(), 60);
+  return new Promise((fertig) => { aufgeschlossen = fertig; });
+}
+
+function sperreOffenMelden() {
+  $('#sperrschirm').hidden = true;
+  $('#s-pw').value = '';
+  $('#s-neu').value = '';
+  $('#s-rettung').value = '';
+  if (aufgeschlossen) {
+    const weiter = aufgeschlossen;
+    aufgeschlossen = null;
+    weiter(true);                /* der Anlauf läuft dort weiter, wo er wartet */
+  } else {
+    location.reload();           /* mitten im Betrieb aufgeschlossen */
+  }
+}
+
+function sperrfehler(text) {
+  const z = $('#s-fehler');
+  z.textContent = text;
+  z.hidden = !text;
+}
+
+$('#s-form').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const geheim = $('#s-pw').value;
+  if (!geheim) { $('#s-pw').focus(); return; }
+  $('#s-auf').disabled = true;
+  sperrfehler('');
+  try {
+    await api('/api/sperre/auf', 'POST', { geheim });
+    sperreOffenMelden();
+  } catch (f) {
+    sperrfehler(f.message);
+    $('#s-pw').select();
+  } finally {
+    $('#s-auf').disabled = false;
+  }
+});
+
+$('#s-zuruecksetzen').addEventListener('click', async () => {
+  const rettung = $('#s-rettung').value.trim();
+  const neu = $('#s-neu').value;
+  if (!rettung || !neu) { sperrfehler('Wiederherstellungsschlüssel und neues Passwort eingeben'); return; }
+  sperrfehler('');
+  try {
+    await api('/api/sperre/zuruecksetzen', 'POST', { rettung, neu });
+    sperreOffenMelden();
+  } catch (f) {
+    sperrfehler(f.message);
+  }
+});
+
+async function zusperrenJetzt() {
+  if (laeuftZu) return;
+  laeuftZu = true;
+  try { if (schmutzig) await speichernJetzt(); } catch (f) { /* trotzdem zu */ }
+  try { await api('/api/sperre/zu', 'POST'); } catch (f) { /* auch dann zu */ }
+  // Neu laden statt Felder leeren: so bleibt garantiert nichts Lesbares stehen.
+  location.reload();
+}
+
+$('#sperren').addEventListener('click', zusperrenJetzt);
+
+/* Zeitsperre. Die Brücke zählt selbst mit, aber nur, wenn ein Aufruf kommt -
+ * und wer nichts tut, ruft nichts auf. Deshalb sieht das Fenster zusätzlich
+ * selbst nach. */
+let letzteTat = Date.now();
+for (const art of ['mousedown', 'keydown', 'wheel', 'touchstart']) {
+  document.addEventListener(art, () => { letzteTat = Date.now(); }, { passive: true, capture: true });
+}
+setInterval(() => {
+  if (!sperreStand.eingerichtet || !sperreStand.minuten || laeuftZu) return;
+  if (!$('#sperrschirm').hidden) return;
+  if (Date.now() - letzteTat > sperreStand.minuten * 60000) zusperrenJetzt();
+}, 15000);
+
+/* --- Wiederherstellungsschlüssel zeigen --- */
+
+let rettungText = '';
+
+function rettungZeigen(schluessel) {
+  rettungText = schluessel;
+  $('#r-schluessel').textContent = schluessel;
+  $('#r-hinweis').textContent = '';
+  $('#rettungfenster').hidden = false;
+}
+
+$('#r-fertig').addEventListener('click', () => { $('#rettungfenster').hidden = true; });
+
+$('#r-kopieren').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(rettungText);
+    $('#r-hinweis').textContent = 'Kopiert.';
+  } catch (f) {
+    // In manchen Webansichten gibt es die Zwischenablage nicht: dann wenigstens
+    // markieren, damit Strg+C geht.
+    const feld = $('#r-schluessel');
+    const bereich = document.createRange();
+    bereich.selectNodeContents(feld);
+    const aus = window.getSelection();
+    aus.removeAllRanges();
+    aus.addRange(bereich);
+    $('#r-hinweis').textContent = 'Markiert - mit Strg+C kopieren.';
+  }
+});
+
+$('#r-datei').addEventListener('click', async () => {
+  try {
+    const r = await api('/api/sperre/rettung/datei', 'POST', { rettung: rettungText });
+    $('#r-hinweis').textContent = r.abgebrochen ? '' : 'Gespeichert: ' + r.ziel;
+  } catch (f) {
+    $('#r-hinweis').textContent = f.message;
+  }
+});
+
+/* --- In den Einstellungen --- */
+
+function sperrhinweis(text) { $('#e-sperre-hinweis').textContent = text; }
+
+async function sperreTafelFuellen() {
+  const s = await sperreHolen();
+  $('#e-sperre-stand').textContent = !s.eingerichtet ? 'aus'
+    : (s.offen ? 'eingeschaltet, offen' : 'eingeschaltet, zugesperrt');
+  $('#e-sperre-einschalten').hidden = s.eingerichtet;
+  $('#e-sperre-verwalten').hidden = !s.eingerichtet;
+  $('#e-sperre-minuten').value = String(s.minuten || 0);
+}
+
+$('#e-sperre-an').addEventListener('click', async () => {
+  const pw = $('#e-sperre-pw1').value;
+  if (pw !== $('#e-sperre-pw2').value) { sperrhinweis('Die beiden Passwörter sind nicht gleich.'); return; }
+  if (pw.length < 8) { sperrhinweis('Das Passwort braucht mindestens 8 Zeichen.'); return; }
+  const knopf = $('#e-sperre-an');
+  knopf.disabled = true;
+  sperrhinweis('wird eingeschaltet, die Notizen werden verschlüsselt …');
+  try {
+    if (schmutzig) await speichernJetzt();
+    const r = await api('/api/sperre/an', 'POST', { passwort: pw });
+    $('#e-sperre-pw1').value = '';
+    $('#e-sperre-pw2').value = '';
+    sperrhinweis(`Eingeschaltet, ${r.umgestellt} Dateien verschlüsselt.`);
+    rettungZeigen(r.rettung);
+    await sperreTafelFuellen();
+  } catch (f) {
+    sperrhinweis(f.message);
+  } finally {
+    knopf.disabled = false;
+  }
+});
+
+$('#e-sperre-zu').addEventListener('click', () => { tafelZeigen(false); zusperrenJetzt(); });
+
+$('#e-sperre-minuten').addEventListener('change', async (ev) => {
+  try {
+    const r = await api('/api/sperre/minuten', 'POST', { minuten: parseInt(ev.target.value, 10) });
+    sperreStand.minuten = r.minuten;
+    letzteTat = Date.now();
+    sperrhinweis(r.minuten ? `Sperrt nach ${r.minuten} Minuten ohne Benutzung.` : 'Sperrt nicht nach Zeit.');
+  } catch (f) { sperrhinweis(f.message); }
+});
+
+$('#e-pw-aendern').addEventListener('click', async () => {
+  const alt = $('#e-pw-alt').value, neu = $('#e-pw-neu').value;
+  if (!alt || !neu) { sperrhinweis('Beide Passwörter eingeben.'); return; }
+  try {
+    await api('/api/sperre/passwort', 'POST', { alt, neu });
+    $('#e-pw-alt').value = '';
+    $('#e-pw-neu').value = '';
+    sperrhinweis('Passwort geändert. Der Wiederherstellungsschlüssel gilt weiter.');
+  } catch (f) { sperrhinweis(f.message); }
+});
+
+$('#e-rettung-neu').addEventListener('click', async () => {
+  const passwort = $('#e-rettung-pw').value;
+  if (!passwort) { sperrhinweis('Passwort eingeben.'); return; }
+  try {
+    const r = await api('/api/sperre/rettung', 'POST', { passwort });
+    $('#e-rettung-pw').value = '';
+    rettungZeigen(r.rettung);
+    sperrhinweis('Neuer Schlüssel ausgegeben, der alte gilt nicht mehr.');
+  } catch (f) { sperrhinweis(f.message); }
+});
+
+$('#e-sperre-aus').addEventListener('click', async () => {
+  const passwort = $('#e-sperre-aus-pw').value;
+  if (!passwort) { sperrhinweis('Passwort eingeben.'); return; }
+  const knopf = $('#e-sperre-aus');
+  knopf.disabled = true;
+  sperrhinweis('wird abgeschaltet, die Notizen werden entschlüsselt …');
+  try {
+    const r = await api('/api/sperre/aus', 'POST', { passwort });
+    $('#e-sperre-aus-pw').value = '';
+    sperrhinweis(`Abgeschaltet, ${r.umgestellt} Dateien liegen wieder im Klartext.`);
+    await sperreTafelFuellen();
+  } catch (f) {
+    sperrhinweis(f.message);
+  } finally {
+    knopf.disabled = false;
+  }
+});
+
 /* ------------------------------------------------------------------ Anlauf */
 
 (async () => {
   zoomSetzen(parseFloat(merker.holen('zoom', '1')));
+  // Vor allem anderen: ist zugesperrt, wird hier gewartet, bis das Passwort
+  // stimmt. Kein Baum, keine Seite, nichts.
+  if (!await sperreAufmachen()) return;
   try {
     await baumLaden();
   } catch (f) {

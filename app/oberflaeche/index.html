@@ -180,6 +180,72 @@ window.addEventListener('unhandledrejection', function (ev) {
 
 
       <section>
+        <h3>Sperre</h3>
+        <p class="zeile2"><span>Zustand</span><span id="e-sperre-stand">…</span></p>
+
+        <div id="e-sperre-einschalten">
+          <p class="ordnerzeile">
+            <input type="password" id="e-sperre-pw1" placeholder="Passwort (mind. 8 Zeichen)" autocomplete="new-password">
+            <input type="password" id="e-sperre-pw2" placeholder="noch einmal" autocomplete="new-password">
+          </p>
+          <p class="knoepfe"><button type="button" id="e-sperre-an">Sperre einschalten</button></p>
+          <p class="hinweis">Damit werden die Notizen auf der Platte verschlüsselt und beim
+            Öffnen der Notizmappe wird nach dem Passwort gefragt. Du bekommst dabei einen
+            Wiederherstellungsschlüssel — der ist der Ersatzweg, wenn das Passwort weg ist.
+            Die Namen der Notizbücher, Abschnitte und Seiten bleiben als Ordner- und
+            Dateinamen lesbar, die Inhalte nicht.</p>
+        </div>
+
+        <div id="e-sperre-verwalten" hidden>
+          <p class="knoepfe">
+            <button type="button" id="e-sperre-zu">Jetzt zusperren</button>
+          </p>
+          <p class="ordnerzeile">
+            <label for="e-sperre-minuten">Ohne Benutzung zusperren nach</label>
+            <select id="e-sperre-minuten">
+              <option value="0">gar nicht</option>
+              <option value="5">5 Minuten</option>
+              <option value="15">15 Minuten</option>
+              <option value="30">30 Minuten</option>
+              <option value="60">1 Stunde</option>
+              <option value="240">4 Stunden</option>
+            </select>
+          </p>
+          <p class="hinweis">Beim Schließen des Fensters wird immer zugesperrt — der
+            Schlüssel steht nur im Arbeitsspeicher und nie auf der Platte.</p>
+
+          <details>
+            <summary>Passwort ändern</summary>
+            <p class="ordnerzeile">
+              <input type="password" id="e-pw-alt" placeholder="bisheriges Passwort" autocomplete="current-password">
+              <input type="password" id="e-pw-neu" placeholder="neues Passwort" autocomplete="new-password">
+            </p>
+            <p class="knoepfe"><button type="button" id="e-pw-aendern">Passwort ändern</button></p>
+          </details>
+
+          <details>
+            <summary>Wiederherstellungsschlüssel neu ausgeben</summary>
+            <p class="hinweis">Nötig, wenn der alte verloren gegangen ist oder jemand ihn
+              gesehen hat. Der alte gilt danach nicht mehr.</p>
+            <p class="ordnerzeile">
+              <input type="password" id="e-rettung-pw" placeholder="Passwort" autocomplete="current-password">
+              <button type="button" id="e-rettung-neu">Neuen ausgeben</button>
+            </p>
+          </details>
+
+          <details>
+            <summary>Sperre abschalten</summary>
+            <p class="hinweis">Die Notizen liegen danach wieder im Klartext auf der Platte.</p>
+            <p class="ordnerzeile">
+              <input type="password" id="e-sperre-aus-pw" placeholder="Passwort" autocomplete="current-password">
+              <button type="button" id="e-sperre-aus">Abschalten</button>
+            </p>
+          </details>
+        </div>
+        <p class="hinweis" id="e-sperre-hinweis"></p>
+      </section>
+
+      <section>
         <h3>Schriften</h3>
         <p class="hinweis">Mit dem Stern kommt eine Schrift nach oben in die Auswahl,
           damit du sie nicht jedes Mal suchen musst.</p>
@@ -204,6 +270,50 @@ window.addEventListener('unhandledrejection', function (ev) {
         </p>
         <p class="hinweis" id="e-lage"></p>
       </section>
+    </div>
+  </div>
+
+  <div id="sperrschirm" hidden>
+    <div class="tafel" role="dialog" aria-label="Zugesperrt">
+      <h2>🔒 Notizmappe</h2>
+      <p id="s-text">Zugesperrt. Bitte das Passwort eingeben.</p>
+      <form id="s-form" autocomplete="off">
+        <p class="ordnerzeile">
+          <input type="password" id="s-pw" placeholder="Passwort" autocomplete="current-password">
+          <button type="submit" id="s-auf">Aufschließen</button>
+        </p>
+      </form>
+      <p id="s-fehler" class="fehlerzeile" hidden></p>
+      <details id="s-vergessen">
+        <summary>Passwort vergessen?</summary>
+        <p class="hinweis">Dann geht es nur mit dem Wiederherstellungsschlüssel von damals.
+          Ohne ihn und ohne Passwort bleiben die Notizen zu — das ist der Sinn der
+          Verschlüsselung, nicht ein Fehler.</p>
+        <p class="ordnerzeile">
+          <input type="text" id="s-rettung" placeholder="ABCDE-FGHIJ-KLMNO-PQRST-UVWXY-Z2345-67"
+                 spellcheck="false" autocomplete="off">
+        </p>
+        <p class="ordnerzeile">
+          <input type="password" id="s-neu" placeholder="neues Passwort (mind. 8 Zeichen)" autocomplete="new-password">
+          <button type="button" id="s-zuruecksetzen">Passwort neu setzen</button>
+        </p>
+      </details>
+    </div>
+  </div>
+
+  <div id="rettungfenster" hidden>
+    <div class="tafel">
+      <h3>Wiederherstellungsschlüssel</h3>
+      <p>Das ist der Ersatzweg hinein, wenn das Passwort weg ist. Schreib ihn auf oder leg
+        ihn als Datei an einen Ort, der nicht derselbe ist wie die Notizen. Er steht
+        nirgends im Programm — wird er verloren und das Passwort auch, sind die Notizen zu.</p>
+      <code id="r-schluessel" class="schluessel">…</code>
+      <p class="knoepfe">
+        <button type="button" id="r-kopieren">Kopieren</button>
+        <button type="button" id="r-datei">Als Datei speichern …</button>
+        <button type="button" id="r-fertig">Hab ich notiert</button>
+      </p>
+      <p class="hinweis" id="r-hinweis"></p>
     </div>
   </div>
 

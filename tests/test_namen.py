@@ -111,6 +111,22 @@ pruefe("jeder Aufruf in mappe.js hat eine Funktion dazu", not offen,
        "ohne Definition: " + ", ".join(offen) if offen else "")
 pruefe("es wird ueberhaupt etwas geprueft", len(gerufen) > 40, f"{len(gerufen)} Aufrufe gefunden")
 
+
+# --- Kennungen: $('#knopf') muss es in index.html wirklich geben --------------
+#
+# Steht da ein Tippfehler, wirft addEventListener beim Laden "of null" - und das
+# reisst das ganze Skript mit, nicht nur den einen Knopf. Dann ist das Fenster
+# leer und nichts sagt, warum. Statisches Nachsehen ist hier billig.
+html = (WURZEL / "app/oberflaeche/index.html").read_text(encoding="utf-8")
+vorhanden = set(re.findall(r'id="([^"]+)"', html))
+# Was die Oberflaeche selbst zur Laufzeit baut und erst danach anspricht.
+GEBAUT = {"schwebe"}
+gesucht = set(re.findall(r"""\$\(['"]#([A-Za-z0-9_-]+)['"]\)""", js))
+fehlende = sorted(gesucht - vorhanden - GEBAUT)
+pruefe("jede angesprochene Kennung steht in index.html", not fehlende,
+       "fehlt: " + ", ".join(fehlende) if fehlende else "")
+pruefe("es werden ueberhaupt Kennungen geprueft", len(gesucht) > 20, f"{len(gesucht)} gefunden")
+
 print()
 print("alle Namen gehen auf" if not fehler else f"{len(fehler)} FEHLER")
 sys.exit(1 if fehler else 0)

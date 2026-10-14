@@ -18,6 +18,7 @@ from pathlib import Path
 
 import konfig
 import reinigen
+import tresor
 
 FORMAT = 1
 PAPIERKORB = ".papierkorb"
@@ -245,6 +246,7 @@ def _pruefen(teile: list[str]) -> list[str]:
 
 
 def pfad_von(teile: list[str]) -> Path:
+    wach()
     """Baut einen Pfad unter der Wurzel und prueft, dass er auch dort bleibt."""
     ziel = wurzel().joinpath(*_pruefen(teile))
     w = wurzel().resolve()
@@ -263,17 +265,59 @@ class Eintrag:
     konflikt: bool = False
 
 
+def verschluesselt() -> bool:
+    """Ist fuer diesen Datenordner eine Sperre eingerichtet?"""
+    try:
+        return tresor.eingerichtet(wurzel())
+    except Exception:                       # noqa: BLE001 - Ordner weg o.ae.
+        return False
+
+
+def wach() -> None:
+    """Steht die Sperre, kommt hier niemand vorbei. Das sitzt bewusst in der
+    Ablage und nicht in der Oberflaeche: eine Pruefung, die man nur im Fenster
+    macht, ist keine."""
+    if verschluesselt() and not tresor.offen():
+        raise tresor.TresorFehler("Zugesperrt")
+
+
+def _roh_lesen(datei: Path) -> bytes:
+    """Dateiinhalt im Klartext. Nicht verschluesselte Dateien kommen unveraendert
+    zurueck - waehrend des Umstellens liegen beide Arten nebeneinander."""
+    return tresor.entschluesseln(datei.read_bytes())
+
+
+def _roh_schreiben(datei: Path, roh: bytes, chiffrieren: bool | None = None) -> None:
+    """Erst daneben schreiben, dann umbenennen. Sonst steht bei einem Absturz
+    mitten im Schreiben eine halbe Seite auf der Platte - und der Sync-Client
+    traegt sie auch noch weiter."""
+    if chiffrieren is None:
+        chiffrieren = verschluesselt()
+    if chiffrieren:
+        roh = tresor.verschluesseln(roh)
+    tmp = datei.with_name(f".{datei.name}.neu")
+    with tmp.open("wb") as f:
+        f.write(roh)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, datei)
+
+
+def _json_lesen(datei: Path) -> dict:
+    return json.loads(_roh_lesen(datei).decode("utf-8"))
+
+
 def _titel_aus(datei: Path) -> str:
     try:
-        with datei.open(encoding="utf-8") as f:
-            return json.load(f).get("titel") or datei.stem
-    except (OSError, ValueError):
+        return _json_lesen(datei).get("titel") or datei.stem
+    except (OSError, ValueError, tresor.TresorFehler):
         return datei.stem
 
 
 def baum() -> list[dict]:
     """Notizbuecher -> Abschnitte -> Seiten. Flach genug, um sie in einem Rutsch
     an den Browser zu geben; bei tausend Seiten wird daraus ein Lazy-Load."""
+    wach()
     aus = []
     for buch in sorted(p for p in wurzel().iterdir() if p.is_dir() and not p.name.startswith(".")):
         abschnitte = []
@@ -292,12 +336,14 @@ def baum() -> list[dict]:
 
 
 def notizbuch_anlegen(name: str) -> str:
+    wach()
     name = frei(wurzel(), slug(name))
     pfad_von([name]).mkdir()
     return name
 
 
 def abschnitt_anlegen(buch: str, name: str) -> str:
+    wach()
     ordner = pfad_von([buch])
     if not ordner.is_dir():
         raise SpeicherFehler("Notizbuch gibt es nicht")
@@ -366,9 +412,7 @@ def anhang_ablegen(buch: str, abschnitt: str, seite: str, dateiname: str, daten:
         n += 1
     name = kandidat + endung
     ziel = ordner / name
-    tmp = ziel.with_name(f".{name}.neu")
-    tmp.write_bytes(daten)
-    os.replace(tmp, ziel)
+    _roh_schreiben(ziel, daten)
     return {"datei": name, "groesse": len(daten)}
 
 
@@ -387,6 +431,12 @@ def anhang_lesen(buch: str, abschnitt: str, seite: str, datei: str) -> Path:
 
 
 SCHONFRIST = 600   # Sekunden: so jung wird ein Anhang nicht weggeraeumt
+
+
+def anhang_inhalt(buch: str, abschnitt: str, seite: str, datei: str) -> bytes:
+    """Der Anhang im Klartext. Alles, was den Inhalt braucht, geht hier durch -
+    bei eingeschalteter Sperre liegt auf der Platte nur Kauderwelsch."""
+    return _roh_lesen(anhang_lesen(buch, abschnitt, seite, datei))
 
 
 def anhaenge_aufraeumen(buch: str, abschnitt: str, seite: str, elemente: list) -> int:
@@ -426,8 +476,7 @@ def seite_lesen(buch: str, abschnitt: str, name: str) -> dict:
     datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
     if not datei.is_file():
         raise SpeicherFehler("Seite gibt es nicht")
-    with datei.open(encoding="utf-8") as f:
-        daten = json.load(f)
+    daten = _json_lesen(datei)
     daten.setdefault("elemente", [])
     daten.setdefault("rev", 1)
     daten["name"] = datei.stem
@@ -436,15 +485,7 @@ def seite_lesen(buch: str, abschnitt: str, name: str) -> dict:
 
 
 def _schreiben(datei: Path, daten: dict) -> None:
-    """Erst daneben schreiben, dann umbenennen. Sonst steht bei einem Absturz
-    mitten im Schreiben eine halbe Seite auf der Platte - und der Sync-Client
-    traegt sie auch noch weiter."""
-    tmp = datei.with_name(f".{datei.name}.neu")
-    with tmp.open("w", encoding="utf-8") as f:
-        json.dump(daten, f, ensure_ascii=False, indent=1)
-        f.flush()
-        os.fsync(f.fileno())
-    os.replace(tmp, datei)
+    _roh_schreiben(datei, json.dumps(daten, ensure_ascii=False, indent=1).encode("utf-8"))
 
 
 def seite_speichern(buch: str, abschnitt: str, name: str, rev: int,
@@ -476,8 +517,7 @@ def seite_umbenennen(buch: str, abschnitt: str, name: str, titel: str) -> str:
     datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
     if not datei.is_file():
         raise SpeicherFehler("Seite gibt es nicht")
-    with datei.open(encoding="utf-8") as f:
-        daten = json.load(f)
+    daten = _json_lesen(datei)
     daten["titel"] = titel
     daten["rev"] = int(daten.get("rev", 1)) + 1
     neuer = slug(titel)
@@ -516,6 +556,36 @@ def in_papierkorb(teile: list[str]) -> None:
         mit = quelle.with_name(f"{quelle.stem}{ANHANG}")
         if mit.is_dir():
             os.replace(mit, korb / frei(korb, f"{marke} {quelle.stem}{ANHANG}"))
+
+
+def inhalte() -> list[Path]:
+    """Alle Dateien, die Notizen enthalten - Seiten, Anhaenge, Papierkorb.
+    Nicht die Tresordatei selbst und keine halbfertigen .neu-Dateien."""
+    aus = []
+    for pfad in wurzel().rglob("*"):
+        if not pfad.is_file() or pfad.name.startswith("."):
+            continue
+        if pfad.suffix == ".json" or pfad.parent.name.endswith(ANHANG) \
+                or PAPIERKORB in pfad.parts:
+            aus.append(pfad)
+    return aus
+
+
+def umstellen(chiffrieren: bool) -> int:
+    """Bestehende Notizen ver- oder entschluesseln. Jede Datei einzeln und mit
+    Umbenennen - bricht es dazwischen ab, ist keine Datei halb geschrieben, und
+    der naechste Lauf macht da weiter, wo dieser stehen geblieben ist."""
+    getan = 0
+    for pfad in inhalte():
+        try:
+            roh = pfad.read_bytes()
+            if tresor.ist_verschluesselt(roh) == chiffrieren:
+                continue                                # schon so, wie es sein soll
+            _roh_schreiben(pfad, tresor.entschluesseln(roh), chiffrieren)
+            getan += 1
+        except (OSError, tresor.TresorFehler):
+            continue
+    return getan
 
 
 def stand(buch: str, abschnitt: str, name: str) -> dict:

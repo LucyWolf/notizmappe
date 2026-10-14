@@ -265,6 +265,13 @@ def pruefen() -> int:
         webview = None
 
     try:
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+        AESGCM(b"0" * 32)
+        print("  cryptography: da  -> die Sperre kann verschlüsseln")
+    except Exception as x:                  # noqa: BLE001
+        print(f"  cryptography: FEHLT  (pip install cryptography)  [{x}]")
+
+    try:
         import gi
         gi.require_version("Gtk", "3.0")
         print("  PyGObject (gi): da")

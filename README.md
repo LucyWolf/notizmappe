@@ -9,7 +9,8 @@ die Oberfläche wird als Datei geladen und ruft das Programm direkt auf
 (`app/bruecke.py`). Dadurch gibt es nichts, was ein anderes Programm auf dem
 Rechner ansprechen könnte, und die Firewall hat nichts zu fragen.
 
-Stand: 08.10.2026 — Stufe 1 (Baum, Textkästen, Autosave, Konflikterkennung).
+Stand: 14.10.2026 — Stufe 1 (Baum, Textkästen, Autosave, Konflikterkennung)
+plus Anhänge, Schriften und Sperre.
 
 ## Warum Dateien und keine Datenbank
 
@@ -105,13 +106,14 @@ selbst entscheidet.
 app/fenster.py       das Fenster (pywebview) und die Diagnose
 app/bruecke.py       was die Oberfläche aufrufen darf - direkt, ohne Netz
 app/speicher.py      Dateien: Notizbuch/Abschnitt/Seite, Anhänge, Papierkorb
+app/tresor.py        Sperre: Schlüssel, Verschlüsseln, Wiederherstellung
 app/reinigen.py      HTML säubern, Bilder erkennen
 app/aktualisieren.py Updates von GitHub
 app/konfig.py        Einstellungen dieses Rechners
 app/oberflaeche/     index.html, mappe.js, stil.css - wird als Datei geladen
 ```
 
-Die einzige Abhängigkeit ist `pywebview`. Früher lag zwischen Fenster und
+Abhängigkeiten sind `pywebview` und — für die Sperre — `cryptography`. Früher lag zwischen Fenster und
 Programm ein kleiner Webserver (FastAPI, uvicorn); das Paket ist seit dem Wegfall
 von 14 MB auf gut 1 MB geschrumpft, und der Start dauert spürbar kürzer, weil
 pydantic und uvicorn nicht mehr geladen werden.
@@ -122,6 +124,11 @@ pydantic und uvicorn nicht mehr geladen werden.
 tests/alle.sh              # alles, baut auch das Paket (~3 Minuten)
 tests/alle.sh --schnell    # nur API und Update
 ```
+
+`tests/test_sperre.py` prüft die Sperre am Ergebnis: steht der Notiztext nach
+dem Einschalten noch in der Datei, ist der Test rot. Dazu: falsches Passwort,
+Wiederherstellungsschlüssel, Passwortwechsel, Zeitsperre, Abschalten und der
+halb umgestellte Ordner (Abbruch mitten im Verschlüsseln).
 
 | | |
 |---|---|
@@ -151,6 +158,48 @@ direkt an dem Rechner, auf dem die Notizmappe läuft.
 Die Wahl steht in `~/.config/notizmappe/einstellungen.json` (Windows:
 `%APPDATA%\notizmappe`), nicht im Datenordner selbst. Ist `NOTIZEN_ORDNER` gesetzt,
 gewinnt das und die Wahl ist gesperrt — Tests und Docker verlassen sich darauf.
+
+## Sperre (Passwort und Verschlüsselung)
+
+Einstellungen → **Sperre**. Eingeschaltet passiert zweierlei: beim Öffnen der
+Notizmappe wird nach dem Passwort gefragt, und die Notizen liegen **verschlüsselt**
+auf der Platte (AES-256-GCM). Das Zweite ist der eigentliche Punkt — eine Abfrage,
+die nur die Oberfläche vorschaltet, umgeht jeder, der den Ordner öffnet.
+
+Zugesperrt wird
+
+* beim **Schließen** des Fensters (immer; der Schlüssel steht nur im
+  Arbeitsspeicher und nie auf der Platte),
+* nach einer einstellbaren **Zeit ohne Benutzung** (Standard: gar nicht),
+* **von Hand** über das Schloss unten in der Seitenleiste.
+
+Solange zugesperrt ist, gibt die Brücke auf jeden Aufruf eine Abfuhr — auch auf
+Lesen, Schreiben und Anlegen. Die Prüfung sitzt in `speicher.py`, nicht in der
+Oberfläche.
+
+### Zwei Schlüssel, und warum
+
+Verschlüsselt wird mit einem zufälligen **Datenschlüssel**. Der liegt doppelt
+verschlossen in `.tresor.json` im Datenordner: einmal mit dem Passwort
+(scrypt, N=2¹⁶ — etwa 130 ms pro Versuch), einmal mit dem
+**Wiederherstellungsschlüssel**, der beim Einschalten einmal angezeigt wird.
+
+* Ein Passwortwechsel schließt nur diese eine Datei neu auf — keine Notiz wird
+  angefasst.
+* Der Wiederherstellungsschlüssel ist der Ersatzweg („Backup-Code“), wenn das
+  Passwort weg ist. Er lässt sich kopieren oder als Datei ablegen und jederzeit
+  neu ausgeben; der alte gilt dann nicht mehr.
+
+Einen festen Hauptcode im Programm gibt es **nicht**, und das ist Absicht: wer ihn
+kennt oder aus dem Programm liest, käme in jede Notizmappe. Sind Passwort **und**
+Wiederherstellungsschlüssel verloren, sind die Notizen verloren.
+
+### Was die Sperre nicht verdeckt
+
+Die **Namen** von Notizbüchern, Abschnitten und Seiten sind Ordner- und
+Dateinamen und bleiben lesbar — nur die Inhalte sind verschlüsselt. Wer Anhänge
+mit „Öffnen“ an ein anderes Programm gibt, bekommt eine lesbare Kopie in einem
+temporären Ordner; die wird beim Zusperren gelöscht.
 
 ## Wenn die Oberfläche nicht reagiert
 

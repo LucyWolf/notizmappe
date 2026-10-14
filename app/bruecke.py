@@ -18,12 +18,15 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
+import time
 from pathlib import Path
 
 import aktualisieren
 import konfig
 import reinigen
 import speicher
+import tresor
 
 HIER = Path(__file__).resolve().parent
 VERSION = (HIER / "VERSION").read_text(encoding="utf-8").strip()
@@ -38,12 +41,59 @@ class Abbruch(Exception):
         self.mehr = mehr
 
 
+_letzte_tat = time.time()
+_minuten_geholt = (0.0, 0)
+
+
+def _ruhe_minuten() -> int:
+    """Wie lange ohne Benutzung bis zum Zusperren. 0 = gar nicht.
+
+    Gepuffert: _takt() laeuft bei jedem Tastendruck mit, und die Einstellung
+    jedes Mal von der Platte zu lesen waere Verschwendung."""
+    global _minuten_geholt
+    jetzt = time.time()
+    if jetzt - _minuten_geholt[0] > 5:
+        try:
+            wert = int(konfig.lesen().get("sperre_minuten", 0) or 0)
+        except (TypeError, ValueError):
+            wert = 0
+        _minuten_geholt = (jetzt, max(0, min(wert, 24 * 60)))
+    return _minuten_geholt[1]
+
+
+def _takt() -> None:
+    global _letzte_tat
+    jetzt = time.time()
+    minuten = _ruhe_minuten()
+    if minuten and tresor.offen() and jetzt - _letzte_tat > minuten * 60:
+        zusperren()
+    _letzte_tat = jetzt
+
+
+def zusperren() -> None:
+    """Schluessel aus dem Arbeitsspeicher - und die Klartextkopien weg, die zum
+    Oeffnen von Anhaengen noetig waren."""
+    tresor.sperren()
+    global _klartext_ordner
+    if _klartext_ordner:
+        shutil.rmtree(_klartext_ordner, ignore_errors=True)
+        _klartext_ordner = None
+
+
+_klartext_ordner = None
+
+
 def _gefasst(f):
     """Fehler als Antwort, nicht als Ausnahme."""
     @functools.wraps(f)
     def innen(*args, **kwargs):
+        _takt()
         try:
             return f(*args, **kwargs)
+        except tresor.TresorFehler as x:
+            # "art" sagt der Oberflaeche, dass sie den Sperrschirm zeigen soll -
+            # und nicht etwa einen roten Fehlerbalken ueber leeren Notizen.
+            return {"fehler": str(x), "art": "zu"}
         except Abbruch as x:
             return {"fehler": str(x), **x.mehr}
         except speicher.KonfliktFehler as x:
@@ -220,8 +270,7 @@ class Bruecke:
         """Bilddaten fuer die Anzeige. Als data:-Adresse, nicht als Dateipfad: eine
         Seite, die beliebige lokale Dateien laden darf, kann auch solche laden, die
         sie nichts angehen."""
-        pfad = speicher.anhang_lesen(notizbuch, abschnitt, name, datei)
-        daten = pfad.read_bytes()
+        daten = speicher.anhang_inhalt(notizbuch, abschnitt, name, datei)
         typ = reinigen.bildtyp(daten)
         if not typ:
             # Kein erkanntes Bild: nicht anzeigen. Sonst fuehrt eine hochgeladene
@@ -233,7 +282,7 @@ class Bruecke:
     def anhang_oeffnen(self, notizbuch: str, abschnitt: str, name: str, datei: str) -> dict:
         """Mit dem Programm oeffnen, das das System dafuer vorsieht. Ein Download
         waere hier sinnlos - die Datei liegt ja schon auf dieser Platte."""
-        pfad = speicher.anhang_lesen(notizbuch, abschnitt, name, datei)
+        pfad = self._zum_oeffnen(notizbuch, abschnitt, name, datei)
         try:
             if sys.platform == "win32":
                 os.startfile(str(pfad))                      # noqa: S606
@@ -252,7 +301,140 @@ class Bruecke:
         ziel = self._dialog_speichern(pfad.name)
         if not ziel:
             return {"abgebrochen": True}
-        shutil.copy2(pfad, ziel)
+        Path(ziel).write_bytes(speicher.anhang_inhalt(notizbuch, abschnitt, name, datei))
+        return {"ok": True, "ziel": str(ziel)}
+
+    def _zum_oeffnen(self, notizbuch: str, abschnitt: str, name: str, datei: str) -> Path:
+        """Pfad, den ein anderes Programm oeffnen kann.
+
+        Ohne Sperre ist das die Datei selbst. Mit Sperre kann kein fremdes
+        Programm etwas damit anfangen, also muss eine lesbare Kopie her. Sie
+        liegt in einem Ordner nur fuer diesen Benutzer und verschwindet, sobald
+        wieder zugesperrt wird."""
+        pfad = speicher.anhang_lesen(notizbuch, abschnitt, name, datei)
+        if not speicher.verschluesselt():
+            return pfad
+        global _klartext_ordner
+        if not _klartext_ordner:
+            _klartext_ordner = tempfile.mkdtemp(prefix="notizmappe-offen-")
+        kopie = Path(_klartext_ordner) / pfad.name
+        kopie.write_bytes(speicher.anhang_inhalt(notizbuch, abschnitt, name, datei))
+        return kopie
+
+    # --- Sperre -----------------------------------------------------------
+
+    @_gefasst
+    def sperre_stand(self) -> dict:
+        return {
+            "eingerichtet": speicher.verschluesselt(),
+            "offen": tresor.offen(),
+            "minuten": _ruhe_minuten(),
+        }
+
+    @_gefasst
+    def sperre_einrichten(self, rumpf: dict) -> dict:
+        """Sperre anlegen und vorhandene Notizen verschluesseln."""
+        passwort = str((rumpf or {}).get("passwort") or "")
+        if speicher.verschluesselt():
+            raise Abbruch("Die Sperre ist schon eingerichtet")
+        try:
+            rettung = tresor.einrichten(speicher.wurzel(), passwort)
+        except tresor.TresorFehler as f:
+            raise Abbruch(str(f))
+        return {"rettung": rettung, "umgestellt": speicher.umstellen(True)}
+
+    @_gefasst
+    def entsperren(self, rumpf: dict) -> dict:
+        geheim = str((rumpf or {}).get("geheim") or "").strip()
+        if not speicher.verschluesselt():
+            return {"ok": True}
+        try:
+            tresor.entsperren(speicher.wurzel(), geheim)
+        except tresor.TresorFehler as f:
+            # Nicht verraten, ob das Passwort oder der Benutzername "fast" stimmte,
+            # und etwas bremsen: ohne das waere Durchprobieren nur eine Schleife.
+            time.sleep(0.5)
+            raise Abbruch(str(f))
+        return {"ok": True}
+
+    @_gefasst
+    def sperren(self) -> dict:
+        zusperren()
+        return {"ok": True}
+
+    @_gefasst
+    def sperre_passwort(self, rumpf: dict) -> dict:
+        d = rumpf or {}
+        try:
+            tresor.passwort_aendern(speicher.wurzel(), str(d.get("alt") or ""),
+                                    str(d.get("neu") or ""))
+        except tresor.TresorFehler as f:
+            raise Abbruch(str(f))
+        return {"ok": True}
+
+    @_gefasst
+    def sperre_zuruecksetzen(self, rumpf: dict) -> dict:
+        """Neues Passwort mit dem Wiederherstellungsschluessel."""
+        d = rumpf or {}
+        try:
+            tresor.passwort_zuruecksetzen(speicher.wurzel(), str(d.get("rettung") or ""),
+                                          str(d.get("neu") or ""))
+        except tresor.TresorFehler as f:
+            time.sleep(0.5)
+            raise Abbruch(str(f))
+        return {"ok": True}
+
+    @_gefasst
+    def sperre_rettung_neu(self, rumpf: dict) -> dict:
+        try:
+            neu = tresor.rettung_erneuern(speicher.wurzel(), str((rumpf or {}).get("passwort") or ""))
+        except tresor.TresorFehler as f:
+            raise Abbruch(str(f))
+        return {"rettung": neu}
+
+    @_gefasst
+    def sperre_aus(self, rumpf: dict) -> dict:
+        """Sperre abschalten: alles wieder im Klartext auf die Platte."""
+        passwort = str((rumpf or {}).get("passwort") or "")
+        if not speicher.verschluesselt():
+            return {"ok": True}
+        wurzel = speicher.wurzel()
+        try:
+            tresor.entsperren(wurzel, passwort)        # erst beweisen, dann aufmachen
+            offen = speicher.umstellen(False)
+            tresor.abschalten(wurzel, passwort)
+        except tresor.TresorFehler as f:
+            raise Abbruch(str(f))
+        return {"ok": True, "umgestellt": offen}
+
+    @_gefasst
+    def sperre_minuten(self, rumpf: dict) -> dict:
+        try:
+            minuten = max(0, min(int((rumpf or {}).get("minuten") or 0), 24 * 60))
+        except (TypeError, ValueError):
+            raise Abbruch("Keine Zahl")
+        konfig.aendern(sperre_minuten=minuten)
+        global _minuten_geholt
+        _minuten_geholt = (0.0, 0)
+        return {"minuten": minuten}
+
+    @_gefasst
+    def rettung_speichern(self, rumpf: dict) -> dict:
+        """Den Wiederherstellungsschluessel in eine Datei legen - dorthin, wo der
+        Benutzer sie haben will. Nicht in den Datenordner vorschlagen: ein
+        Schluessel neben dem Schloss ist keiner."""
+        schluessel = str((rumpf or {}).get("rettung") or "").strip()
+        if not schluessel:
+            raise Abbruch("Kein Schlüssel übergeben")
+        ziel = self._dialog_speichern("notizmappe-wiederherstellungsschluessel.txt")
+        if not ziel:
+            return {"abgebrochen": True}
+        Path(ziel).write_text(
+            "Notizmappe - Wiederherstellungsschlüssel\n\n"
+            f"{schluessel}\n\n"
+            "Damit lässt sich das Passwort neu setzen, wenn es verloren ist.\n"
+            "Nicht im selben Ordner aufbewahren wie die Notizen.\n",
+            encoding="utf-8")
         return {"ok": True, "ziel": str(ziel)}
 
     @_gefasst

@@ -38,7 +38,11 @@ VERBOTEN = ("fastapi", "uvicorn", "starlette", "flask", "jinja2", "aiohttp",
             "tornado", "bottle", "werkzeug", "waitress", "gunicorn")
 
 anforderungen = (WURZEL / "requirements.txt").read_text(encoding="utf-8").split()
-pruefe("requirements.txt enthaelt nur pywebview", anforderungen == ["pywebview"], anforderungen)
+# Eine knappe, ausdrueckliche Liste statt "nur pywebview": was hier nicht steht,
+# kommt auch nicht herein. Nachschieben soll auffallen.
+ERLAUBT = {"pywebview", "cryptography"}
+pruefe("requirements.txt enthaelt nur das Fenster und die Verschluesselung",
+       set(anforderungen) <= ERLAUBT, anforderungen)
 
 for p in quellen("app/*.py", "windows/*.py", "tools/*.py", "tests/*.py"):
     text = p.read_text(encoding="utf-8")
