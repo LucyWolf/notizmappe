@@ -219,7 +219,7 @@ def _erwartete_summe(url: str) -> str | None:
 def einspielen() -> dict:
     """Paket holen, pruefen, Installer starten.
 
-    Der Installer startet den Dienst neu und wuerde damit diesen Prozess abschiessen -
+    Der Installer beendet das laufende Programm und wuerde damit diesen Prozess abschiessen -
     mitten im eigenen Update. Deshalb laeuft er abgekoppelt in einer eigenen Sitzung
     und schreibt sein Protokoll in eine Datei, die wir danach auslesen koennen.
     """
@@ -282,7 +282,8 @@ def einspielen() -> dict:
                 f'"{ziel}" /SILENT /SUPPRESSMSGBOXES /NORESTART '
                 f'/LOG="{mitschrift.with_name("update-setup.log")}" >>"{mitschrift}" 2>&1\r\n'
                 f'echo Rueckgabe %ERRORLEVEL%>>"{mitschrift}"\r\n'
-                "ping -n 4 127.0.0.1 >nul\r\n"
+                # Kurz warten, bis das Setup die Dateien freigegeben hat.
+                "timeout /t 3 /nobreak >nul\r\n"
                 f'echo Starte neu: {sys.executable}>>"{mitschrift}"\r\n'
                 f'"{sys.executable}"\r\n',
                 encoding="ascii", errors="replace")
@@ -290,7 +291,9 @@ def einspielen() -> dict:
             log.flush()
             subprocess.Popen(["cmd", "/c", str(stapel)],
                              stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
-                             creationflags=0x00000008 | 0x00000200,   # DETACHED | NEW_GROUP
+                             # CREATE_NO_WINDOW: ohne das blitzt waehrend des Updates
+                             # ein schwarzes Konsolenfenster auf.
+                             creationflags=0x08000000 | 0x00000200,
                              cwd=str(ziel.parent))
             threading.Timer(1.5, lambda: os._exit(0)).start()
             return {"von": installierte_version(), "nach": r["version"], "pruefsumme": echt}
@@ -298,7 +301,7 @@ def einspielen() -> dict:
         subprocess.Popen(
             ["bash", str(ziel), "--update"],
             stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
-            start_new_session=True,   # ueberlebt den Neustart des Dienstes
+            start_new_session=True,   # ueberlebt den Neustart des Programms
             cwd=str(ziel.parent),
             env={**os.environ, "NOTIZMAPPE_ZIEL": str(ORDNER)},
         )

@@ -78,6 +78,22 @@ for was, muster, wo in [
 
 pruefe("Oberflaeche ruft die Bruecke", "pywebview.api" in js)
 
+# Auch im Text: wer in den Code schaut, soll keine Adressen und keine Rede von
+# Servern finden. Das ist keine Kosmetik - es war jedes Mal der Hinweis darauf,
+# dass noch etwas uebrig war.
+for p in list(quellen("app/*.py")) + list(quellen("app/oberflaeche/*.js", "app/oberflaeche/*.html")):
+    text = p.read_text(encoding="utf-8")
+    for was, muster in [("keine Adresse 127.0.0.1", r"127\.0\.0\.1"),
+                        ("kein localhost", r"localhost"),
+                        ("kein ping", r"\bping\b"),
+                        ("keine Rede von Servern", r"[Ss]erver")]:
+        # aktualisieren.py darf GitHub nennen; das ist der einzige Weg nach draussen.
+        if p.name == "aktualisieren.py" and was == "keine Rede von Servern":
+            continue
+        treffer = re.search(muster, text)
+        pruefe(f"{p.relative_to(WURZEL)}: {was}", not treffer,
+               text.splitlines()[text[:treffer.start()].count(chr(10))].strip() if treffer else "")
+
 # --- Keine Server-Dateien ----------------------------------------------------
 for name in ("Dockerfile", "docker-compose.yml", ".dockerignore", "starten.sh",
              "app/main.py", "app/konten.py", "app/verbindungen.py",

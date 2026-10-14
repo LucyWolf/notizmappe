@@ -1,12 +1,8 @@
 """Die Verbindung zwischen Fenster und Programm - ohne Netz.
 
-Die Oberflaeche ist HTML und laeuft in der Webansicht des Systems. Frueher lag
-dazwischen ein kleiner Webserver auf 127.0.0.1: die Seite holte ihre Daten per
-HTTP. Das hiess, dass ein Desktop-Programm einen Port offen hielt, den jedes
-andere Programm auf dem Rechner htte ansprechen koennen.
-
-Jetzt ruft die Seite diese Methoden direkt auf (window.pywebview.api.xyz). Kein
-Port, keine Adresse, kein HTTP - nur ein Funktionsaufruf in denselben Prozess.
+Die Oberflaeche ist HTML und laeuft in der Webansicht des Systems. Sie ruft diese
+Methoden direkt auf (window.pywebview.api.xyz): kein Port, keine Adresse, kein
+HTTP - ein Funktionsaufruf in denselben Prozess.
 
 Alle Methoden geben ein Woerterbuch zurueck. Geht etwas schief, steht darin
 "fehler" (und bei einem Schreibkonflikt zusaetzlich "art": "konflikt" mit der

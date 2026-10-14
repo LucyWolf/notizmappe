@@ -1,7 +1,7 @@
 /* Notizmappe - freie Flaeche. Kein Framework, damit es ohne Build laeuft.
  *
  * Grundgedanke: die Seite ist eine Liste von Kaesten mit x/y/Breite. Der Browser
- * haelt sie in `elemente`, der Server kennt nur das JSON. Gespeichert wird
+ * haelt sie in `elemente`, auf der Platte steht nur das JSON. Gespeichert wird
  * verzoegert, aber immer die ganze Seite - bei einer Handvoll Kaesten pro Seite
  * ist das billiger als Einzelfeld-Buchhaltung. */
 
@@ -60,10 +60,9 @@ const zugeklappt = new Set(JSON.parse(merker.holen('zugeklappt', '[]')));
 
 /* Ruft das Programm auf - direkt, ohne Netz.
  *
- * Frueher ging das per fetch an einen kleinen Webserver auf 127.0.0.1. Den gibt
- * es nicht mehr: window.pywebview.api sind die Methoden aus bruecke.py, im selben
- * Prozess. Die Aufrufstellen unten sehen noch aus wie Adressen - das ist Absicht,
- * so bleibt an einer einzigen Stelle stehen, was wohin geht.
+ * window.pywebview.api sind die Methoden aus bruecke.py, im selben Prozess -
+ * kein Netz, keine Adresse. Die Namen unten sehen aus wie Pfade; das ist nur eine
+ * Ordnung, damit an einer einzigen Stelle steht, was wohin geht.
  *
  * Fehler kommen als {fehler: "..."} zurueck und werden hier wieder zu Ausnahmen,
  * damit die try/catch drumherum bleiben koennen wie sie waren. */
@@ -294,7 +293,7 @@ function flaecheLeeren() {
 async function seiteOeffnen(buch, abschnitt, name) {
   if (schmutzig) await speichernJetzt();
   if (schmutzig) {
-    // Speichern ging nicht (Konflikt, Server weg): nicht wegwechseln, sonst sind
+    // Speichern ging nicht (Konflikt, Programm beendet): nicht wegwechseln, sonst sind
     // die Aenderungen still verworfen. Die Meldung dazu steht schon oben.
     sagen('Erst speichern - die Seite hat ungesicherte Änderungen', 4000);
     return false;
@@ -666,7 +665,7 @@ async function nachsehen() {
         meldungWeg(); await seiteOeffnen(offen.notizbuch, offen.abschnitt, offen.name);
       }]]);
     }
-  } catch (f) { /* Server weg - beim naechsten Mal wieder */ }
+  } catch (f) { /* gerade nicht erreichbar - beim naechsten Mal wieder */ }
 }
 
 /* -------------------------------------------------------------- Bedienung */
@@ -796,7 +795,7 @@ let letzterKasten = null;
  * execCommand ist aus der Mode, macht hier aber genau das Richtige: es setzt die
  * Auszeichnung auf die Auswahl und laesst den Rest in Ruhe. styleWithCSS=false
  * sorgt dafuer, dass dabei <font size> und <font face> entsteht statt beliebigem
- * CSS - nur diese beiden Angaben laesst der Server durch. */
+ * CSS - nur diese beiden Angaben laesst der Reiniger durch. */
 function aufAuswahl(befehl, wert) {
   const k = (document.activeElement && document.activeElement.closest('.kasten'))
     || letzterKasten;
