@@ -345,7 +345,10 @@ body {
 }
 .schriftliste .stern.an { color: #e8b000; }
 .schriftliste .stern:hover { color: var(--akzent); }
-.schriftliste .probe { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.schriftliste .probe {
+  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 16px;
+}
 .schriftliste .name { color: var(--matt); font-size: 11px; font-family: system-ui; }
 #einstellungen details summary {
   cursor: pointer; font-size: 13px; color: var(--schrift); padding: 4px 0;

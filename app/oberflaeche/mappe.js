@@ -939,7 +939,7 @@ function auswahlfelderFuellen() {
     const vorher = feld.value;
     feld.textContent = '';
 
-    // Favoriten zuerst - dafür sind sie da.
+    // Favoriten ganz oben - dafür sind sie da. Erst danach die Gruppen.
     if (d.favoriten && d.favoriten.length) {
       const g = document.createElement('optgroup');
       g.label = '★ Favoriten';
@@ -975,11 +975,15 @@ function schriftzeile(name, istFavorit) {
   stern.title = istFavorit ? 'Nicht mehr bevorzugen' : 'Nach oben in die Auswahl';
   stern.addEventListener('click', () => sternUmlegen(name, !istFavorit));
 
+  // Der Name in seiner eigenen Schrift: so sieht man sofort, wie sie aussieht,
+  // und muss nicht von einem Beispielsatz auf die Schrift schliessen.
   const probe = document.createElement('span');
   probe.className = 'probe';
   probe.style.fontFamily = `"${name}"`;
-  probe.textContent = 'Hallo Welt – 123';
+  probe.textContent = name;
 
+  // Daneben derselbe Name in der gewohnten Schrift - bei Symbolschriften wie
+  // Wingdings ist die Probe sonst nicht zu entziffern.
   const beschriftung = document.createElement('span');
   beschriftung.className = 'name';
   beschriftung.textContent = name;
