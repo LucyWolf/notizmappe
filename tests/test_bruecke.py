@@ -222,6 +222,27 @@ pruefe("Anhangsordner umbenannt", (DATEN / f"Arbeit/Projekte/{neu2}.anhang/Bild.
 pruefe("Bild nach dem Umbenennen abrufbar", "fehler" not in b.anhang_bild(buch, absch, neu2, "Bild.png"))
 neu = neu2
 
+# --- Schriften ---------------------------------------------------------------
+sch = b.schriften()
+pruefe("Schriftenliste abrufbar", "fehler" not in sch and "schriften" in sch, sch)
+pruefe("die vier Gruppen sind dabei", len(sch["vorschlaege"]) == 4, sch["vorschlaege"])
+import reinigen
+for name, erlaubt in [("Arial", True), ("Comic Sans MS", True), ("Noto Sans CJK JP", True),
+                      ("Fira Code Retina", True), ('boese; position:fixed', False),
+                      ("url(evil)", False), ("<script>", False), ('a"b', False), ("", False)]:
+    pruefe(f"Schriftname {name!r} {'erlaubt' if erlaubt else 'abgelehnt'}",
+           reinigen.schriftname_ok(name) is erlaubt)
+
+s5 = b.seite_lesen(buch, absch, neu)
+r = b.seite_speichern({"notizbuch": buch, "abschnitt": absch, "name": neu, "rev": s5["rev"],
+                       "titel": s5["titel"],
+                       "elemente": [{"id": "s1", "typ": "text", "x": 0, "y": 0, "b": 400,
+                                     "html": '<font face="Fira Sans">eigene Schrift</font>'
+                                             '<font face="x&quot; onload=&quot;boese()">Angriff</font>'}]})
+h = b.seite_lesen(buch, absch, neu)["elemente"][0]["html"]
+pruefe("Schrift vom Rechner bleibt", 'face="Fira Sans"' in h, h)
+pruefe("Schriftname mit Anfuehrungszeichen weg", "onload" not in h, h)
+
 # --- Einstellungen und Updates ----------------------------------------------
 e = b.einstellungen()
 pruefe("Einstellungen abfragbar", "ordner" in e and e["version"], e)

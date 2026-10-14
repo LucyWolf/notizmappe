@@ -30,10 +30,28 @@ ATTRIBUTE = {"a": {"href"}, "img": {"data-datei", "alt"}, "font": {"size", "face
 #
 # Nur was im Auswahlfeld steht; andere Angaben fliegen raus, damit niemand ueber
 # den Namen einer Schrift etwas anderes hineinschreibt.
-SCHRIFTEN = {
-    "system-ui", "Georgia, serif", "ui-monospace, monospace",
-    "Segoe Script, Comic Sans MS, cursive",
-}
+# Die vier Gruppen stehen oben im Auswahlfeld; darunter kommen die Schriften,
+# die auf dem Rechner wirklich installiert sind.
+SCHRIFT_GRUPPEN = [
+    ["system-ui", "Standard"],
+    ["Georgia, serif", "Serife"],
+    ["ui-monospace, monospace", "Feste Breite"],
+    ["Segoe Script, Comic Sans MS, cursive", "Handschrift"],
+]
+
+# Statt einer festen Liste ein strenges Muster: Schriftnamen bestehen aus
+# Buchstaben, Ziffern, Leerzeichen und ein paar Satzzeichen. Alles, womit sich
+# aus einem face="..." etwas anderes machen liesse - Anfuehrungszeichen,
+# Semikolon, spitze Klammern - faellt damit weg.
+SCHRIFT_MUSTER = re.compile(r"^[A-Za-z0-9 ,.\-_()\u00c0-\u024f]{1,80}$")
+
+
+def schriftname_ok(name: str) -> bool:
+    name = str(name or "").strip()
+    if not name or not SCHRIFT_MUSTER.match(name):
+        return False
+    # Keine CSS-Funktionen oder Kommentare hineinschmuggeln
+    return not any(z in name for z in ("url(", "/*", "*/", "expression"))
 
 # Dieselbe Idee bei den Farben: nur was in der Palette steht. Eine beliebige
 # Farbe waere harmlos, aber die Pruefung kostet nichts und haelt die Liste der
@@ -67,7 +85,7 @@ class _Reiniger(HTMLParser):
                 continue
             if name == "size" and wert not in {"1", "2", "3", "4", "5", "6", "7"}:
                 continue
-            if name == "face" and wert not in SCHRIFTEN:
+            if name == "face" and not schriftname_ok(wert):
                 continue
             if name == "color" and wert.lower() not in FARBEN:
                 continue

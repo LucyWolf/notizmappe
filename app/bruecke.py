@@ -14,6 +14,7 @@ from __future__ import annotations
 import base64
 import functools
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -253,6 +254,42 @@ class Bruecke:
             return {"abgebrochen": True}
         shutil.copy2(pfad, ziel)
         return {"ok": True, "ziel": str(ziel)}
+
+    @_gefasst
+    def schriften(self) -> dict:
+        """Die Schriften, die auf diesem Rechner installiert sind.
+
+        Eine feste Liste im Programm waere immer falsch: sie enthielte Schriften,
+        die hier fehlen, und kennte die nicht, die da sind.
+        """
+        gefunden = set()
+
+        if sys.platform == "win32":
+            try:
+                import winreg
+                pfad = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"
+                with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, pfad) as k:
+                    for i in range(winreg.QueryInfoKey(k)[1]):
+                        name = winreg.EnumValue(k, i)[0]
+                        # "Arial (TrueType)" -> "Arial"; Schnitte zusammenfassen
+                        name = re.sub(r"\s*\((TrueType|OpenType)\)$", "", name)
+                        name = re.sub(r"\s+(Bold|Italic|Bold Italic|Regular)$", "", name)
+                        for teil in name.split("&"):
+                            gefunden.add(teil.strip())
+            except Exception:
+                pass
+        else:
+            try:
+                lauf = subprocess.run(["fc-list", "--format", "%{family[0]}\n"],
+                                      capture_output=True, text=True, timeout=20)
+                for zeile in lauf.stdout.splitlines():
+                    gefunden.add(zeile.strip())
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+
+        sauber = sorted({n for n in gefunden
+                         if n and reinigen.schriftname_ok(n)}, key=str.lower)
+        return {"schriften": sauber, "vorschlaege": reinigen.SCHRIFT_GRUPPEN}
 
     # --- Einstellungen, Ordner, Updates -----------------------------------
 

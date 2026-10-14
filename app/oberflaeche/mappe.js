@@ -897,6 +897,45 @@ for (const [feld, befehl] of [['#schriftart', 'fontName'], ['#schriftgroesse', '
   });
 }
 
+/* --- Schriftenliste vom Rechner -------------------------------------------
+ *
+ * Eine feste Liste im Programm waere immer falsch: sie enthielte Schriften, die
+ * hier fehlen, und kennte die nicht, die installiert sind. */
+async function schriftenLaden() {
+  let d;
+  try {
+    const b = await bruecke();
+    d = await b.schriften();
+  } catch (f) { return; }
+  if (!d || d.fehler) return;
+
+  for (const feld of document.querySelectorAll('select[data-befehl="fontName"], #schriftart')) {
+    const vorher = feld.value;
+    feld.textContent = '';
+    for (const [wert, name] of (d.vorschlaege || [])) {
+      const o = document.createElement('option');
+      o.value = wert;
+      o.textContent = name;
+      o.style.fontFamily = wert;
+      feld.append(o);
+    }
+    if (d.schriften && d.schriften.length) {
+      const gruppe = document.createElement('optgroup');
+      gruppe.label = `Auf diesem Rechner (${d.schriften.length})`;
+      for (const name of d.schriften) {
+        const o = document.createElement('option');
+        o.value = name;
+        o.textContent = name;
+        // Vorschau: jeder Eintrag in seiner eigenen Schrift
+        o.style.fontFamily = `"${name}"`;
+        gruppe.append(o);
+      }
+      feld.append(gruppe);
+    }
+    if (vorher) feld.value = vorher;
+  }
+}
+
 /* --- Leiste, die beim Markieren aufgeht -------------------------------------
  *
  * Markieren und dann nach oben in die Werkzeugleiste fahren ist weit; und wer
@@ -1422,6 +1461,7 @@ $('#e-zoom-zurueck').addEventListener('click', () => { zoomSetzen(1); $('#e-zoom
     await api('/api/seite', 'POST', { notizbuch: buch, abschnitt: ab, titel: 'Erste Seite' });
     await baumLaden();
   }
+  schriftenLaden();
   await updateBeimStart();
   let z = null;
   try { z = JSON.parse(merker.holen('zuletzt', 'null')); } catch (f) { /* dann die erste */ }
