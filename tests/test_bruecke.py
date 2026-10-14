@@ -317,6 +317,42 @@ pruefe("Loeschen mit falscher Pfadlaenge abgelehnt", "fehler" in b.loeschen("sei
 pruefe("Notizbuch geloescht",
        "fehler" not in b.loeschen("notizbuch", [buch]) and not (DATEN / "Arbeit").exists())
 
+# --- Was die Oberflaeche aus den Einstellungen liest, muss es geben ----------
+#
+# Hier ist schon einmal ein Feld verschwunden ("hier", beim Wegfall des
+# Servers). Die Oberflaeche fragte es weiter ab, bekam undefined - und
+# versteckte daraufhin stillschweigend das Feld fuer den Datenordner. Kein
+# Fehler, keine Meldung, es war einfach weg.
+import re
+
+js = (WURZEL / "app/oberflaeche/mappe.js").read_text(encoding="utf-8")
+
+
+def rumpf_von(anfang: str) -> str:
+    """Den Koerper einer Funktion herausschneiden, ueber Klammerzaehlen."""
+    i = js.index(anfang)
+    auf = js.index("{", i)
+    tiefe = 0
+    for j in range(auf, len(js)):
+        if js[j] == "{":
+            tiefe += 1
+        elif js[j] == "}":
+            tiefe -= 1
+            if tiefe == 0:
+                return js[auf:j]
+    raise AssertionError(f"Klammern von {anfang} gehen nicht auf")
+
+
+gelesen = set()
+for stelle in ("async function einstellungenLaden", "async function updateBeimStart"):
+    gelesen |= set(re.findall(r"\be\.([a-z_]+)", rumpf_von(stelle)))
+antwort = set(b.einstellungen())
+fehlt = sorted(gelesen - antwort)
+pruefe("einstellungen() liefert jedes Feld, das die Oberflaeche liest", not fehlt,
+       "fehlt: " + ", ".join(fehlt))
+pruefe("es werden ueberhaupt Felder geprueft", len(gelesen) > 5, f"{len(gelesen)} Felder")
+pruefe("im Fenster ist die Oberflaeche am selben Rechner", b.einstellungen()["hier"] is True)
+
 print()
 print("alles gruen" if not fehler else f"{len(fehler)} FEHLER:\n - " + "\n - ".join(fehler))
 shutil.rmtree(DATEN, ignore_errors=True)

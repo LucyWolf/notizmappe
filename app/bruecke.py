@@ -565,6 +565,11 @@ class Bruecke:
         korb = ordner / speicher.PAPIERKORB if ordner else None
         return {
             "version": VERSION,
+            # Sitzt die Oberflaeche auf demselben Rechner wie das Programm? Im
+            # Fenster immer ja. Die Oberflaeche haengt daran, ob sie den
+            # Datenordner umstellen und Updates einspielen laesst - fehlt das
+            # Feld, ist das Ordnerfeld stillschweigend weg (genau das war es).
+            "hier": True,
             "ordner": str(ordner) if ordner else speicher.gewaehlter_ordner(),
             "ordner_fehlt": fehlt,
             "ordner_quelle": speicher.ordner_quelle(),
