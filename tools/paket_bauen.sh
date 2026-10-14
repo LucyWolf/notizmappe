@@ -36,14 +36,14 @@ echo "  Python-Pakete holen …"
 # nicht bauen, weil ihm dafuer die Bauwerkzeuge fehlen. pip wheel erledigt das hier,
 # wo noch Netz ist, und legt fertige Rad-Dateien ab.
 if "$PYBAU" -m pip wheel -q --no-input -r "$WURZEL/requirements.txt" -w "$PAKET/vendor"; then
-  # markupsafe und pydantic_core sind uebersetzt und haengen an der Python-Version.
-  # Gebaut wird hier mit einer, installiert wird dort vielleicht mit einer anderen -
-  # deshalb die gaengigen Fassungen gleich mitnehmen. Das kostet ein paar MB und
-  # erspart dem Anwender, dass der Installer doch wieder ins Netz muss.
-  for paket in markupsafe pydantic_core; do
-    fassung=$(ls "$PAKET/vendor" | sed -n "s/^${paket}-\([0-9][^-]*\)-.*/\1/p" | head -1)
-    [ -n "$fassung" ] || continue
-    name=$(echo "$paket" | tr '_' '-')
+  # Uebersetzte Pakete haengen an der Python-Version: gebaut wird hier mit einer,
+  # installiert dort vielleicht mit einer anderen. Fuer die holen wir die gaengigen
+  # Fassungen dazu. Seit nur noch pywebview gebraucht wird, ist meist keines dabei -
+  # dann faellt die Schleife sofort durch.
+  for rad in "$PAKET"/vendor/*-cp3*-*.whl; do
+    [ -e "$rad" ] || break
+    name=$(basename "$rad" | cut -d- -f1 | tr '_' '-')
+    fassung=$(basename "$rad" | cut -d- -f2)
     for abi in 311 312 313 314; do
       "$PYBAU" -m pip download -q --no-input --no-deps --only-binary=:all: \
         --python-version "$abi" --implementation cp \
@@ -51,6 +51,7 @@ if "$PYBAU" -m pip wheel -q --no-input -r "$WURZEL/requirements.txt" -w "$PAKET/
         -d "$PAKET/vendor" "$name==$fassung" 2>/dev/null || true
     done
   done
+
   echo "  $(ls "$PAKET/vendor" | wc -l) Rad-Dateien"
 
   # Nachsehen, ob sich daraus wirklich ohne Netz einrichten laesst. Sonst faellt der

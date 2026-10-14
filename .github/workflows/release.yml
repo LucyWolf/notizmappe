@@ -17,6 +17,13 @@ on:
 permissions:
   contents: write
 
+# Wer zweimal kurz hintereinander anstoesst, braucht nicht zwei Laeufe: der
+# aeltere wird abgebrochen. Bei einem Tag nicht - ein halb gebautes Release
+# waere schlimmer als ein doppelter Lauf.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
 jobs:
   linux:
     runs-on: ubuntu-latest
@@ -25,6 +32,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
 
       # Die Versionsnummer steht in app/VERSION. Laeuft der Tag davon weg, sieht eine
       # laufende Installation nie wieder ein Update - also hier abbrechen.
@@ -62,6 +71,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
+          retention-days: 7      # nur zum Weiterreichen an den Release-Schritt
           name: linux
           path: |
             dist/notizmappe-v*-installer.sh
@@ -75,6 +85,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
 
       - name: Abhaengigkeiten
         run: pip install -r requirements.txt pyinstaller
@@ -131,7 +143,7 @@ jobs:
           $env:NOTIZMAPPE_OHNE_FENSTER = "1"
           $p = Start-Process -FilePath dist\Notizmappe\Notizmappe.exe -PassThru -NoNewWindow `
                  -RedirectStandardOutput lauf.txt -RedirectStandardError lauf-err.txt
-          Start-Sleep -Seconds 8
+          Start-Sleep -Seconds 4
           $lauscht = Get-NetTCPConnection -State Listen -OwningProcess $p.Id -ErrorAction SilentlyContinue
           if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
           Write-Host "--- Ausgabe ---"; if (Test-Path lauf.txt) { Get-Content lauf.txt }
@@ -143,6 +155,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
+          retention-days: 7
           name: windows
           path: Notizmappe-windows.zip
 
@@ -214,7 +227,7 @@ jobs:
           $env:NOTIZMAPPE_OHNE_FENSTER = "1"
           $laeuft = Start-Process -FilePath "$env:EXE" -PassThru -NoNewWindow `
                       -RedirectStandardOutput lauf.txt -RedirectStandardError lauf-err.txt
-          Start-Sleep -Seconds 6
+          Start-Sleep -Seconds 3
           $p = Start-Process .\setup.exe -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -PassThru -Wait
           Write-Host "Setup-Rueckgabe: $($p.ExitCode)"
           if ($p.ExitCode -ne 0) { throw "Setup ueber eine laufende Fassung endete mit $($p.ExitCode)" }
@@ -241,8 +254,8 @@ jobs:
           if ($p.ExitCode -ne 0) { throw "Das Update liess sich nicht anstossen" }
 
           $fertig = $false
-          foreach ($i in 1..40) {
-            Start-Sleep -Seconds 3
+          foreach ($i in 1..60) {
+            Start-Sleep -Seconds 2
             if ((Test-Path $vdatei) -and ((Get-Content $vdatei -Raw).Trim() -eq $echt)) { $fertig = $true; break }
           }
           Write-Host "--- Protokolle ---"
