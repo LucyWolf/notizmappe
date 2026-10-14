@@ -19,7 +19,7 @@ window.addEventListener('error', function (ev) {
   });
   var m = document.getElementById('meldung');
   if (m) {
-    m.textContent = 'Fehler in der Oberfläche: ' + (ev.message || ev.error)
+    m.textContent = 'Fehler im Fenster: ' + (ev.message || ev.error)
       + '  (' + (ev.filename || '?').replace(/^.*\//, '') + ':' + (ev.lineno || '?') + ')';
     m.hidden = false;
   }

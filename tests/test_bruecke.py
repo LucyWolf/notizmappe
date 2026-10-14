@@ -284,6 +284,14 @@ js_api = (WURZEL / "app/oberflaeche/mappe.js").read_text(encoding="utf-8")
 pruefe("Oberflaeche behandelt den Hinweis nicht als Abbruch",
        "schluessel !== 'GET /api/version'" in js_api)
 
+# --- Wo sonst noch Notizen liegen koennten -----------------------------------
+import speicher as sp
+leer = Path(tempfile.mkdtemp(prefix="notizen-leer-"))
+pruefe("leerer Ordner sieht nicht nach Notizen aus", not sp.sieht_nach_notizen_aus(leer))
+pruefe("der Datenordner schon", sp.sieht_nach_notizen_aus(DATEN), DATEN)
+pruefe("andere Orte werden gemeldet", DATEN.name or True)
+shutil.rmtree(leer, ignore_errors=True)
+
 # --- Löschen -----------------------------------------------------------------
 pruefe("Seite geloescht", "fehler" not in b.loeschen("seite", [buch, absch, neu]))
 pruefe("Seite wirklich weg", not (DATEN / f"Arbeit/Projekte/{neu}.json").exists())

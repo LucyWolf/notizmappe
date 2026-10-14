@@ -353,6 +353,9 @@ class Bruecke:
             "seiten": gesamt,
             "frei": shutil.disk_usage(ordner).free if ordner else 0,
             "papierkorb": sum(1 for _ in korb.glob("*")) if korb and korb.is_dir() else 0,
+            # Wenn hier nichts liegt: wo liegt dann etwas? Ein leerer Ordner
+            # heisst meistens nicht, dass alles weg ist.
+            "andere_orte": speicher.andere_orte(ordner) if ordner and not gesamt else [],
             "aus_installation": aktualisieren.aus_installation(),
             "optionen": aktualisieren.optionen_lesen(),
             "quelle": aktualisieren.QUELLE,

@@ -46,7 +46,20 @@ def dokumentenordner() -> Path:
     """
     heim = Path.home()
     if sys.platform == "win32":
-        for name in ("Documents", "Dokumente"):
+        # Windows fuehrt den Dokumentenordner in der Registry. Wer OneDrive
+        # benutzt, hat ihn dort liegen und nicht unter %USERPROFILE%\Documents -
+        # dann entstuende daneben ein zweiter, leerer Ordner.
+        try:
+            import winreg
+            pfad = r"Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, pfad) as k:
+                roh = winreg.QueryValueEx(k, "Personal")[0]
+            weg = Path(os.path.expandvars(roh))
+            if weg.is_dir():
+                return weg
+        except Exception:
+            pass
+        for name in ("Documents", "Dokumente", "OneDrive/Dokumente", "OneDrive/Documents"):
             if (heim / name).is_dir():
                 return heim / name
         return heim / "Documents"
@@ -78,6 +91,49 @@ def standard_ordner() -> Path:
     if alt.is_dir() and any(alt.iterdir()):
         return alt
     return dokumentenordner() / "Notizmappe"
+
+
+def sieht_nach_notizen_aus(p: Path) -> bool:
+    """Liegt dort eine Notizmappe-Ablage? Also ein Ordner mit mindestens einer
+    Seite darin (Notizbuch/Abschnitt/Seite.json)."""
+    try:
+        if not p.is_dir():
+            return False
+        for buch in p.iterdir():
+            if not buch.is_dir() or buch.name.startswith("."):
+                continue
+            for abschnitt in buch.iterdir():
+                if abschnitt.is_dir() and any(abschnitt.glob("*.json")):
+                    return True
+    except OSError:
+        pass
+    return False
+
+
+def andere_orte(ausser: Path | None = None) -> list[str]:
+    """Wo sonst noch Notizen liegen koennten.
+
+    Wenn das Programm in einen leeren Ordner schaut, ist die haeufigste Erklaerung
+    nicht, dass alles weg ist, sondern dass es woanders hinschaut - nach einem
+    Update, einem Umzug nach OneDrive oder einem Wechsel des Standards.
+    """
+    heim = Path.home()
+    kandidaten = [
+        heim / "Notizen",
+        dokumentenordner() / "Notizmappe",
+        heim / "Documents" / "Notizmappe",
+        heim / "Dokumente" / "Notizmappe",
+        heim / "OneDrive" / "Dokumente" / "Notizmappe",
+        heim / "OneDrive" / "Documents" / "Notizmappe",
+        heim / "Nextcloud" / "Notizen",
+    ]
+    gefunden = []
+    for k in kandidaten:
+        if ausser and k.resolve() == ausser.resolve():
+            continue
+        if sieht_nach_notizen_aus(k) and str(k) not in gefunden:
+            gefunden.append(str(k))
+    return gefunden
 
 
 def ordner_quelle() -> str:

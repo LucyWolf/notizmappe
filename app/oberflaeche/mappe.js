@@ -113,11 +113,19 @@ function bruecke() {
     window.addEventListener('pywebviewready', nachsehen);
     const uhr = setInterval(() => {
       if (nachsehen()) return;
-      if (++versuche > 300) {        // 30 Sekunden
+      if (++versuche > 600) {        // eine Minute
         clearInterval(uhr);
         window.removeEventListener('pywebviewready', nachsehen);
-        bruecke_bereit = null;       // beim nächsten Versuch neu warten
-        schiefgegangen(new Error('Keine Verbindung zum Programm'));
+        bruecke_bereit = null;       // beim nächsten Versuch von vorn warten
+
+        // Verständlich bleiben: hier geht es um nichts im Netz, sondern um die
+        // Schnittstelle, über die das Fenster mit dem Programm spricht.
+        const was = !window.pywebview ? 'das Fenster meldet sich gar nicht'
+          : !window.pywebview.api ? 'das Fenster ist da, aber ohne Schnittstelle'
+          : 'die Schnittstelle ist leer geblieben';
+        schiefgegangen(new Error(
+          `Das Fenster und das Programm haben sich nicht gefunden (${was}). `
+          + 'Das hat nichts mit dem Netz zu tun. Meist hilft: Notizmappe schließen und neu starten.'));
       }
     }, 100);
   });
@@ -1589,12 +1597,38 @@ $('#e-zoom-zurueck').addEventListener('click', () => { zoomSetzen(1); $('#e-zoom
   } catch (f) {
     // Z. B. Datenordner auf einem nicht eingehaengten Laufwerk: sagen, was los ist,
     // statt eine leere Flaeche zu zeigen - und nichts anlegen.
-    melden(f.message, [['Einstellungen', () => tafelZeigen(true)]]);
+    // Mit Pfad: "geht nicht" allein hilft niemandem beim Suchen.
+    let wo = '';
+    try {
+      const b = await bruecke();
+      const e = await b.einstellungen();
+      wo = e && e.ordner ? `  (${e.ordner})` : '';
+    } catch (x) { /* dann eben ohne */ }
+    melden(f.message + wo, [['Einstellungen', () => tafelZeigen(true)]]);
     return;
   }
   // Nicht nur beim ganz leeren Datenordner: auch ein Notizbuch ohne Abschnitte oder
   // ein Abschnitt ohne Seiten lässt einen vor einer Fläche sitzen, auf der sich
   // nichts schreiben lässt - und nichts sagt einem, warum.
+  // Leerer Ordner, aber woanders liegen Notizen? Dann nicht einfach ein neues
+  // Notizbuch anlegen - sonst sieht es aus, als waere alles weg.
+  try {
+    const e = await api('/api/einstellungen');
+    if (!erstesSeitchen() && e.andere_orte && e.andere_orte.length) {
+      const ziel = e.andere_orte[0];
+      melden(`Hier liegen keine Notizen (${e.ordner}). Gefunden in: ${ziel}`, [
+        ['Dorthin wechseln', async () => {
+          try {
+            await api('/api/ordner', 'POST', { ordner: ziel });
+            location.reload();
+          } catch (f) { melden('Umstellen ging nicht: ' + f.message); }
+        }],
+        ['Einstellungen', () => tafelZeigen(true)],
+      ]);
+      return;
+    }
+  } catch (f) { /* dann weiter wie bisher */ }
+
   if (!erstesSeitchen()) {
     const buch = baumDaten[0] ? baumDaten[0].name
       : (await api('/api/notizbuch', 'POST', { name: 'Notizbuch' })).name;
