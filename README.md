@@ -18,7 +18,7 @@ SQLite-Dateien überleben das nicht zuverlässig (Nextcloud kopiert sie mitten i
 einer Transaktion und legt bei Bedarf eine Konfliktkopie daneben). Deshalb:
 
 ```
-~/Notizen/                        ← NOTIZEN_ORDNER, liegt im Sync-Ordner
+Dokumente/Notizmappe/             ← Standard; umstellbar in den Einstellungen
   Arbeit/                         ← Notizbuch  = Ordner
     Projekte/                     ← Abschnitt  = Unterordner
       Phobos.json                 ← Seite      = eine JSON-Datei

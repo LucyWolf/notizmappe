@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 import time
 import unicodedata
 import uuid
@@ -36,6 +37,49 @@ class KonfliktFehler(Exception):
         self.seite = seite
 
 
+def dokumentenordner() -> Path:
+    """Der Dokumentenordner des Benutzers - dort gehoeren Dateien eines normalen
+    Programms hin, nicht in ein eigenes Verzeichnis neben dem Heimatordner.
+
+    Windows nennt ihn je nach Sprache "Documents" oder "Dokumente"; unter Linux
+    steht er in ~/.config/user-dirs.dirs, wenn die Arbeitsumgebung ihn gesetzt hat.
+    """
+    heim = Path.home()
+    if sys.platform == "win32":
+        for name in ("Documents", "Dokumente"):
+            if (heim / name).is_dir():
+                return heim / name
+        return heim / "Documents"
+
+    datei = Path(os.environ.get("XDG_CONFIG_HOME", heim / ".config")) / "user-dirs.dirs"
+    try:
+        for zeile in datei.read_text(encoding="utf-8").splitlines():
+            if zeile.startswith("XDG_DOCUMENTS_DIR"):
+                roh = zeile.split("=", 1)[1].strip().strip('"')
+                weg = Path(roh.replace("$HOME", str(heim))).expanduser()
+                if weg.is_dir():
+                    return weg
+    except OSError:
+        pass
+    for name in ("Dokumente", "Documents"):
+        if (heim / name).is_dir():
+            return heim / name
+    return heim / "Dokumente"
+
+
+def standard_ordner() -> Path:
+    """Wo die Notizen liegen, solange nichts anderes gewaehlt ist.
+
+    Frueher war das ~/Notizen. Wer schon damit arbeitet, behaelt es: ein
+    Programm, das nach einem Update woanders hinschreibt, sieht aus, als haette
+    es alles verloren.
+    """
+    alt = Path.home() / "Notizen"
+    if alt.is_dir() and any(alt.iterdir()):
+        return alt
+    return dokumentenordner() / "Notizmappe"
+
+
 def ordner_quelle() -> str:
     """Woher der Datenordner kommt: "umgebung" (NOTIZEN_ORDNER, fest), "gewaehlt"
     (in den Einstellungen) oder "standard"."""
@@ -59,14 +103,15 @@ def wurzel() -> Path:
                     f"Der gewählte Datenordner {p} ist nicht da - ist das Laufwerk eingehängt? "
                     "Unter Einstellungen → Daten lässt er sich umstellen.")
             return p
-    p = Path(os.environ.get("NOTIZEN_ORDNER") or "~/Notizen").expanduser()
+    p = Path(os.environ["NOTIZEN_ORDNER"]).expanduser() if os.environ.get("NOTIZEN_ORDNER") \
+        else standard_ordner()
     p.mkdir(parents=True, exist_ok=True)
     return p
 
 
 def gewaehlter_ordner() -> str:
     """Der eingestellte Ordner als Text, auch wenn er gerade nicht da ist."""
-    return os.environ.get("NOTIZEN_ORDNER") or konfig.lesen().get("ordner") or str(Path("~/Notizen").expanduser())
+    return os.environ.get("NOTIZEN_ORDNER") or konfig.lesen().get("ordner") or str(standard_ordner())
 
 
 def inhalt_kopieren(alt: Path, neu: Path) -> int:

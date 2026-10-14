@@ -487,6 +487,79 @@ async function alsBase64(datei) {
   return btoa(text);
 }
 
+/* Bilder, die mitten im Text stehen, bekommen ihre Daten nachgereicht: im
+ * gespeicherten HTML steht nur der Dateiname (data-datei), nie eine Adresse. */
+function textBilderZeigen(text) {
+  for (const bild of text.querySelectorAll('img[data-datei]')) {
+    if (bild.getAttribute('src')) continue;
+    bild.addEventListener('load', flaecheMessen, { once: true });
+    bildEinsetzen(bild, bild.dataset.datei);
+  }
+}
+
+/* Bilder an die Stelle setzen, an der der Zeiger steht - alles andere wird eine
+ * Kachel auf der Fläche. */
+async function inTextEinsetzen(text, e, dateien, stelle) {
+  for (const d of dateien) {
+    if (d.size > MAX_ANHANG) {
+      melden(`"${d.name}" ist ${groesse(d.size)} groß - mehr als ${groesse(MAX_ANHANG)} gehen nicht.`);
+      continue;
+    }
+    zustandAnzeige.textContent = 'lädt …';
+    let r;
+    try {
+      const b = await bruecke();
+      r = await b.anhang_ablegen(offen.notizbuch, offen.abschnitt, offen.name,
+                                 anhangName(d), await alsBase64(d));
+    } catch (f) {
+      melden('Hinzufügen ging nicht: ' + f.message);
+      continue;
+    }
+    if (r && r.fehler) { melden(`"${d.name}" ging nicht: ${r.fehler}`); continue; }
+
+    if (r.art !== 'bild') {
+      // Keine Bilder (PDF, Zip ...) bleiben Kacheln auf der Fläche.
+      elementAnlegen(r, d, e.x, e.y + text.offsetHeight + 40);
+      continue;
+    }
+    const bild = document.createElement('img');
+    bild.dataset.datei = r.datei;
+    bild.alt = d.name;
+    if (stelle && text.contains(stelle.startContainer)) {
+      stelle.deleteContents();
+      stelle.insertNode(bild);
+      stelle.setStartAfter(bild);
+      stelle.collapse(true);
+    } else {
+      text.append(bild);
+    }
+    textBilderZeigen(text);
+    // Gleich eintragen, nicht erst nach dem letzten Bild - sonst speichert die Uhr
+    // zwischendurch einen Stand, der die schon hochgeladenen nicht kennt.
+    e.html = text.innerHTML;
+    angefasst();
+  }
+  e.html = text.innerHTML;
+  zustandAnzeige.textContent = '';
+  angefasst();
+}
+
+/* Ein fertig abgelegter Anhang wird zu einem Element auf der Fläche. */
+function elementAnlegen(r, datei, x, y) {
+  const e = {
+    id: Math.random().toString(36).slice(2, 12),
+    typ: r.art, x, y,
+    b: r.art === 'bild' ? 420 : 280,
+    datei: r.datei, beschriftung: datei.name, groesse: r.groesse,
+  };
+  elemente.push(e);
+  flaeche.append(kastenBauen(e));
+  $('#leerhinweis').hidden = true;
+  flaecheMessen();
+  angefasst();
+  return e;
+}
+
 async function anhangHochladen(datei, x, y) {
   if (!offen) { sagen('Erst eine Seite öffnen', 2000); return; }
   // Vorher prüfen: sonst wandert eine riesige Datei erst durch die Brücke, nur
@@ -1289,7 +1362,6 @@ async function einstellungenLaden() {
   } catch (f) {
     $('#e-lage').textContent = 'Einstellungen ließen sich nicht laden: ' + f.message;
   }
-  await kontoTeileLaden();
   updateAnzeigen(await versionPruefen());
 }
 
