@@ -84,9 +84,9 @@ const WEGE = {
   'POST /api/update':          (p, b) => b.update(),
   'GET /api/update/stand':     (p, b) => b.update_stand(),
   'POST /api/onenote':         (p, b, r) => b.onenote_einlesen(r),
-  'GET /api/versionen':        (p, b) => b.versionen(p.notizbuch, p.abschnitt, p.name),
-  'GET /api/version':          (p, b) => b.version_lesen(p.notizbuch, p.abschnitt, p.name, p.marke),
-  'POST /api/version':         (p, b, r) => b.version_zurueck(r),
+  'GET /api/verlauf':          (p, b) => b.versionen(p.notizbuch, p.abschnitt, p.name),
+  'GET /api/verlauf/fassung':  (p, b) => b.version_lesen(p.notizbuch, p.abschnitt, p.name, p.marke),
+  'POST /api/verlauf/zurueck': (p, b, r) => b.version_zurueck(r),
   'GET /api/papierkorb':       (p, b) => b.papierkorb(),
   'POST /api/papierkorb/zurueck': (p, b, r) => b.papierkorb_zurueck(r),
   'POST /api/papierkorb/weg':  (p, b, r) => b.papierkorb_weg(r),
@@ -2214,7 +2214,7 @@ async function versionenZeigen() {
   const seite = { ...offen };
   let r;
   try {
-    r = await api(`/api/versionen?notizbuch=${encodeURIComponent(seite.notizbuch)}`
+    r = await api(`/api/verlauf?notizbuch=${encodeURIComponent(seite.notizbuch)}`
       + `&abschnitt=${encodeURIComponent(seite.abschnitt)}&name=${encodeURIComponent(seite.name)}`);
   } catch (f) { $('#v-hinweis').textContent = f.message; return; }
 
@@ -2224,7 +2224,7 @@ async function versionenZeigen() {
     knoepfe: [
       ['Ansehen', async () => {
         try {
-          const alt = await api(`/api/version?notizbuch=${encodeURIComponent(seite.notizbuch)}`
+          const alt = await api(`/api/verlauf/fassung?notizbuch=${encodeURIComponent(seite.notizbuch)}`
             + `&abschnitt=${encodeURIComponent(seite.abschnitt)}&name=${encodeURIComponent(seite.name)}`
             + `&marke=${encodeURIComponent(v.marke)}`);
           const text = (alt.elemente || [])
@@ -2247,7 +2247,7 @@ async function versionenZeigen() {
 
 async function zurueckholen(seite, marke) {
   try {
-    await api('/api/version', 'POST', { ...seite, marke });
+    await api('/api/verlauf/zurueck', 'POST', { ...seite, marke });
     verlaufZu();
     meldungWeg();
     await seiteOeffnen(seite.notizbuch, seite.abschnitt, seite.name);

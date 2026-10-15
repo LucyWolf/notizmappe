@@ -1,0 +1,15 @@
+
+--- 2026-10-15 15:27:44  bei version_lesen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 673, in version_lesen
+    return speicher.verlauf_lesen(notizbuch, abschnitt, name, reinigen.text(marke, 40))
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 586, in verlauf_lesen
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+                                          ~~~~^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 223, in slug
+    name = unicodedata.normalize("NFC", name).strip()
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+TypeError: normalize() argument 2 must be str, not None

@@ -84,6 +84,29 @@ def zusperren() -> None:
 _klartext_ordner = None
 
 
+def _ins_protokoll(wo: str, x: Exception) -> None:
+    """Fehler mit Spur in eine Datei schreiben.
+
+    traceback.print_exc() allein nuetzt nichts: die Windows-Fassung ist ohne
+    Konsole gebaut, dort geht die Ausgabe ins Leere. Uebrig bleibt im Fenster
+    eine Zeile wie "TypeError: ..." - und niemand weiss, woher sie kommt. Genau
+    danach habe ich einmal lange gesucht.
+    """
+    import traceback
+    traceback.print_exc()
+    try:
+        import aktualisieren
+        datei = aktualisieren.PROTOKOLL.with_name("fenster.log")
+        datei.parent.mkdir(parents=True, exist_ok=True)
+        if datei.exists() and datei.stat().st_size > 1024 * 1024:
+            datei.unlink()                      # nicht endlos wachsen lassen
+        with datei.open("a", encoding="utf-8") as p:
+            p.write(f"\n--- {time.strftime('%Y-%m-%d %H:%M:%S')}  bei {wo}\n")
+            p.write(traceback.format_exc())
+    except Exception:                           # noqa: BLE001 - Protokoll ist nett, nicht wichtig
+        pass
+
+
 def _gefasst(f):
     """Fehler als Antwort, nicht als Ausnahme."""
     @functools.wraps(f)
@@ -102,9 +125,8 @@ def _gefasst(f):
         except speicher.SpeicherFehler as x:
             return {"fehler": str(x)}
         except Exception as x:                      # noqa: BLE001 - nichts soll durchfallen
-            import traceback
-            traceback.print_exc()
-            return {"fehler": f"{type(x).__name__}: {x}"}
+            _ins_protokoll(f.__name__, x)
+            return {"fehler": f"{type(x).__name__}: {x}", "wo": f.__name__}
     return innen
 
 

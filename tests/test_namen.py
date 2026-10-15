@@ -112,6 +112,18 @@ pruefe("jeder Aufruf in mappe.js hat eine Funktion dazu", not offen,
 pruefe("es wird ueberhaupt etwas geprueft", len(gerufen) > 40, f"{len(gerufen)} Aufrufe gefunden")
 
 
+# --- Kein Weg zweimal --------------------------------------------------------
+#
+# In JavaScript ist ein doppelter Schluessel im Woerterbuch kein Fehler: der
+# spaetere gewinnt stillschweigend. So hat "GET /api/version" (Updatepruefung)
+# den Weg zur Seitenfassung bekommen - und die Updatepruefung meldete einen
+# TypeError, der nach einem Fehler im Updater aussah und keiner war.
+block = js[js.index("const WEGE = {"):js.index("};", js.index("const WEGE = {"))]
+wege = re.findall(r"^\s*'([^']+)':", block, re.M)
+doppelt = sorted({w for w in wege if wege.count(w) > 1})
+pruefe("kein Weg steht zweimal in der Tabelle", not doppelt, ", ".join(doppelt))
+pruefe("es gibt ueberhaupt Wege", len(wege) > 15, f"{len(wege)} gefunden")
+
 # --- Kennungen: $('#knopf') muss es in index.html wirklich geben --------------
 #
 # Steht da ein Tippfehler, wirft addEventListener beim Laden "of null" - und das

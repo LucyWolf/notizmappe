@@ -19,6 +19,11 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 QUELLE = Path(__file__).resolve().parent.parent
+# Die Versionspruefung legt ihre letzte Antwort im Quellordner ab. Wer das
+# Programm vorher von Hand laufen liess, hat dort eine echte Antwort von GitHub
+# stehen - und der Test prueft dann die statt seiner eigenen. Genau das ist mir
+# passiert, also vorher weg damit.
+(QUELLE / ".update-stand.json").unlink(missing_ok=True)
 fehler = []
 
 
@@ -176,6 +181,7 @@ pruefe("und schreibt seine Antwort ins Protokoll",
        and "--update:" in akt_fuer_protokoll.PROTOKOLL.read_text(encoding="utf-8"),
        str(akt_fuer_protokoll.PROTOKOLL))
 shutil.rmtree(ohne_konsole, ignore_errors=True)
+(QUELLE / ".update-stand.json").unlink(missing_ok=True)
 
 print()
 print("alles gruen" if not fehler else f"{len(fehler)} FEHLER: " + ", ".join(fehler))
