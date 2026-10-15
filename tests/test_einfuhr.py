@@ -125,6 +125,17 @@ pruefe("Zeilenumbruch wurde übernommen", "<br>" in inhalt["elemente"][0]["html"
 pruefe("Die Kästen überdecken sich nicht",
        inhalt["elemente"][1]["y"] > inhalt["elemente"][0]["y"] + 40, inhalt["elemente"])
 
+# --- Text bleibt Text --------------------------------------------------------
+print("\nSpitze Klammern im Text")
+for roh, muss_drin in (("Die Klammer <b> in HTML", "&lt;b&gt;"),
+                       ("<script>wichtig</script> Notiz", "wichtig"),
+                       ("Preis < 5 & mehr", "&lt; 5 &amp; mehr")):
+    html = einfuhr._elemente([roh])[0]["html"]
+    pruefe("Text bleibt erhalten: " + roh[:24], muss_drin in html, html)
+pruefe("Zeilenumbrüche werden zu <br>", "<br>" in einfuhr._elemente(["a\nb"])[0]["html"])
+pruefe("Und es wird kein Markup daraus",
+       "<b>" not in einfuhr._elemente(["Die Klammer <b> in HTML"])[0]["html"])
+
 # --- Durch die Brücke --------------------------------------------------------
 print("\nDurch die Brücke")
 antwort = b.onenote_einlesen({"pfad": str(tmp / "text.one")})

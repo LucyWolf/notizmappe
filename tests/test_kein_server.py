@@ -37,6 +37,19 @@ def quellen(*muster):
 VERBOTEN = ("fastapi", "uvicorn", "starlette", "flask", "jinja2", "aiohttp",
             "tornado", "bottle", "werkzeug", "waitress", "gunicorn")
 
+# --- Der Webserver, der mit pywebview mitkommt -------------------------------
+#
+# pywebview haengt an bottle und laedt es beim Import mit - daran ist nichts zu
+# aendern, ohne das Fenster zu verlieren. Gestartet wird dieser Server nur, wenn
+# man pywebview eine Datei zu laden gibt statt fertigem HTML. Das tut dieses
+# Programm nicht, und beim Start steht es zusaetzlich ausdruecklich da.
+fenstertext = (WURZEL / "app/fenster.py").read_text(encoding="utf-8")
+pruefe("das Fenster schaltet den mitgelieferten Webserver ausdruecklich ab",
+       fenstertext.count("http_server=False") >= 2
+       and "http_server=True" not in fenstertext)
+pruefe("die Oberflaeche wird als fertiges HTML uebergeben, nicht als Datei",
+       "html=" in fenstertext and "url=" not in fenstertext)
+
 anforderungen = (WURZEL / "requirements.txt").read_text(encoding="utf-8").split()
 # Eine knappe, ausdrueckliche Liste statt "nur pywebview": was hier nicht steht,
 # kommt auch nicht herein. Nachschieben soll auffallen.
@@ -96,7 +109,10 @@ for p in list(quellen("app/*.py")) + list(quellen("app/oberflaeche/*.js", "app/o
         # aktualisieren.py darf GitHub nennen; das ist der einzige Weg nach draussen.
         if p.name == "aktualisieren.py" and was == "keine Rede von Servern":
             continue
-        treffer = re.search(muster, text)
+        # "http_server=False" ist die Abschaltung selbst - die soll dastehen.
+        geprueft = text.replace("http_server=False", "")
+        treffer = re.search(muster, geprueft)
+        text = geprueft
         pruefe(f"{p.relative_to(WURZEL)}: {was}", not treffer,
                text.splitlines()[text[:treffer.start()].count(chr(10))].strip() if treffer else "")
 

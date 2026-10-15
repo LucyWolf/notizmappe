@@ -1684,6 +1684,10 @@ const STIFTE = [
 ];
 const MAX_STRICHE = 4000;
 const MAX_PUNKTE = 1400;            // je Strich; danach faengt ein neuer an
+/* Und ein Deckel über allem: eine Seite wird bei jedem Autosave ganz neu
+ * geschrieben und vom Sync übertragen. Ohne das dürfte sie rechnerisch 96 MB
+ * groß werden - echte Handschrift braucht etwa 400 KB für 250 Striche. */
+const MAX_ZAHLEN_GESAMT = 400000;
 
 let malblatt = null;                // das <canvas>
 let malstift = null;                // sein 2d-Kontext
@@ -1957,8 +1961,21 @@ function zeiger(ev) {
   strichAblegen();
 }
 
+function zahlenGesamt() {
+  let n = 0;
+  for (const st of zeichnung.striche) n += st.p.length;
+  return n;
+}
+
 function strichAblegen() {
   if (!laufend) return;
+  const voll = zahlenGesamt() + laufend.p.length > MAX_ZAHLEN_GESAMT;
+  if (voll) {
+    hinweis('Die Zeichnung auf dieser Seite ist voll - bitte auf einer neuen Seite weitermalen.');
+    laufend = null;
+    allesMalen();
+    return;
+  }
   if (laufend.p.length >= 3 && zeichnung.striche.length < MAX_STRICHE) {
     zeichnungSichern();
     // Runden spart in der Datei viel: zwei Nachkommastellen sind feiner, als

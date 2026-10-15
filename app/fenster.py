@@ -214,9 +214,14 @@ def fenster_zeigen() -> bool:
     begonnen = time.monotonic()
     try:
         # private_mode=False: sonst stellt WebKitGTK gar kein localStorage bereit.
-        webview.start(private_mode=False, storage_path=str(speicher), **zusatz)
+        # Ausdruecklich abgeschaltet: pywebview bringt einen kleinen HTTP-Dienst
+        # mit und startet ihn, sobald man ihm eine Datei statt fertigem HTML zu
+        # laden gibt. Hier wird nie eine Datei geladen, er waere also ohnehin
+        # aus - aber "waere ohnehin" ist keine Zusage. So steht es da.
+        webview.start(private_mode=False, storage_path=str(speicher),
+                      http_server=False, **zusatz)
     except TypeError:
-        webview.start(private_mode=False, storage_path=str(speicher))
+        webview.start(private_mode=False, storage_path=str(speicher), http_server=False)
     dauer = time.monotonic() - begonnen
 
     if dauer < 2.0:

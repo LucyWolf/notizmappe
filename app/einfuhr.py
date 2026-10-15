@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import re
 import tempfile
+from html import escape
 from pathlib import Path
 
 import reinigen
@@ -235,7 +236,14 @@ def _elemente(texte: list[str]) -> list[dict]:
     y = 40
     for text in texte:
         zeilen = sum(max(1, len(z) // 70 + 1) for z in text.split("\n")) or 1
-        html = reinigen.html("<br>".join(zeile.strip() for zeile in text.split("\n")))
+        # Erst entschaerfen, dann als HTML behandeln. Aus OneNote kommt reiner
+        # Text - stand darin "Die Klammer <b>", waere daraus Fettschrift
+        # geworden und die Klammer verschwunden, und aus "<script>wichtig
+        # </script>" waere das Wort ganz verloren gegangen. Bei einer Funktion,
+        # die beim Umstieg nichts verlieren soll, ist das der schlimmste Fall:
+        # es faellt niemandem auf.
+        sicher = escape(text, quote=False)
+        html = reinigen.html("<br>".join(zeile.strip() for zeile in sicher.split("\n")))
         aus.append({"id": speicher.uuid.uuid4().hex[:12], "typ": "text",
                     "x": 40, "y": y, "b": SEITE_BREIT, "html": html})
         y += max(60, zeilen * 22 + 30)

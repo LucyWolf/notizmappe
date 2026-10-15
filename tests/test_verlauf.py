@@ -139,7 +139,13 @@ pruefe("Und nicht mehr unter dem alten",
 b.loeschen("seite", [buch, absch, neuer])
 eintraege = b.papierkorb()["eintraege"]
 pruefe("Die Seite liegt im Papierkorb", any(e["art"] == "seite" for e in eintraege), eintraege)
-pruefe("Der Verlauf ist mitgegangen", any(e["art"] == "verlauf" for e in eintraege), eintraege)
+# Der Verlauf liegt mit im Papierkorb, bekommt aber keine eigene Zeile: er
+# gehört zur Seite und kommt mit ihr zurück.
+imkorb = [p.name for p in (DATEN / ".papierkorb").iterdir()]
+pruefe("Der Verlauf ist mitgegangen",
+       any(n.endswith(speicher.VERLAUF) for n in imkorb), imkorb)
+pruefe("Und steht nicht als eigene Zeile da",
+       not any(e["art"] == "verlauf" for e in eintraege), eintraege)
 seiteneintrag = next(e for e in eintraege if e["art"] == "seite")
 pruefe("Die Herkunft steht fest, wird nicht geraten", seiteneintrag["genau"] is True, seiteneintrag)
 
@@ -165,6 +171,48 @@ pruefe("Ausbrechen aus dem Papierkorb prallt ab",
        "fehler" in b.papierkorb_weg({"eintrag": "../../../etc/passwd"}))
 geleert = b.papierkorb_leeren()
 pruefe("Leeren räumt alles weg", "fehler" not in geleert and not b.papierkorb()["eintraege"], geleert)
+
+# --- Eine Seite kommt vollständig zurück -------------------------------------
+#
+# Beim Löschen wandern Anhänge und Verlauf als eigene Einträge mit in den
+# Papierkorb. Wer nur die Seite zurückholt, hat seine Bilder weggeworfen, ohne
+# es zu merken - genau das ist beim Durchspielen eines ganzen Tagesablaufs
+# herausgekommen.
+print("\nZurückholen bringt alles mit")
+import base64                                                       # noqa: E402
+
+ganz = b.seite_anlegen(buch, absch, "Mit Bild")["name"]
+bild = base64.b64encode(bytes.fromhex("89504e470d0a1a0a") + b"\x00" * 40 + b"BILD").decode()
+anhang = b.anhang_ablegen(buch, absch, ganz, "foto.png", bild)
+for i in range(3):
+    st = b.seite_lesen(buch, absch, ganz)
+    b.seite_speichern({"notizbuch": buch, "abschnitt": absch, "name": ganz, "rev": st["rev"],
+                       "titel": "Mit Bild", "elemente": [
+                           {"typ": "text", "x": 10, "y": 10, "b": 300, "html": f"Stand {i}"},
+                           {"typ": "bild", "x": 10, "y": 200, "b": 300,
+                            "datei": anhang["datei"], "beschriftung": ""}]})
+    time.sleep(1.05)
+fassungen_vorher = len(b.versionen(buch, absch, ganz)["versionen"])
+pruefe("Vorher gibt es Fassungen", fassungen_vorher >= 2, fassungen_vorher)
+
+b.loeschen("seite", [buch, absch, ganz])
+zeilen = b.papierkorb()["eintraege"]
+pruefe("Der Papierkorb zeigt eine Zeile, nicht drei",
+       len([z for z in zeilen if z["art"] in ("seite", "anhaenge", "verlauf")]) == 1, zeilen)
+zurueck = b.papierkorb_zurueck({"eintrag": zeilen[0]["eintrag"]})
+pruefe("Anhänge und Verlauf kommen mit", zurueck.get("mitgekommen") == 2, zurueck)
+pruefe("Das Bild ist wieder da",
+       "daten" in b.anhang_bild(buch, absch, ganz, anhang["datei"]))
+pruefe("Die Fassungen sind wieder da",
+       len(b.versionen(buch, absch, ganz)["versionen"]) == fassungen_vorher)
+pruefe("Und nichts bleibt im Papierkorb liegen", b.papierkorb()["eintraege"] == [])
+
+# Endgültig löschen muss das Beiwerk auch mitnehmen, sonst bleiben Reste.
+b.loeschen("seite", [buch, absch, ganz])
+eine = b.papierkorb()["eintraege"][0]["eintrag"]
+b.papierkorb_weg({"eintrag": eine})
+pruefe("Endgültig löschen lässt keine Reste zurück", b.papierkorb()["eintraege"] == [],
+       b.papierkorb()["eintraege"])
 
 # --- Mit Sperre --------------------------------------------------------------
 print("\nMit eingeschalteter Sperre")

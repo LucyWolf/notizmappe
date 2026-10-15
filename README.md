@@ -203,7 +203,11 @@ und Löschen mit. Ist die Sperre an, sind sie genauso verschlüsselt wie die Sei
 Klartext.
 
 **Papierkorb** — Gelöschtes wiederherstellen oder endgültig wegwerfen. Geleert
-wird **nie von allein**, nur auf Knopfdruck. Beim Löschen wird vermerkt, woher
+wird **nie von allein**, nur auf Knopfdruck. Eine Seite kommt **vollständig**
+zurück: Anhänge und frühere Fassungen wandern beim Löschen als eigene Einträge
+mit in den Papierkorb, bekommen dort aber keine eigene Zeile und kommen mit der
+Seite zurück. Wer nur die Seite zurückgeholt hätte, hätte seine Bilder
+weggeworfen, ohne es zu merken. Beim Löschen wird vermerkt, woher
 etwas kam; fehlt beim Zurückholen inzwischen der Abschnitt oder das Notizbuch,
 werden sie wieder angelegt. Einträge aus älteren Fassungen haben keinen
 Vermerk — dort wird der Platz aus dem Namen abgeleitet und als „Ort geraten"
@@ -286,8 +290,15 @@ Seite stehen in **einem** Element vom Typ `stift` — sonst wäre die Grenze von
 
 Die Punkte stehen flach hintereinander (x, y, Druck) — das spart gegenüber einer
 Liste von Objekten etwa die Hälfte, und eine Seite voller Handschrift hat
-schnell hunderttausend Zahlen. Gedeckelt wird bei 4000 Strichen je Seite und
-1400 Punkten je Strich; Koordinaten auf eine Nachkommastelle gerundet.
+schnell hunderttausend Zahlen. Gedeckelt wird bei 4000 Strichen je Seite, 1400
+Punkten je Strich und **400.000 Zahlen für die ganze Seite**; Koordinaten auf
+eine Nachkommastelle gerundet.
+
+Der letzte Deckel ist der wichtigste: ohne ihn dürfte eine Seite rechnerisch
+96 MB groß werden — und sie wird bei jedem Autosave vollständig neu
+geschrieben, verschlüsselt, vom Sync übertragen und alle zehn Minuten als
+Fassung abgelegt. Echte Handschrift braucht etwa 400 KB für 250 Striche, der
+Deckel liegt also beim Zehnfachen davon.
 
 Eine **leere** Zeichnung wird nicht mitgeschrieben — sonst bekäme jede Seite,
 die man nur anschaut, ein Element dazu.

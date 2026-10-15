@@ -81,6 +81,12 @@ SCHRIFT_MUSTER = re.compile(r"^[A-Za-z0-9 ,.\-_()\u00c0-\u024f]{1,80}$")
 # schnell hunderttausend Zahlen.
 MAX_STRICHE = 4000
 MAX_PUNKTE = 1400                   # je Strich
+# Deckel ueber allem. Ohne ihn duerfte eine Seite rechnerisch 96 MB gross
+# werden - und die wird bei jedem Autosave neu geschrieben, verschluesselt,
+# vom Sync uebertragen und alle zehn Minuten als Fassung abgelegt. Echte
+# Handschrift braucht etwa 400 KB fuer 250 Striche; 400.000 Zahlen sind rund
+# 3 MB und damit das Zehnfache davon.
+MAX_ZAHLEN_GESAMT = 400_000
 WEIT = 50000                        # weiter als so kann keine Seite sein
 FARBE_MUSTER = re.compile(r"^#[0-9a-fA-F]{6}$")
 
@@ -96,7 +102,10 @@ def striche(roh) -> list[dict]:
     if not isinstance(roh, list):
         return []
     aus = []
+    gesamt = 0
     for strich in roh[:MAX_STRICHE]:
+        if gesamt >= MAX_ZAHLEN_GESAMT:
+            break                               # die Seite ist voll
         if not isinstance(strich, dict):
             continue
         p = strich.get("p")
@@ -120,6 +129,7 @@ def striche(roh) -> list[dict]:
             dicke = float(strich.get("d") or 4)
         except (TypeError, ValueError):
             dicke = 4
+        gesamt += len(punkte)
         aus.append({
             "f": farbe.lower() if FARBE_MUSTER.match(farbe) else "#1d1d1f",
             "d": round(max(1.0, min(60.0, dicke)), 1),

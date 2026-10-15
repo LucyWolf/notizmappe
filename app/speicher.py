@@ -823,10 +823,17 @@ def papierkorb_liste() -> list[dict]:
     korb = wurzel() / PAPIERKORB
     if not korb.is_dir():
         return []
+    namen = {p.name for p in korb.iterdir()}
+    beiwerk = {n for name in namen for n in _beiwerk_namen(name) if n in namen}
     aus = []
     for p in sorted(korb.iterdir(), reverse=True):
         if p.name.startswith("."):
             continue                            # Herkunftsvermerke
+        # Anhaenge und Verlauf einer Seite, die auch im Papierkorb liegt, nicht
+        # als eigene Zeile zeigen: sie kommen mit der Seite zurueck. Nur wenn
+        # die Seite fehlt (aus einer aelteren Fassung), stehen sie fuer sich.
+        if p.name in beiwerk:
+            continue
         teile = _herkunft(korb, p.name) or _aus_namen(p.name)
         if p.is_dir():
             art = "anhaenge" if p.name.endswith(ANHANG) else (
@@ -841,6 +848,26 @@ def papierkorb_liste() -> list[dict]:
             "genau": _herkunft(korb, p.name) is not None,
         })
     return aus
+
+
+def _beiwerk_namen(name: str) -> list[str]:
+    """Wie die Eintraege heissen, die zu einer geloeschten Seite gehoeren.
+
+    Beim Loeschen wandern Anhaenge und frueherer Verlauf als eigene Eintraege
+    in den Papierkorb. Die Seite traegt dabei ihren ganzen Pfad im Namen
+    ("<Marke> Buch - Abschnitt - Seite.json"), das Beiwerk nur den Seitennamen
+    ("<Marke> Seite.anhang") - daran bin ich beim ersten Versuch vorbeigelaufen.
+    """
+    if not name.endswith(".json"):
+        return []
+    marke = name.split(" ", 1)[0]
+    letzter = name[:-5].split(" - ")[-1]
+    return [f"{marke} {letzter}{ANHANG}", f"{marke} {letzter}{VERLAUF}"]
+
+
+def _beiwerk(korb: Path, name: str) -> list[Path]:
+    """Dasselbe, aber nur was es wirklich gibt."""
+    return [korb / n for n in _beiwerk_namen(name) if (korb / n).exists()]
 
 
 def _korbeintrag(eintrag: str) -> Path:
@@ -903,13 +930,43 @@ def papierkorb_zurueck(eintrag: str) -> dict:
         (korb / f".{quelle.name}.herkunft").unlink(missing_ok=True)
     except OSError:
         pass
-    return {"zurueck": str(ziel.relative_to(wurzel()))}
+
+    # Anhaenge und frueherer Verlauf gehen mit zurueck - und zwar unter dem
+    # Namen, den die Seite jetzt hat: sie kann beim Zurueckholen umbenannt
+    # worden sein, weil der alte Name wieder vergeben war.
+    mitgekommen = 0
+    for weiteres in _beiwerk(korb, quelle.name):
+        endung = ANHANG if weiteres.name.endswith(ANHANG) else VERLAUF
+        if endung == VERLAUF:
+            wohin = ziel.parent / VERLAUF / ziel.stem
+            wohin.parent.mkdir(parents=True, exist_ok=True)
+        else:
+            wohin = ziel.parent / f"{ziel.stem}{ANHANG}"
+        if wohin.exists():
+            continue                            # da ist schon etwas - nichts ueberschreiben
+        try:
+            os.replace(weiteres, wohin)
+            (korb / f".{weiteres.name}.herkunft").unlink(missing_ok=True)
+            mitgekommen += 1
+        except OSError:
+            continue
+    return {"zurueck": str(ziel.relative_to(wurzel())), "mitgekommen": mitgekommen}
 
 
 def papierkorb_weg(eintrag: str) -> dict:
-    """Einen Eintrag endgültig löschen."""
+    """Einen Eintrag endgültig löschen - samt dem, was dazugehört.
+
+    Sonst blieben Anhaenge und Verlauf als verwaiste Eintraege liegen, die
+    niemand mehr zuordnen kann.
+    """
     korb = wurzel() / PAPIERKORB
     ziel = _korbeintrag(eintrag)
+    for weiteres in _beiwerk(korb, ziel.name):
+        shutil.rmtree(weiteres, ignore_errors=True)
+        try:
+            (korb / f".{weiteres.name}.herkunft").unlink(missing_ok=True)
+        except OSError:
+            pass
     if ziel.is_dir():
         shutil.rmtree(ziel, ignore_errors=True)
     else:
