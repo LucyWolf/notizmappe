@@ -200,9 +200,43 @@ const meldungWeg = () => { $('#meldung').hidden = true; };
 
 /* -------------------------------------------------------------------- Baum */
 
+/* Eine Meldung dort, wo der Baum stünde.
+ *
+ * Bisher stand bei einem Fehler nur im Hauptbereich etwas - und wer das Fenster
+ * schmal gezogen hat, sieht davon nichts und starrt auf eine schwarze Fläche.
+ * Die Seitenleiste ist aber immer da. */
+function baumMeldung(text, knopf) {
+  const baum = $('#baum');
+  baum.textContent = '';
+  const kasten = document.createElement('div');
+  kasten.className = 'baumleer';
+  kasten.textContent = text;
+  if (knopf) {
+    const k = document.createElement('button');
+    k.type = 'button';
+    k.textContent = knopf[0];
+    k.addEventListener('click', knopf[1]);
+    kasten.append(k);
+  }
+  baum.append(kasten);
+}
+
 function baumZeichnen() {
   const baum = $('#baum');
   baum.textContent = '';
+  if (!baumDaten || !baumDaten.length) {
+    baumMeldung('Hier liegt noch kein Notizbuch.', ['Einstellungen öffnen', () => tafelZeigen(true)]);
+    // Wo "hier" ist, gehört dazu - sonst sucht man an der falschen Stelle.
+    api('/api/einstellungen').then((e) => {
+      const wo = $('#ordner');
+      if (wo && e && e.ordner) { wo.textContent = e.ordner; wo.title = 'Datenordner: ' + e.ordner; }
+      const kasten = $('#baum').querySelector('.baumleer');
+      if (kasten && e && e.ordner) {
+        kasten.firstChild.textContent = `Hier liegt noch kein Notizbuch (${e.ordner}).`;
+      }
+    }).catch(() => { /* dann eben ohne Pfad */ });
+    return;
+  }
   for (const buch of baumDaten) {
     const bd = document.createElement('div');
     bd.className = 'buch' + (zugeklappt.has(buch.name) ? ' eingeklappt' : '');
@@ -2583,6 +2617,7 @@ $('#e-sperre-aus').addEventListener('click', async () => {
       wo = e && e.ordner ? `  (${e.ordner})` : '';
     } catch (x) { /* dann eben ohne */ }
     melden(f.message + wo, [['Einstellungen', () => tafelZeigen(true)]]);
+    baumMeldung(f.message + wo, ['Einstellungen öffnen', () => tafelZeigen(true)]);
     return;
   }
   // Nicht nur beim ganz leeren Datenordner: auch ein Notizbuch ohne Abschnitte oder
@@ -2592,17 +2627,30 @@ $('#e-sperre-aus').addEventListener('click', async () => {
   // Notizbuch anlegen - sonst sieht es aus, als waere alles weg.
   try {
     const e = await api('/api/einstellungen');
+    // Wo die Notizen liegen, gehört in die Leiste - die ist immer zu sehen,
+    // auch wenn das Fenster schmal gezogen ist.
+    if (e && e.ordner) {
+      const wo = $('#ordner');
+      wo.textContent = e.ordner;
+      wo.title = 'Datenordner: ' + e.ordner;
+    }
     if (!erstesSeitchen() && e.andere_orte && e.andere_orte.length) {
       const ziel = e.andere_orte[0];
+      const wechseln = async () => {
+        try {
+          await api('/api/ordner', 'POST', { ordner: ziel });
+          location.reload();
+        } catch (f) { melden('Umstellen ging nicht: ' + f.message); }
+      };
       melden(`Hier liegen keine Notizen (${e.ordner}). Gefunden in: ${ziel}`, [
-        ['Dorthin wechseln', async () => {
-          try {
-            await api('/api/ordner', 'POST', { ordner: ziel });
-            location.reload();
-          } catch (f) { melden('Umstellen ging nicht: ' + f.message); }
-        }],
+        ['Dorthin wechseln', wechseln],
         ['Einstellungen', () => tafelZeigen(true)],
       ]);
+      // Und dasselbe in der Leiste. Genau dieser Hinweis stand bisher nur im
+      // Hauptbereich - wer das Fenster schmal gezogen hat, sah eine schwarze
+      // Fläche und nirgends einen Grund.
+      baumMeldung(`Hier liegen keine Notizen:\n${e.ordner}\n\nGefunden in:\n${ziel}`,
+                  ['Dorthin wechseln', wechseln]);
       return;
     }
   } catch (f) { /* dann weiter wie bisher */ }
