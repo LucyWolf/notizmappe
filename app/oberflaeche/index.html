@@ -55,6 +55,7 @@ window.addEventListener('unhandledrejection', function (ev) {
         <nav id="reiter" aria-label="Werkzeuge">
           <button type="button" class="reiter" data-reiter="start" aria-selected="true">Start</button>
           <button type="button" class="reiter" data-reiter="zeichnen" aria-selected="false">Zeichnen</button>
+          <button type="button" class="reiter" data-reiter="verlauf" aria-selected="false">Verlauf</button>
         </nav>
         <button type="button" id="update" hidden></button>
         <span id="zustand"></span>
@@ -83,6 +84,15 @@ window.addEventListener('unhandledrejection', function (ev) {
         <button type="button" id="raus" title="Kleiner (Strg+-)">−</button>
         <span id="zoomwert">100%</span>
         <button type="button" id="rein" title="Größer (Strg++)">+</button>
+      </div>
+
+      <!-- Verlauf: frühere Fassungen und Gelöschtes. Beides liegt als Datei im
+           Datenordner und wandert mit dem Sync mit. -->
+      <div id="verlaufzeug" hidden>
+        <button type="button" id="v-versionen">🕐 Seitenversionen</button>
+        <button type="button" id="v-papierkorb">🗑 Papierkorb</button>
+        <button type="button" id="v-letzte">📝 Letzte Änderungen</button>
+        <span id="v-hinweis"></span>
       </div>
 
       <!-- Zeichnen. Die Striche liegen als Linien in der Seite, nicht als Bild:
@@ -323,6 +333,20 @@ window.addEventListener('unhandledrejection', function (ev) {
           <button type="button" id="e-zoom-rein">größer</button>
         </p>
         <p class="hinweis" id="e-lage"></p>
+      </section>
+    </div>
+  </div>
+
+  <div id="verlauffenster" hidden>
+    <div class="tafel" role="dialog" aria-label="Verlauf">
+      <header>
+        <strong id="v-titel">Verlauf</strong>
+        <button type="button" id="v-zu" title="Schließen">✕</button>
+      </header>
+      <section>
+        <p class="hinweis" id="v-erklaerung"></p>
+        <div id="v-liste" class="verlaufliste"></div>
+        <p class="knoepfe" id="v-knoepfe"></p>
       </section>
     </div>
   </div>

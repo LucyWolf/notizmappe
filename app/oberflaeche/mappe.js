@@ -84,6 +84,13 @@ const WEGE = {
   'POST /api/update':          (p, b) => b.update(),
   'GET /api/update/stand':     (p, b) => b.update_stand(),
   'POST /api/onenote':         (p, b, r) => b.onenote_einlesen(r),
+  'GET /api/versionen':        (p, b) => b.versionen(p.notizbuch, p.abschnitt, p.name),
+  'GET /api/version':          (p, b) => b.version_lesen(p.notizbuch, p.abschnitt, p.name, p.marke),
+  'POST /api/version':         (p, b, r) => b.version_zurueck(r),
+  'GET /api/papierkorb':       (p, b) => b.papierkorb(),
+  'POST /api/papierkorb/zurueck': (p, b, r) => b.papierkorb_zurueck(r),
+  'POST /api/papierkorb/weg':  (p, b, r) => b.papierkorb_weg(r),
+  'POST /api/papierkorb/leeren': (p, b) => b.papierkorb_leeren(),
   'GET /api/sperre':           (p, b) => b.sperre_stand(),
   'POST /api/sperre/an':       (p, b, r) => b.sperre_einrichten(r),
   'POST /api/sperre/auf':      (p, b, r) => b.entsperren(r),
@@ -1986,6 +1993,7 @@ function reiterSetzen(name) {
   }
   $('#werkzeuge').hidden = name !== 'start';
   $('#malzeug').hidden = name !== 'zeichnen';
+  $('#verlaufzeug').hidden = name !== 'verlauf';
   merker.legen('reiter', name);
   // Beim Verlassen des Reiters nicht weitermalen: sonst fängt der nächste Klick
   // in den Text einen Strich an.
@@ -2092,6 +2100,200 @@ function zeichnungLaden() {
   // Zeichnen gemalt und es waere nichts passiert.
   werkzeugSetzen(werkzeug, stiftnummer);
 }
+
+/* ----------------------------------------------------------------- Verlauf
+ *
+ * Frühere Fassungen und Gelöschtes. Beides liegt als Datei im Datenordner und
+ * wandert mit dem Sync mit - deshalb braucht es dafür keine Datenbank und kein
+ * Aufräumen im Hintergrund.
+ */
+
+function wann(sekunden) {
+  const d = new Date(sekunden * 1000);
+  const heute = new Date();
+  const gleich = d.toDateString() === heute.toDateString();
+  const uhr = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  if (gleich) return 'heute ' + uhr;
+  const gestern = new Date(heute.getTime() - 86400000);
+  if (d.toDateString() === gestern.toDateString()) return 'gestern ' + uhr;
+  return d.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + uhr;
+}
+
+function verlaufFenster(titel, erklaerung, zeilen, knoepfe) {
+  $('#v-titel').textContent = titel;
+  $('#v-erklaerung').textContent = erklaerung;
+  const liste = $('#v-liste');
+  liste.textContent = '';
+  if (!zeilen.length) {
+    const leer = document.createElement('p');
+    leer.className = 'verlaufleer';
+    leer.textContent = 'Hier liegt nichts.';
+    liste.append(leer);
+  }
+  for (const z of zeilen) {
+    const zeile = document.createElement('div');
+    zeile.className = 'verlaufzeile';
+    const wo = document.createElement('span');
+    wo.className = 'wann';
+    wo.textContent = z.wann;
+    const was = document.createElement('span');
+    was.className = 'was';
+    was.textContent = z.was;
+    if (z.ungenau) {
+      const hin = document.createElement('span');
+      hin.className = 'ungenau';
+      hin.textContent = ' (Ort geraten)';
+      was.append(hin);
+    }
+    zeile.append(wo, was);
+    for (const [beschriftung, tun] of (z.knoepfe || [])) {
+      const k = document.createElement('button');
+      k.type = 'button';
+      k.textContent = beschriftung;
+      k.addEventListener('click', tun);
+      zeile.append(k);
+    }
+    liste.append(zeile);
+  }
+  const unten = $('#v-knoepfe');
+  unten.textContent = '';
+  for (const [beschriftung, tun] of (knoepfe || [])) {
+    const k = document.createElement('button');
+    k.type = 'button';
+    k.textContent = beschriftung;
+    k.addEventListener('click', tun);
+    unten.append(k);
+  }
+  $('#verlauffenster').hidden = false;
+}
+
+function verlaufZu() { $('#verlauffenster').hidden = true; }
+$('#v-zu').addEventListener('click', verlaufZu);
+$('#verlauffenster').addEventListener('click', (ev) => { if (ev.target === $('#verlauffenster')) verlaufZu(); });
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape' && !$('#verlauffenster').hidden) verlaufZu();
+});
+
+async function versionenZeigen() {
+  if (!offen) { $('#v-hinweis').textContent = 'Erst eine Seite öffnen.'; return; }
+  if (schmutzig) await speichernJetzt();
+  const seite = { ...offen };
+  let r;
+  try {
+    r = await api(`/api/versionen?notizbuch=${encodeURIComponent(seite.notizbuch)}`
+      + `&abschnitt=${encodeURIComponent(seite.abschnitt)}&name=${encodeURIComponent(seite.name)}`);
+  } catch (f) { $('#v-hinweis').textContent = f.message; return; }
+
+  const zeilen = (r.versionen || []).map((v) => ({
+    wann: wann(v.zeit),
+    was: Math.round(v.groesse / 1024 * 10) / 10 + ' KB',
+    knoepfe: [
+      ['Ansehen', async () => {
+        try {
+          const alt = await api(`/api/version?notizbuch=${encodeURIComponent(seite.notizbuch)}`
+            + `&abschnitt=${encodeURIComponent(seite.abschnitt)}&name=${encodeURIComponent(seite.name)}`
+            + `&marke=${encodeURIComponent(v.marke)}`);
+          const text = (alt.elemente || [])
+            .map((e) => (e.typ === 'text' ? (e.html || '').replace(/<[^>]*>/g, ' ') : `[${e.typ}]`))
+            .join('\n').replace(/\s+/g, ' ').trim();
+          melden(`${wann(v.zeit)}: ${text.slice(0, 300) || '(ohne Text)'}`,
+                 [['Diese Fassung zurückholen', () => zurueckholen(seite, v.marke)]]);
+          verlaufZu();
+        } catch (f) { $('#v-hinweis').textContent = f.message; }
+      }],
+      ['Zurückholen', () => zurueckholen(seite, v.marke)],
+    ],
+  }));
+  verlaufFenster('Seitenversionen',
+    'Beim Zurückholen wird der jetzige Stand vorher als Fassung abgelegt - '
+    + 'du kannst es also gefahrlos ausprobieren. Eine Fassung entsteht höchstens '
+    + 'alle zehn Minuten, dazu immer vor einem Konflikt.',
+    zeilen, []);
+}
+
+async function zurueckholen(seite, marke) {
+  try {
+    await api('/api/version', 'POST', { ...seite, marke });
+    verlaufZu();
+    meldungWeg();
+    await seiteOeffnen(seite.notizbuch, seite.abschnitt, seite.name);
+    sagen('Fassung zurückgeholt');
+  } catch (f) {
+    $('#v-hinweis').textContent = f.message;
+    melden('Zurückholen ging nicht: ' + f.message);
+  }
+}
+
+const KORBART = { seite: 'Seite', ordner: 'Notizbuch oder Abschnitt',
+                  anhaenge: 'Anhänge', verlauf: 'frühere Fassungen' };
+
+async function papierkorbZeigen() {
+  let r;
+  try { r = await api('/api/papierkorb'); } catch (f) { $('#v-hinweis').textContent = f.message; return; }
+  const eintraege = r.eintraege || [];
+  const zeilen = eintraege.map((e) => ({
+    wann: wann(e.zeit),
+    was: `${e.titel}  ·  ${KORBART[e.art] || e.art}`,
+    ungenau: !e.genau,
+    knoepfe: [
+      ['Zurückholen', async () => {
+        try {
+          const z = await api('/api/papierkorb/zurueck', 'POST', { eintrag: e.eintrag });
+          await baumLaden();
+          sagen('Zurückgeholt: ' + z.zurueck, 4000);
+          papierkorbZeigen();
+        } catch (f) { $('#v-hinweis').textContent = f.message; }
+      }],
+      ['Endgültig löschen', async () => {
+        // Das ist der eine Knopf hier, der wirklich etwas vernichtet.
+        if (!confirm(`„${e.titel}" endgültig löschen? Das lässt sich nicht rückgängig machen.`)) return;
+        try {
+          await api('/api/papierkorb/weg', 'POST', { eintrag: e.eintrag });
+          papierkorbZeigen();
+        } catch (f) { $('#v-hinweis').textContent = f.message; }
+      }],
+    ],
+  }));
+  verlaufFenster('Papierkorb',
+    'Gelöschtes bleibt hier liegen, bis du es wegwirfst - von allein wird nichts '
+    + 'geleert. „Ort geraten" heißt: der Eintrag stammt aus einer älteren Fassung '
+    + 'ohne Herkunftsvermerk, der Platz wird aus dem Namen abgeleitet.',
+    zeilen,
+    eintraege.length ? [['Papierkorb leeren', async () => {
+      if (!confirm(`Alle ${eintraege.length} Einträge endgültig löschen?`)) return;
+      try {
+        const w = await api('/api/papierkorb/leeren', 'POST', {});
+        sagen(`${w.weg} Einträge gelöscht`);
+        papierkorbZeigen();
+      } catch (f) { $('#v-hinweis').textContent = f.message; }
+    }]] : []);
+}
+
+function letzteZeigen() {
+  const alle = [];
+  for (const buch of baumDaten) {
+    for (const ab of buch.abschnitte) {
+      for (const s of ab.seiten) {
+        alle.push({ buch: buch.name, abschnitt: ab.name, seite: s, zeit: s.geaendert || 0 });
+      }
+    }
+  }
+  alle.sort((a, b) => b.zeit - a.zeit);
+  const zeilen = alle.slice(0, 40).map((e) => ({
+    wann: e.zeit ? wann(e.zeit) : '—',
+    was: `${e.seite.titel}  ·  ${e.buch} / ${e.abschnitt}`,
+    knoepfe: [['Öffnen', async () => {
+      verlaufZu();
+      await seiteOeffnen(e.buch, e.abschnitt, e.seite.name);
+    }]],
+  }));
+  verlaufFenster('Letzte Änderungen',
+    'Die zuletzt angefassten Seiten, neueste zuerst.', zeilen, []);
+}
+
+$('#v-versionen').addEventListener('click', versionenZeigen);
+$('#v-papierkorb').addEventListener('click', papierkorbZeigen);
+$('#v-letzte').addEventListener('click', letzteZeigen);
 
 /* ------------------------------------------------------------------ Sperre */
 

@@ -127,6 +127,12 @@ tests/alle.sh              # alles, baut auch das Paket (~3 Minuten)
 tests/alle.sh --schnell    # nur API und Update
 ```
 
+`tests/test_verlauf.py` prüft Fassungen und Papierkorb: dass nicht bei jedem
+Speichern eine Fassung entsteht, dass Zurückholen den jetzigen Stand nicht
+kostet, dass Umbenennen und Löschen den Verlauf mitnehmen, dass sich der
+Papierkorb nicht von allein leert — und dass Fassungen bei eingeschalteter
+Sperre verschlüsselt auf der Platte liegen.
+
 `tests/test_einfuhr.py` prüft das Übernehmen. Eine echte `.one` lässt sich für
 einen Test nicht nachbauen, also wird alles drumherum geprüft: Dateierkennung,
 ein echtes CAB-Paket, das Anlegen von Notizbuch/Seiten/Anhängen — und vor allem,
@@ -169,6 +175,45 @@ direkt an dem Rechner, auf dem die Notizmappe läuft.
 Die Wahl steht in `~/.config/notizmappe/einstellungen.json` (Windows:
 `%APPDATA%\notizmappe`), nicht im Datenordner selbst. Ist `NOTIZEN_ORDNER` gesetzt,
 gewinnt das und die Wahl ist gesperrt — Tests und Docker verlassen sich darauf.
+
+## Verlauf
+
+Reiter **Verlauf** oben. Drei Sachen:
+
+**Seitenversionen** — frühere Fassungen der offenen Seite ansehen und
+zurückholen. Beim Zurückholen wird der jetzige Stand vorher selbst als Fassung
+weggelegt; man kann es also gefahrlos ausprobieren.
+
+Eine Fassung entsteht **höchstens alle zehn Minuten** — gespeichert wird
+automatisch alle paar Sekunden, eine Fassung je Speichern wären hunderte am Tag
+und ein Sync-Ordner voller Kleinkram. So entspricht eine Fassung ungefähr einem
+Arbeitsabschnitt. Vor einem Sync-Konflikt wird immer eine abgelegt, egal wie
+kurz das her ist.
+
+Aufgehoben wird **90 Tage lang, höchstens 50 Fassungen je Seite**, und
+ausgedünnt statt abgeschnitten: der letzte Tag vollständig, danach eine je Tag,
+ab einem Monat eine je Woche. Sonst bleiben nach einem langen Arbeitstag nur die
+letzten zwei Stunden übrig und der Stand von vorletzter Woche ist fort — und
+genau den sucht man.
+
+Die Fassungen liegen als Dateien neben der Seite
+(`<Abschnitt>/.verlauf/<Seite>/<Zeitstempel>.json`) und gehen beim Umbenennen
+und Löschen mit. Ist die Sperre an, sind sie genauso verschlüsselt wie die Seite
+— sonst stünde der Text, den man gerade versteckt, in der Fassung daneben im
+Klartext.
+
+**Papierkorb** — Gelöschtes wiederherstellen oder endgültig wegwerfen. Geleert
+wird **nie von allein**, nur auf Knopfdruck. Beim Löschen wird vermerkt, woher
+etwas kam; fehlt beim Zurückholen inzwischen der Abschnitt oder das Notizbuch,
+werden sie wieder angelegt. Einträge aus älteren Fassungen haben keinen
+Vermerk — dort wird der Platz aus dem Namen abgeleitet und als „Ort geraten"
+gekennzeichnet.
+
+**Letzte Änderungen** — die zuletzt angefassten Seiten, zum Draufklicken.
+
+Nicht übernommen aus dem OneNote-Band: „Nach Autor suchen", „Autoren
+ausblenden", „Als gelesen markieren". Das sind Mehrpersonen-Funktionen; hier hat
+am Server jeder seinen eigenen Ordner.
 
 ## Aus OneNote übernehmen
 

@@ -640,6 +640,44 @@ class Bruecke:
     def update_stand(self) -> dict:
         return aktualisieren.protokoll()
 
+    # --- Verlauf ----------------------------------------------------------
+
+    @_gefasst
+    def versionen(self, notizbuch: str, abschnitt: str, name: str) -> dict:
+        return {"versionen": speicher.verlauf_liste(notizbuch, abschnitt, name)}
+
+    @_gefasst
+    def version_lesen(self, notizbuch: str, abschnitt: str, name: str, marke: str) -> dict:
+        return speicher.verlauf_lesen(notizbuch, abschnitt, name, reinigen.text(marke, 40))
+
+    @_gefasst
+    def version_zurueck(self, rumpf: dict) -> dict:
+        d = rumpf or {}
+        return speicher.verlauf_zurueck(d.get("notizbuch", ""), d.get("abschnitt", ""),
+                                        d.get("name", ""), reinigen.text(d.get("marke"), 40))
+
+    @_gefasst
+    def papierkorb(self) -> dict:
+        return {"eintraege": speicher.papierkorb_liste()}
+
+    @_gefasst
+    def papierkorb_zurueck(self, rumpf: dict) -> dict:
+        eintrag = str((rumpf or {}).get("eintrag") or "")
+        if not eintrag:
+            raise Abbruch("Kein Eintrag angegeben")
+        return speicher.papierkorb_zurueck(eintrag)
+
+    @_gefasst
+    def papierkorb_weg(self, rumpf: dict) -> dict:
+        eintrag = str((rumpf or {}).get("eintrag") or "")
+        if not eintrag:
+            raise Abbruch("Kein Eintrag angegeben")
+        return speicher.papierkorb_weg(eintrag)
+
+    @_gefasst
+    def papierkorb_leeren(self) -> dict:
+        return speicher.papierkorb_leeren()
+
     # --- Aus OneNote einlesen ---------------------------------------------
 
     @_gefasst

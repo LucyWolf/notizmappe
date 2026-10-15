@@ -471,3 +471,51 @@ body {
 #malblatt.malt { pointer-events: auto; cursor: crosshair; }
 #malblatt.wischt { pointer-events: auto; cursor: cell; }
 #malblatt.schiebt { pointer-events: auto; cursor: grab; }
+
+
+/* --- Verlauf --------------------------------------------------------------- */
+
+#verlaufzeug { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+#verlaufzeug button {
+  height: 28px; padding: 0 10px; border: 1px solid var(--linie);
+  background: var(--papier); color: var(--schrift); border-radius: 6px;
+  cursor: pointer; font: inherit; font-size: 13px;
+}
+#verlaufzeug button:hover { border-color: var(--akzent); }
+#v-hinweis { font-size: 12px; color: var(--matt); margin-left: 8px; }
+
+#verlauffenster {
+  position: fixed; inset: 0; z-index: 25; display: flex;
+  align-items: flex-start; justify-content: center; padding: 40px 16px;
+  background: color-mix(in srgb, #000 45%, transparent); overflow: auto;
+}
+#verlauffenster .tafel {
+  width: min(620px, 100%); background: var(--papier); color: var(--schrift);
+  border: 1px solid var(--linie); border-radius: 10px; padding: 0 0 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .35);
+}
+#verlauffenster header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-bottom: 1px solid var(--linie);
+}
+#verlauffenster #v-zu {
+  border: 0; background: transparent; color: var(--matt); font-size: 16px; cursor: pointer;
+}
+#verlauffenster section { padding: 12px 16px; }
+#verlauffenster .hinweis { color: var(--matt); font-size: 12px; margin: 0 0 10px; }
+#verlauffenster .knoepfe { display: flex; gap: 8px; margin: 12px 0 0; flex-wrap: wrap; }
+#verlauffenster button:not(#v-zu) {
+  padding: 6px 11px; border: 1px solid var(--linie); border-radius: 6px;
+  background: var(--papier); color: var(--schrift); font: inherit; font-size: 13px; cursor: pointer;
+}
+#verlauffenster button:not(#v-zu):hover { border-color: var(--akzent); }
+.verlaufliste { max-height: 50vh; overflow: auto; border: 1px solid var(--linie); border-radius: 8px; }
+.verlaufzeile {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+  border-bottom: 1px solid var(--linie);
+}
+.verlaufzeile:last-child { border-bottom: 0; }
+.verlaufzeile .wann { font-size: 12px; color: var(--matt); min-width: 130px; }
+.verlaufzeile .was { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.verlaufzeile .ungenau { color: var(--matt); font-size: 11px; }
+.verlaufleer { padding: 18px; text-align: center; color: var(--matt); font-size: 13px; }

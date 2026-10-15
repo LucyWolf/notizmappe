@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import sys
 import time
 import unicodedata
@@ -472,6 +473,149 @@ def anhaenge_aufraeumen(buch: str, abschnitt: str, seite: str, elemente: list) -
     return weg
 
 
+# --- Verlauf: frühere Fassungen einer Seite ----------------------------------
+#
+# Eine Datei je Fassung, in einem Ordner neben der Seite. Keine Datenbank: der
+# Datenordner liegt im Sync, und die Fassungen sollen dort genauso ankommen wie
+# die Seiten selbst.
+VERLAUF = ".verlauf"
+VERLAUF_ABSTAND = 10 * 60           # höchstens alle 10 Minuten eine Fassung
+VERLAUF_TAGE = 90
+VERLAUF_ANZAHL = 50                 # je Seite
+
+
+def verlauf_ordner(datei: Path) -> Path:
+    return datei.parent / VERLAUF / datei.stem
+
+
+def verlauf_liste(buch: str, abschnitt: str, name: str) -> list[dict]:
+    """Die Fassungen einer Seite, neueste zuerst."""
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+    ordner = verlauf_ordner(datei)
+    if not ordner.is_dir():
+        return []
+    aus = []
+    for p in sorted(ordner.glob("*.json"), reverse=True):
+        try:
+            aus.append({"marke": p.stem, "zeit": p.stat().st_mtime, "groesse": p.stat().st_size})
+        except OSError:
+            continue
+    return aus
+
+
+def _ausduennen(ordner: Path) -> int:
+    """Alte Fassungen wegräumen: erst alle, dann eine je Tag, dann eine je Woche.
+
+    Nicht einfach "die ältesten weg": sonst bleiben nach einem langen Arbeitstag
+    nur die letzten zwei Stunden übrig und der Stand von vorletzter Woche ist
+    fort - und genau den sucht man.
+    """
+    fassungen = sorted(ordner.glob("*.json"), reverse=True)
+    if not fassungen:
+        return 0
+    jetzt = time.time()
+    behalten, gesehen_tag, gesehen_woche = [], set(), set()
+    weg = []
+    for p in fassungen:
+        try:
+            alter = jetzt - p.stat().st_mtime
+        except OSError:
+            continue
+        if alter > VERLAUF_TAGE * 86400:
+            weg.append(p)
+            continue
+        if alter < 86400:                       # letzter Tag: alles behalten
+            behalten.append(p)
+            continue
+        tag = time.strftime("%Y-%m-%d", time.localtime(p.stat().st_mtime))
+        woche = time.strftime("%Y-%W", time.localtime(p.stat().st_mtime))
+        if alter < 30 * 86400:
+            if tag in gesehen_tag:
+                weg.append(p)
+                continue
+            gesehen_tag.add(tag)
+        else:
+            if woche in gesehen_woche:
+                weg.append(p)
+                continue
+            gesehen_woche.add(woche)
+        behalten.append(p)
+
+    # Immer noch zu viele? Dann von hinten, also von den ältesten.
+    while len(behalten) > VERLAUF_ANZAHL:
+        weg.append(behalten.pop())
+
+    for p in weg:
+        try:
+            p.unlink()
+        except OSError:
+            pass
+    return len(weg)
+
+
+def verlauf_merken(datei: Path, erzwingen: bool = False) -> bool:
+    """Den aktuellen Stand einer Seite als Fassung beiseitelegen.
+
+    Gespeichert wird automatisch alle paar Sekunden - eine Fassung je Speichern
+    wären hunderte am Tag. Deshalb höchstens alle zehn Minuten eine; so
+    entspricht eine Fassung ungefähr einem Arbeitsabschnitt. Vor einem
+    Konflikt wird immer eine abgelegt, egal wie kurz das her ist.
+    """
+    if not datei.is_file():
+        return False
+    ordner = verlauf_ordner(datei)
+    try:
+        ordner.mkdir(parents=True, exist_ok=True)
+        neueste = max((p.stat().st_mtime for p in ordner.glob("*.json")), default=0)
+        if not erzwingen and time.time() - neueste < VERLAUF_ABSTAND:
+            return False
+        marke = time.strftime("%Y%m%d-%H%M%S")
+        ziel = ordner / f"{marke}.json"
+        if ziel.exists():
+            return False
+        # Roh kopieren, nicht neu schreiben: so bleibt die Fassung genau das,
+        # was auf der Platte stand - verschlüsselt, wenn die Sperre an ist.
+        ziel.write_bytes(datei.read_bytes())
+        _ausduennen(ordner)
+        return True
+    except OSError:
+        return False                            # Verlauf ist nett, nicht wichtig
+
+
+def verlauf_lesen(buch: str, abschnitt: str, name: str, marke: str) -> dict:
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+    sicher = slug(marke)
+    if not sicher or sicher != marke:
+        raise SpeicherFehler("Unerlaubte Fassung")
+    quelle = verlauf_ordner(datei) / f"{sicher}.json"
+    if not quelle.is_file():
+        raise SpeicherFehler("Die Fassung gibt es nicht mehr")
+    daten = _json_lesen(quelle)
+    daten.setdefault("elemente", [])
+    daten["marke"] = sicher
+    daten["zeit"] = quelle.stat().st_mtime
+    return daten
+
+
+def verlauf_zurueck(buch: str, abschnitt: str, name: str, marke: str) -> dict:
+    """Eine alte Fassung wieder zur aktuellen machen.
+
+    Der jetzige Stand wird vorher als Fassung abgelegt - Zurückholen darf nie
+    etwas kosten, sonst traut sich niemand, es auszuprobieren.
+    """
+    alt = verlauf_lesen(buch, abschnitt, name, marke)
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+    verlauf_merken(datei, erzwingen=True)
+    jetzt = seite_lesen(buch, abschnitt, name)
+    neu = dict(alt)
+    for raus in ("marke", "zeit", "name", "mtime"):
+        neu.pop(raus, None)
+    neu["rev"] = int(jetzt.get("rev", 1)) + 1
+    neu["geaendert"] = time.time()
+    _schreiben(datei, neu)
+    return {"rev": neu["rev"], "titel": neu.get("titel", ""), "marke": marke}
+
+
 def seite_lesen(buch: str, abschnitt: str, name: str) -> dict:
     datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
     if not datei.is_file():
@@ -497,6 +641,7 @@ def seite_speichern(buch: str, abschnitt: str, name: str, rev: int,
     if int(alt.get("rev", 1)) != int(rev):
         # Jemand anders (oder der Sync) war schneller. Nichts ueberschreiben.
         raise KonfliktFehler(alt)
+    verlauf_merken(datei)
     neu = dict(alt)
     neu.pop("name", None)
     neu.pop("mtime", None)
@@ -535,6 +680,15 @@ def seite_umbenennen(buch: str, abschnitt: str, name: str, titel: str) -> str:
         alt_ordner = datei.parent / f"{datei.stem}{ANHANG}"
         if alt_ordner.is_dir():
             os.replace(alt_ordner, datei.parent / f"{neuer}{ANHANG}")
+        # Der Verlauf heisst auch nach der Seite. Bleibt er unter dem alten
+        # Namen liegen, sind alle frueheren Fassungen unerreichbar - und die
+        # Seite sieht aus, als haette sie nie eine gehabt.
+        alt_verlauf = verlauf_ordner(datei)
+        if alt_verlauf.is_dir():
+            ziel_verlauf = datei.parent / VERLAUF / neuer
+            ziel_verlauf.parent.mkdir(parents=True, exist_ok=True)
+            if not ziel_verlauf.exists():
+                os.replace(alt_verlauf, ziel_verlauf)
         return neuer
     _schreiben(datei, daten)
     return datei.stem
@@ -552,10 +706,32 @@ def in_papierkorb(teile: list[str]) -> None:
     marke = time.strftime("%Y%m%d-%H%M%S")
     ziel = korb / frei(korb, f"{marke} {' - '.join(teile)}".replace("/", "-"))
     os.replace(quelle, ziel)
+    # Woher es kam, ausdruecklich festhalten. Aus dem Namen laesst sich das zwar
+    # meist ablesen, aber nicht, wenn ein Notizbuch selbst " - " im Namen hat -
+    # und beim Zurueckholen darf nicht geraten werden.
+    try:
+        (korb / f".{ziel.name}.herkunft").write_text(
+            json.dumps({"teile": teile, "zeit": time.time()}, ensure_ascii=False),
+            encoding="utf-8")
+    except OSError:
+        pass
     if quelle.suffix == ".json":
-        mit = quelle.with_name(f"{quelle.stem}{ANHANG}")
-        if mit.is_dir():
-            os.replace(mit, korb / frei(korb, f"{marke} {quelle.stem}{ANHANG}"))
+        # Anhaenge und frueheren Fassungen gehen mit - wer eine Seite
+        # zurueckholt, will beides nicht verloren haben. Auch sie bekommen
+        # ihren Herkunftsvermerk, sonst waeren sie nachher nicht zuzuordnen.
+        for ordner_, endung in ((quelle.with_name(f"{quelle.stem}{ANHANG}"), ANHANG),
+                                (verlauf_ordner(quelle), VERLAUF)):
+            if not ordner_.is_dir():
+                continue
+            mitziel = korb / frei(korb, f"{marke} {quelle.stem}{endung}")
+            os.replace(ordner_, mitziel)
+            try:
+                (korb / f".{mitziel.name}.herkunft").write_text(
+                    json.dumps({"teile": teile[:-1] + [f"{quelle.stem}{endung}"],
+                                "zeit": time.time()}, ensure_ascii=False),
+                    encoding="utf-8")
+            except OSError:
+                pass
 
 
 def inhalte() -> list[Path]:
@@ -586,6 +762,149 @@ def umstellen(chiffrieren: bool) -> int:
         except (OSError, tresor.TresorFehler):
             continue
     return getan
+
+
+# --- Papierkorb --------------------------------------------------------------
+#
+# Geleert wird nur auf Knopfdruck. Nichts verschwindet hinter dem Rücken des
+# Benutzers - das ist der ganze Sinn eines Papierkorbs.
+
+def _herkunft(korb: Path, name: str) -> list[str] | None:
+    try:
+        daten = json.loads((korb / f".{name}.herkunft").read_text(encoding="utf-8"))
+        teile = daten.get("teile")
+        return [str(t) for t in teile] if isinstance(teile, list) and teile else None
+    except (OSError, ValueError, TypeError):
+        return None
+
+
+def _aus_namen(name: str) -> list[str]:
+    """Notbehelf für Einträge ohne Herkunftsvermerk (von vor dieser Fassung)."""
+    ohne_marke = name.split(" ", 1)[1] if " " in name else name
+    stamm = ohne_marke[:-5] if ohne_marke.endswith(".json") else ohne_marke
+    teile = [t for t in stamm.split(" - ") if t]
+    return teile or [stamm]
+
+
+def papierkorb_liste() -> list[dict]:
+    """Was im Papierkorb liegt, neueste zuerst."""
+    korb = wurzel() / PAPIERKORB
+    if not korb.is_dir():
+        return []
+    aus = []
+    for p in sorted(korb.iterdir(), reverse=True):
+        if p.name.startswith("."):
+            continue                            # Herkunftsvermerke
+        teile = _herkunft(korb, p.name) or _aus_namen(p.name)
+        if p.is_dir():
+            art = "anhaenge" if p.name.endswith(ANHANG) else (
+                "verlauf" if p.name.endswith(VERLAUF) else "ordner")
+        else:
+            art = "seite"
+        aus.append({
+            "eintrag": p.name,
+            "art": art,
+            "titel": " / ".join(teile),
+            "zeit": p.stat().st_mtime,
+            "genau": _herkunft(korb, p.name) is not None,
+        })
+    return aus
+
+
+def _korbeintrag(eintrag: str) -> Path:
+    korb = wurzel() / PAPIERKORB
+    name = slug(eintrag) if "/" in eintrag or "\\" in eintrag else eintrag
+    ziel = (korb / name).resolve()
+    if not str(ziel).startswith(str(korb.resolve())) or not ziel.exists():
+        raise SpeicherFehler("Den Eintrag gibt es im Papierkorb nicht")
+    return ziel
+
+
+def papierkorb_zurueck(eintrag: str) -> dict:
+    """Einen Eintrag an seinen alten Platz zurücklegen.
+
+    Fehlen Notizbuch oder Abschnitt inzwischen, werden sie neu angelegt - sonst
+    liesse sich eine Seite nicht zurückholen, nur weil der Abschnitt darüber
+    auch gelöscht wurde.
+    """
+    korb = wurzel() / PAPIERKORB
+    quelle = _korbeintrag(eintrag)
+    teile = _herkunft(korb, quelle.name) or _aus_namen(quelle.name)
+
+    if quelle.is_dir() and not quelle.name.endswith((ANHANG, VERLAUF)):
+        ziel = wurzel() / slug(teile[-1] if teile else quelle.name)
+        if len(teile) >= 2:
+            buch = wurzel() / slug(teile[0])
+            buch.mkdir(parents=True, exist_ok=True)
+            ziel = buch / slug(teile[-1])
+        if ziel.exists():
+            ziel = ziel.with_name(frei(ziel.parent, ziel.name))
+        ziel.parent.mkdir(parents=True, exist_ok=True)
+        os.replace(quelle, ziel)
+    else:
+        if len(teile) < 3:
+            raise SpeicherFehler("Zu diesem Eintrag ist nicht bekannt, wohin er gehört")
+        ordner = wurzel() / slug(teile[0]) / slug(teile[1])
+        ordner.mkdir(parents=True, exist_ok=True)
+        roh = teile[2]
+        for endung in (".json", ANHANG, VERLAUF):
+            if roh.endswith(endung):
+                roh = roh[: -len(endung)]
+                break
+        stamm = slug(roh) or "Wiederhergestellt"
+        # Die Endung richtet sich danach, was wirklich im Papierkorb liegt -
+        # nicht danach, was im Namen steht.
+        if quelle.is_file():
+            endung = ".json"
+        elif quelle.name.endswith(ANHANG):
+            endung = ANHANG
+        else:
+            endung = VERLAUF
+        if endung == VERLAUF:
+            ordner = ordner / VERLAUF
+            ordner.mkdir(parents=True, exist_ok=True)
+            endung = ""
+        ziel = ordner / (frei(ordner, stamm, endung) + endung)
+        os.replace(quelle, ziel)
+
+    try:
+        (korb / f".{quelle.name}.herkunft").unlink(missing_ok=True)
+    except OSError:
+        pass
+    return {"zurueck": str(ziel.relative_to(wurzel()))}
+
+
+def papierkorb_weg(eintrag: str) -> dict:
+    """Einen Eintrag endgültig löschen."""
+    korb = wurzel() / PAPIERKORB
+    ziel = _korbeintrag(eintrag)
+    if ziel.is_dir():
+        shutil.rmtree(ziel, ignore_errors=True)
+    else:
+        ziel.unlink(missing_ok=True)
+    try:
+        (korb / f".{ziel.name}.herkunft").unlink(missing_ok=True)
+    except OSError:
+        pass
+    return {"weg": ziel.name}
+
+
+def papierkorb_leeren() -> dict:
+    korb = wurzel() / PAPIERKORB
+    if not korb.is_dir():
+        return {"weg": 0}
+    weg = 0
+    for p in list(korb.iterdir()):
+        try:
+            if p.is_dir():
+                shutil.rmtree(p, ignore_errors=True)
+            else:
+                p.unlink()
+            if not p.name.startswith("."):
+                weg += 1
+        except OSError:
+            continue
+    return {"weg": weg}
 
 
 def stand(buch: str, abschnitt: str, name: str) -> dict:
