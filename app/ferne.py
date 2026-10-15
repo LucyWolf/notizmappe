@@ -93,7 +93,7 @@ def _schicken(adresse: str, weg: str, daten: bytes | None, kopf: dict,
     try:
         # Keine Umleitungen verfolgen: eine Anmeldung, die woandershin zeigt,
         # soll auffallen und nicht stillschweigend woanders landen.
-        with urllib.request.urlopen(anfrage, timeout=ZEIT) as antwort:
+        with _oeffner.open(anfrage, timeout=ZEIT) as antwort:
             return antwort.status, antwort.read(MAX_ANTWORT), _kopf(antwort.headers)
     except urllib.error.HTTPError as f:
         return f.code, f.read(MAX_ANTWORT), _kopf(f.headers)
@@ -105,12 +105,22 @@ def _schicken(adresse: str, weg: str, daten: bytes | None, kopf: dict,
 
 
 class _OhneUmleitung(urllib.request.HTTPRedirectHandler):
+    """Umleitungen nicht verfolgen.
+
+    Eine Anmeldung, die woandershin zeigt, soll auffallen und nicht
+    stillschweigend woanders landen.
+    """
+
     def redirect_request(self, *args, **kwargs):
         return None
 
 
+# Ein eigener Oeffner, **nicht** per install_opener gesetzt. Das waere
+# prozessweit - und hat dem Updater prompt die Downloads zerschossen, weil
+# GitHub dabei umleitet ("HTTP Error 302: Found"). Ein Modul, das die
+# Voreinstellung des ganzen Programms verstellt, ist eine Falle fuer jedes
+# andere Modul.
 _oeffner = urllib.request.build_opener(_OhneUmleitung)
-urllib.request.install_opener(_oeffner)
 
 
 def anmelden(adresse: str, benutzer: str, passwort: str) -> dict:

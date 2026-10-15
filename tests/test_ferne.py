@@ -113,6 +113,49 @@ server = ThreadingHTTPServer(("127.0.0.1", 0), Gegenserver)
 threading.Thread(target=server.serve_forever, daemon=True).start()
 ADRESSE = f"http://127.0.0.1:{server.server_port}"
 
+# --- Kein Modul verstellt die Voreinstellung des ganzen Programms ------------
+#
+# ferne.py will Umleitungen nicht verfolgen: eine Anmeldung, die woandershin
+# zeigt, soll auffallen. Das per install_opener zu setzen gilt aber
+# prozessweit - und hat dem Updater prompt die Downloads zerschossen, weil
+# GitHub dabei umleitet ("HTTP Error 302: Found"). Gemerkt hat es niemand, bis
+# die Windows-Probe das Selbstupdate durchspielte.
+print("Nebenwirkungen")
+import urllib.request                                               # noqa: E402
+
+
+class Umleiter(BaseHTTPRequestHandler):
+    def log_message(self, *a):
+        pass
+
+    def do_GET(self):
+        if self.path == "/um":
+            self.send_response(302)
+            self.send_header("Location", "/ziel")
+            self.end_headers()
+        else:
+            self.send_response(200)
+            self.send_header("Content-Length", "2")
+            self.end_headers()
+            self.wfile.write(b"ok")
+
+
+umleitung = ThreadingHTTPServer(("127.0.0.1", 0), Umleiter)
+threading.Thread(target=umleitung.serve_forever, daemon=True).start()
+wohin = f"http://127.0.0.1:{umleitung.server_port}/um"
+try:
+    gelesen = urllib.request.urlopen(wohin, timeout=5).read()
+except Exception as f:                                              # noqa: BLE001
+    gelesen = f"FEHLER {f}"
+pruefe("Umleitungen funktionieren trotz geladenem ferne.py", gelesen == b"ok", gelesen)
+# Nur der Code zählt - im Kommentar darüber darf das Wort stehen, dort erklärt
+# es ja gerade, warum es nicht benutzt wird.
+ohne_kommentare = "\n".join(
+    z.split("#")[0] for z in (WURZEL / "app/ferne.py").read_text(encoding="utf-8").splitlines())
+pruefe("ferne.py setzt keinen prozessweiten Öffner",
+       "install_opener" not in ohne_kommentare)
+umleitung.shutdown()
+
 # --- Anmelden ----------------------------------------------------------------
 print("Anmelden")
 pruefe("Vorher nicht verbunden", ferne.stand()["aktiv"] is False)
