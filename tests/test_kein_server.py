@@ -105,9 +105,23 @@ for p in list(quellen("app/*.py")) + list(quellen("app/oberflaeche/*.js", "app/o
     for was, muster in [("keine Adresse 127.0.0.1", r"127\.0\.0\.1"),
                         ("kein localhost", r"localhost"),
                         ("kein ping", r"\bping\b"),
-                        ("keine Rede von Servern", r"[Ss]erver")]:
-        # aktualisieren.py darf GitHub nennen; das ist der einzige Weg nach draussen.
-        if p.name == "aktualisieren.py" and was == "keine Rede von Servern":
+                        # Nicht mehr das Wort allein - seit sie sich mit ihrer
+                        # eigenen Notizmappe auf einem Server verbinden kann,
+                        # kommt es in der Oberflaeche und in der Bruecke
+                        # berechtigt vor. Verboten ist, was einen Server
+                        # *macht*: ein Rahmenwerk, ein lauschender Socket.
+                        ("nichts, was selbst Server spielt",
+                         r"\b(fastapi|uvicorn|starlette|flask|bottle|tornado|waitress"
+                         r"|HTTPServer|socketserver|ThreadingHTTPServer)\b"
+                         r"|\.listen\(|\.bind\(")]:
+        # Zwei Module duerfen ins Netz, und nur sie:
+        #   aktualisieren.py  sieht bei GitHub nach Updates
+        #   ferne.py          verbindet sich mit ihrer eigenen Notizmappe auf
+        #                     einem Server - auf ihren ausdruecklichen Wunsch
+        # Der Sinn dieser Pruefung bleibt derselbe: es gibt keinen Server *im*
+        # Programm. Es gibt die Moeglichkeit, sich mit einem zu verbinden, und
+        # die steht an genau einer Stelle.
+        if p.name in ("aktualisieren.py", "ferne.py"):
             continue
         # "http_server=False" ist die Abschaltung selbst - die soll dastehen.
         geprueft = text.replace("http_server=False", "")
@@ -122,13 +136,40 @@ for name in ("Dockerfile", "docker-compose.yml", ".dockerignore", "starten.sh",
              "app/templates/anmelden.html", "requirements-server.txt"):
     pruefe(f"{name} gibt es nicht", not (WURZEL / name).exists())
 
+# Der Kern bleibt voellig frei davon. Dort waere schon das Wort ein Zeichen,
+# dass wieder etwas abgedriftet ist - diese Module haben mit Netz nichts zu tun.
+for name in ("speicher.py", "tresor.py", "reinigen.py", "konfig.py", "einfuhr.py"):
+    text = (WURZEL / "app" / name).read_text(encoding="utf-8")
+    treffer = re.search(r"[Ss]erver", text)
+    pruefe(f"app/{name}: keine Rede von Servern", not treffer,
+           treffer.group(0) if treffer else "")
+
+# --- Die Verbindung zum eigenen Server liegt an genau einer Stelle -----------
+ferne = (WURZEL / "app/ferne.py").read_text(encoding="utf-8")
+pruefe("ferne.py nimmt die Adresse von ihr entgegen, hat keine eingebaute",
+       not re.search(r"https?://[a-z0-9.]+", ferne.replace("http://", "").replace("https://", ""))
+       and 'konfig.lesen()' in ferne)
+pruefe("ferne.py merkt sich kein Passwort",
+       "ferne_passwort" not in ferne and "passwort=" not in ferne.replace('"passwort": passwort', ''))
+netz = []
+for p in quellen("app/*.py"):
+    if p.name in ("aktualisieren.py", "ferne.py"):
+        continue
+    text = p.read_text(encoding="utf-8")
+    if re.search(r"^\\s*(import|from)\\s+(urllib|socket|http\\.client|requests|httpx)\\b", text, re.M):
+        netz.append(p.name)
+pruefe("kein anderes Modul holt sich Netzwerkzeug", not netz, ", ".join(netz))
+pruefe("die Bruecke leitet nur die bekannten Methoden weiter",
+       "FERN = {" in (WURZEL / "app/bruecke.py").read_text(encoding="utf-8"))
+
 # --- Das Einzige, was ins Netz darf, ist die Update-Prüfung ------------------
 akt = (WURZEL / "app/aktualisieren.py").read_text(encoding="utf-8")
 pruefe("Updates holen von GitHub, sonst nirgendwoher",
        "api.github.com" in akt and not re.search(r"https?://(?!api\.github\.com)[a-z]", akt))
 andere = [p.relative_to(WURZEL) for p in quellen("app/*.py")
-          if p.name != "aktualisieren.py" and re.search(r"urllib|requests\.|httpx", p.read_text(encoding="utf-8"))]
-pruefe("nur aktualisieren.py geht ueberhaupt ins Netz", not andere, andere)
+          if p.name not in ("aktualisieren.py", "ferne.py")
+          and re.search(r"urllib|requests\.|httpx", p.read_text(encoding="utf-8"))]
+pruefe("nur aktualisieren.py und ferne.py gehen ins Netz", not andere, andere)
 
 print()
 print("kein Server drin" if not fehler else f"{len(fehler)} FEHLER:\n - " + "\n - ".join(fehler))

@@ -24,6 +24,7 @@ from pathlib import Path
 
 import aktualisieren
 import einfuhr
+import ferne
 import konfig
 import reinigen
 import speicher
@@ -117,11 +118,31 @@ def _ins_protokoll(wo: str, x: Exception) -> None:
         pass
 
 
+# Was bei bestehender Verbindung auf dem Server passiert statt hier. Dieselbe
+# Liste, die der Server freigibt - alles andere bleibt oertlich: die eigenen
+# Schriften, die eigene Sperre, die eigenen Updates.
+FERN = {
+    "baum", "notizbuch_anlegen", "abschnitt_anlegen", "seite_anlegen",
+    "seite_lesen", "seite_speichern", "seite_umbenennen", "stand", "loeschen",
+    "anhang_ablegen", "anhang_bild", "favorit_setzen",
+    "versionen", "version_lesen", "version_zurueck",
+    "papierkorb", "papierkorb_zurueck", "papierkorb_weg", "papierkorb_leeren",
+}
+
+
 def _gefasst(f):
     """Fehler als Antwort, nicht als Ausnahme."""
     @functools.wraps(f)
     def innen(*args, **kwargs):
         _takt()
+        # Verbunden arbeitet das Fenster gegen den Server, und zwar ganz. Hier
+        # umzuleiten statt in jeder Methode einzeln heisst: es kann keine
+        # Methode geben, die versehentlich doch in den eigenen Ordner schreibt.
+        if f.__name__ in FERN and ferne.aktiv():
+            try:
+                return ferne.ruf(f.__name__, list(args[1:]))
+            except ferne.FerneFehler as x:
+                return {"fehler": str(x), "art": "ferne"}
         try:
             return f(*args, **kwargs)
         except tresor.TresorFehler as x:
@@ -337,6 +358,13 @@ class Bruecke:
     @_gefasst
     def anhang_speichern_unter(self, notizbuch: str, abschnitt: str, name: str, datei: str) -> dict:
         """Kopie irgendwohin legen, wo der Benutzer sie haben will."""
+        if ferne.aktiv():
+            inhalt = ferne.anhang_holen(notizbuch, abschnitt, name, datei)
+            ziel = self._dialog_speichern(speicher.slug(datei) or "anhang")
+            if not ziel:
+                return {"abgebrochen": True}
+            Path(ziel).write_bytes(inhalt)
+            return {"ok": True, "ziel": str(ziel)}
         pfad = speicher.anhang_lesen(notizbuch, abschnitt, name, datei)
         ziel = self._dialog_speichern(pfad.name)
         if not ziel:
@@ -351,10 +379,18 @@ class Bruecke:
         Programm etwas damit anfangen, also muss eine lesbare Kopie her. Sie
         liegt in einem Ordner nur fuer diesen Benutzer und verschwindet, sobald
         wieder zugesperrt wird."""
+        global _klartext_ordner
+        if ferne.aktiv():
+            # Vom Server geholt und hier abgelegt - oeffnen kann nur der eigene
+            # Rechner, und das ist der Vorteil gegenueber dem Browser.
+            if not _klartext_ordner:
+                _klartext_ordner = tempfile.mkdtemp(prefix="notizmappe-offen-")
+            kopie = Path(_klartext_ordner) / (speicher.slug(datei) or "anhang")
+            kopie.write_bytes(ferne.anhang_holen(notizbuch, abschnitt, name, datei))
+            return kopie
         pfad = speicher.anhang_lesen(notizbuch, abschnitt, name, datei)
         if not speicher.verschluesselt():
             return pfad
-        global _klartext_ordner
         if not _klartext_ordner:
             _klartext_ordner = tempfile.mkdtemp(prefix="notizmappe-offen-")
         kopie = Path(_klartext_ordner) / pfad.name
@@ -626,14 +662,23 @@ class Bruecke:
             for buch in speicher.baum():
                 gesamt += sum(len(a["seiten"]) for a in buch["abschnitte"])
         korb = ordner / speicher.PAPIERKORB if ordner else None
+        verbindung = ferne.stand()
+        if verbindung["aktiv"]:
+            # Der Pfad in der Leiste muss unmissverstaendlich sein: wer nicht
+            # sieht, wohin er schreibt, schreibt irgendwann ins Falsche.
+            ordner = None
+            fehlt = ""
         return {
             "version": VERSION,
+            "ferne": verbindung,
             # Sitzt die Oberflaeche auf demselben Rechner wie das Programm? Im
             # Fenster immer ja. Die Oberflaeche haengt daran, ob sie den
             # Datenordner umstellen und Updates einspielen laesst - fehlt das
             # Feld, ist das Ordnerfeld stillschweigend weg (genau das war es).
             "hier": True,
-            "ordner": str(ordner) if ordner else speicher.gewaehlter_ordner(),
+            "ordner": (f"Server: {verbindung['adresse']} ({verbindung['benutzer']})"
+                       if verbindung["aktiv"]
+                       else (str(ordner) if ordner else speicher.gewaehlter_ordner())),
             "ordner_fehlt": fehlt,
             "ordner_quelle": speicher.ordner_quelle(),
             "ordner_waehlbar": True,          # der Dialog kommt vom Fenster selbst
@@ -695,6 +740,33 @@ class Bruecke:
     @_gefasst
     def update_stand(self) -> dict:
         return aktualisieren.protokoll()
+
+    # --- Verbindung zu einem Server ---------------------------------------
+
+    @_gefasst
+    def ferne_stand(self) -> dict:
+        return ferne.stand()
+
+    @_gefasst
+    def ferne_anmelden(self, rumpf: dict) -> dict:
+        d = _woerterbuch(rumpf)
+        try:
+            return ferne.anmelden(str(d.get("adresse") or ""), str(d.get("benutzer") or ""),
+                                  str(d.get("passwort") or ""))
+        except ferne.FerneFehler as f:
+            raise Abbruch(str(f))
+
+    @_gefasst
+    def ferne_abmelden(self) -> dict:
+        return ferne.abmelden()
+
+    @_gefasst
+    def ferne_umschalten(self, rumpf: dict) -> dict:
+        d = _woerterbuch(rumpf)
+        try:
+            return ferne.umschalten(bool(d.get("an")))
+        except ferne.FerneFehler as f:
+            raise Abbruch(str(f))
 
     # --- Verlauf ----------------------------------------------------------
 

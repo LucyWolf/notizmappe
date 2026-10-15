@@ -202,6 +202,40 @@ window.addEventListener('unhandledrejection', function (ev) {
           Offene Änderungen werden vorher gespeichert, danach startet sie neu.</p>
       </section>
 
+      <!-- Nur am eigenen Rechner zu sehen (e.hier): in der Serverfassung waere
+           "mit einem Server verbinden" sinnlos. -->
+      <section id="e-ferne-abschnitt" hidden>
+        <h3>Mit einem Server verbinden</h3>
+        <p class="zeile2"><span>Zustand</span><span id="e-ferne-stand">…</span></p>
+        <div id="e-ferne-anmeldung">
+          <p class="ordnerzeile">
+            <input type="text" id="e-ferne-adresse" placeholder="http://rechner:8112"
+                   autocomplete="off" spellcheck="false">
+          </p>
+          <p class="ordnerzeile">
+            <input type="text" id="e-ferne-benutzer" placeholder="Benutzername"
+                   autocomplete="username" autocapitalize="none" spellcheck="false">
+            <input type="password" id="e-ferne-passwort" placeholder="Passwort"
+                   autocomplete="current-password">
+            <button type="button" id="e-ferne-anmelden">Anmelden</button>
+          </p>
+        </div>
+        <p class="knoepfe" id="e-ferne-knoepfe" hidden>
+          <button type="button" id="e-ferne-ein">Auf dem Server arbeiten</button>
+          <button type="button" id="e-ferne-aus">Eigene Notizen</button>
+          <button type="button" id="e-ferne-abmelden">Abmelden</button>
+        </p>
+        <p class="hinweis">Damit arbeitet dieses Fenster gegen deine Notizmappe auf
+          dem Server statt gegen den Ordner hier — derselbe Baum, dieselben Seiten.
+          Umgeschaltet wird mit den Knöpfen; oben in der Seitenleiste steht immer,
+          wo du gerade schreibst.</p>
+        <p class="hinweis">Gemerkt werden Adresse und Benutzername, <strong>nicht das
+          Passwort</strong>. Stattdessen das Sitzungs-Kennzeichen des Servers: es
+          läuft nach zwei Wochen ab und endet sofort, wenn du dort das Passwort
+          änderst.</p>
+        <p class="hinweis" id="e-ferne-hinweis"></p>
+      </section>
+
       <section>
         <h3>Daten</h3>
         <p class="zeile2"><span>Ordner</span><code id="e-ordner">…</code></p>

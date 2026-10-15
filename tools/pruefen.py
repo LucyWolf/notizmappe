@@ -13,7 +13,11 @@ fehler = []
 
 for p in sorted((WURZEL / "app").rglob("*.py")) + sorted((WURZEL / "tools").rglob("*.py")):
     try:
-        ast.parse(p.read_text(encoding="utf-8"), filename=str(p))
+        # compile() statt ast.parse(): manche Fehler entstehen erst beim
+        # Uebersetzen und nicht beim Lesen - "global x" nach der ersten
+        # Verwendung zum Beispiel. ast.parse() laesst so etwas durch, und
+        # dann faellt das Programm erst beim Start um.
+        compile(p.read_text(encoding="utf-8"), str(p), "exec")
     except SyntaxError as f:
         fehler.append(f"{p.relative_to(WURZEL)}:{f.lineno}: {f.msg}")
 

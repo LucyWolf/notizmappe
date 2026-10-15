@@ -77,6 +77,10 @@ const WEGE = {
   'GET /api/stand':            (p, b) => b.stand(p.notizbuch, p.abschnitt, p.name),
   'POST /api/loeschen':        (p, b, r) => b.loeschen(r.art, r.pfad),
   'GET /api/einstellungen':    (p, b) => b.einstellungen(),
+  'GET /api/ferne':            (p, b) => b.ferne_stand(),
+  'POST /api/ferne/anmelden':  (p, b, r) => b.ferne_anmelden(r),
+  'POST /api/ferne/abmelden':  (p, b) => b.ferne_abmelden(),
+  'POST /api/ferne/umschalten': (p, b, r) => b.ferne_umschalten(r),
   'POST /api/einstellungen':   (p, b, r) => b.optionen_setzen(r),
   'POST /api/ordner/waehlen':  (p, b) => b.ordner_waehlen(),
   'POST /api/ordner':          (p, b, r) => b.ordner_setzen(r),
@@ -1613,6 +1617,7 @@ async function einstellungenLaden() {
                 : 'Installierte Fassung, von einem anderen Rechner geöffnet - Updates gehen nur direkt dort.')
       : 'Läuft aus dem Quellordner - hier wird mit git aktualisiert, nicht über den Knopf.';
     $('#e-zoom').textContent = Math.round(zoom * 100) + ' %';
+    ferneZeigen(e);
     await sperreTafelFuellen();
     if (!schriftstand) await schriftenLaden();
     schriftenTafelFuellen();
@@ -2533,6 +2538,69 @@ $('#e-onenote').addEventListener('click', async () => {
   } finally {
     knopf.disabled = false;
   }
+});
+
+/* ------------------------------------------------- Verbindung zum Server */
+
+function ferneZeigen(e) {
+  // Nur am eigenen Rechner: in der Serverfassung wäre der Abschnitt sinnlos.
+  $('#e-ferne-abschnitt').hidden = !e.hier;
+  const f = e.ferne || {};
+  $('#e-ferne-stand').textContent = f.aktiv
+    ? `verbunden mit ${f.adresse} als ${f.benutzer}`
+    : (f.angemeldet ? `angemeldet an ${f.adresse}, arbeitet gerade örtlich`
+                    : 'nicht verbunden');
+  $('#e-ferne-anmeldung').hidden = !!f.angemeldet;
+  $('#e-ferne-knoepfe').hidden = !f.angemeldet;
+  $('#e-ferne-ein').hidden = !!f.aktiv;
+  $('#e-ferne-aus').hidden = !f.aktiv;
+  if (f.adresse) $('#e-ferne-adresse').value = f.adresse;
+  if (f.benutzer) $('#e-ferne-benutzer').value = f.benutzer;
+  // Verbunden ist der örtliche Datenordner nicht das Thema.
+  if (f.aktiv) {
+    $('#e-ordnerwahl').hidden = true;
+    $('#e-ordner-hinweis').textContent = 'Dieses Fenster arbeitet gerade auf dem Server. '
+      + 'Zum Umstellen des eigenen Ordners erst auf „Eigene Notizen" zurückschalten.';
+  }
+}
+
+async function ferneUmschalten(an) {
+  try {
+    await api('/api/ferne/umschalten', 'POST', { an });
+    merker.legen('zuletzt', 'null');     // die offene Seite gibt es dort nicht
+    sagen(an ? 'Auf dem Server …' : 'Zurück zu den eigenen Notizen …', 0);
+    setTimeout(() => location.reload(), 400);
+  } catch (f) { $('#e-ferne-hinweis').textContent = f.message; }
+}
+
+$('#e-ferne-anmelden').addEventListener('click', async () => {
+  const knopf = $('#e-ferne-anmelden');
+  knopf.disabled = true;
+  $('#e-ferne-hinweis').textContent = 'wird verbunden …';
+  try {
+    const r = await api('/api/ferne/anmelden', 'POST', {
+      adresse: $('#e-ferne-adresse').value,
+      benutzer: $('#e-ferne-benutzer').value,
+      passwort: $('#e-ferne-passwort').value,
+    });
+    $('#e-ferne-passwort').value = '';
+    $('#e-ferne-hinweis').textContent = `Angemeldet an ${r.adresse} als ${r.benutzer}.`;
+    await einstellungenLaden();
+  } catch (f) {
+    $('#e-ferne-hinweis').textContent = f.message;
+  } finally {
+    knopf.disabled = false;
+  }
+});
+
+$('#e-ferne-ein').addEventListener('click', () => ferneUmschalten(true));
+$('#e-ferne-aus').addEventListener('click', () => ferneUmschalten(false));
+$('#e-ferne-abmelden').addEventListener('click', async () => {
+  try {
+    await api('/api/ferne/abmelden', 'POST', {});
+    $('#e-ferne-hinweis').textContent = 'Abgemeldet.';
+    setTimeout(() => location.reload(), 300);
+  } catch (f) { $('#e-ferne-hinweis').textContent = f.message; }
 });
 
 function sperrhinweis(text) { $('#e-sperre-hinweis').textContent = text; }

@@ -108,6 +108,7 @@ app/bruecke.py       was die Oberfläche aufrufen darf - direkt, ohne Netz
 app/speicher.py      Dateien: Notizbuch/Abschnitt/Seite, Anhänge, Papierkorb
 app/tresor.py        Sperre: Schlüssel, Verschlüsseln, Wiederherstellung
 app/einfuhr.py       OneNote einlesen (.one, .onepkg)
+app/ferne.py         Verbindung zu einer Notizmappe auf einem Server
 app/reinigen.py      HTML säubern, Bilder erkennen
 app/aktualisieren.py Updates von GitHub
 app/konfig.py        Einstellungen dieses Rechners
@@ -175,6 +176,38 @@ direkt an dem Rechner, auf dem die Notizmappe läuft.
 Die Wahl steht in `~/.config/notizmappe/einstellungen.json` (Windows:
 `%APPDATA%\notizmappe`), nicht im Datenordner selbst. Ist `NOTIZEN_ORDNER` gesetzt,
 gewinnt das und die Wahl ist gesperrt — Tests und Docker verlassen sich darauf.
+
+## Mit einem Server verbinden
+
+Einstellungen → **Mit einem Server verbinden**: Adresse, Benutzername, Passwort,
+**Anmelden**. Danach zwei Knöpfe — „Auf dem Server arbeiten" und „Eigene
+Notizen". Verbunden arbeitet dieses Fenster gegen die
+[Serverfassung](https://github.com/LucyWolf/notizmappe-server) statt gegen den
+Ordner hier: derselbe Baum, dieselben Seiten, derselbe Verlauf.
+
+Oben in der Seitenleiste steht dann `Server: http://… (name)` statt des
+Ordnerpfads. **Man darf nie im Zweifel sein, wo man gerade schreibt.**
+
+Gemerkt werden Adresse und Benutzername, **nicht das Passwort** — stattdessen
+das Sitzungs-Kennzeichen des Servers. Es läuft nach zwei Wochen ab, gilt nur
+für diesen Server, und ein Passwortwechsel dort beendet es sofort. Es steht in
+`einstellungen.json`, die nur dem eigenen Benutzer gehört (0600).
+
+Örtlich bleiben: die **Schriften** (die deines Rechners), die **Sperre** (die
+gilt den Notizen hier) und die **Updates** (das Fenster aktualisiert sich
+selbst). Anhänge werden vom Server geholt und hier geöffnet oder abgelegt —
+das kann der Browser nicht, das Fenster schon.
+
+### Und die Regel „kein Server im Programm"?
+
+Die gilt weiter. Es gibt keinen Server **im** Programm — es gibt die
+Möglichkeit, sich mit einem zu **verbinden**, und die steht in genau einer
+Datei: `app/ferne.py`. `tests/test_kein_server.py` prüft das nach und wurde
+dafür nicht aufgeweicht, sondern geschärft: verboten ist jetzt alles, was
+selbst Server **spielt** (FastAPI, uvicorn, bottle, ein lauschender Socket),
+und nur `aktualisieren.py` und `ferne.py` dürfen überhaupt Netzwerkzeug
+importieren. Der Kern — Ablage, Tresor, Reinigung, Konfig, Einfuhr — bleibt
+frei auch vom Wort.
 
 ## Verlauf
 
