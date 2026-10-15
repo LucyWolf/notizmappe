@@ -112,6 +112,22 @@ pruefe("jeder Aufruf in mappe.js hat eine Funktion dazu", not offen,
 pruefe("es wird ueberhaupt etwas geprueft", len(gerufen) > 40, f"{len(gerufen)} Aufrufe gefunden")
 
 
+# --- Jede benutzte Farbe muss es geben ---------------------------------------
+#
+# Eine Farbe, die es nicht gibt, ist kein Fehler: die Regel faellt einfach aus,
+# und das Element bekommt die Vorgabe des Browsers. In einer dunklen
+# Oberflaeche heisst das weiss. Genau so ist --flaeche sechs Stellen lang
+# unbemerkt geblieben.
+css = (WURZEL / "app/oberflaeche/stil.css").read_text(encoding="utf-8")
+definiert = set(re.findall(r"^\s*(--[a-z-]+)\s*:", css, re.M))
+benutzt = set(re.findall(r"var\((--[a-z-]+)", css))
+# Was die Oberflaeche selbst setzt (etwa die Farbe eines Stifts), steht nicht
+# im Stil - das hat einen Ersatzwert und ist in Ordnung.
+mit_ersatz = set(re.findall(r"var\((--[a-z-]+)\s*,", css))
+fehlend = sorted(benutzt - definiert - mit_ersatz - {"--stiftfarbe"})
+pruefe("jede benutzte Farbe ist auch definiert", not fehlend, ", ".join(fehlend))
+pruefe("es werden ueberhaupt Farben geprueft", len(benutzt) > 5, f"{len(benutzt)} benutzt")
+
 # --- Kein Weg zweimal --------------------------------------------------------
 #
 # In JavaScript ist ein doppelter Schluessel im Woerterbuch kein Fehler: der

@@ -7,6 +7,11 @@
   --schrift: #1f1d1a;
   --matt: #78736a;
   --leiste: #f4f1ea;
+  /* Fuer Eingabefelder und abgesetzte Kaesten - ein Ton neben dem Papier.
+     Wurde an sechs Stellen benutzt und war nie definiert: alles, was sie
+     verwendete, bekam gar keinen Hintergrund und damit die weisse Vorgabe des
+     Browsers. In einer dunklen Oberflaeche faellt das sofort auf. */
+  --flaeche: #f7f5f0;
   --akzent: #7a5cff;
   --warnung: #b23b2e;
   --kasten-rand: #d8d4ca;
@@ -18,6 +23,7 @@
     --schrift: #e8e4dc;
     --matt: #938d83;
     --leiste: #121110;
+    --flaeche: #232220;
     --akzent: #9d86ff;
     --warnung: #ff8d7e;
     --kasten-rand: #3a3631;
