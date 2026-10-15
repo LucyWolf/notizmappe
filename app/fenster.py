@@ -272,6 +272,13 @@ def pruefen() -> int:
         print(f"  cryptography: FEHLT  (pip install cryptography)  [{x}]")
 
     try:
+        from pyOneNote.OneDocument import OneDocment       # noqa: F401
+        import cabarchive                                  # noqa: F401
+        print("  OneNote-Leser: da  -> .one und .onepkg lassen sich übernehmen")
+    except Exception as x:                  # noqa: BLE001
+        print(f"  OneNote-Leser: FEHLT  (pip install pyOneNote cabarchive)  [{x}]")
+
+    try:
         import gi
         gi.require_version("Gtk", "3.0")
         print("  PyGObject (gi): da")

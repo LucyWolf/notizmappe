@@ -83,6 +83,7 @@ const WEGE = {
   'GET /api/version':          (p, b) => b.version(p.frisch === 'true'),
   'POST /api/update':          (p, b) => b.update(),
   'GET /api/update/stand':     (p, b) => b.update_stand(),
+  'POST /api/onenote':         (p, b, r) => b.onenote_einlesen(r),
   'GET /api/sperre':           (p, b) => b.sperre_stand(),
   'POST /api/sperre/an':       (p, b, r) => b.sperre_einrichten(r),
   'POST /api/sperre/auf':      (p, b, r) => b.entsperren(r),
@@ -2251,6 +2252,26 @@ $('#r-datei').addEventListener('click', async () => {
 });
 
 /* --- In den Einstellungen --- */
+
+$('#e-onenote').addEventListener('click', async () => {
+  const knopf = $('#e-onenote');
+  const stand = $('#e-onenote-stand');
+  knopf.disabled = true;
+  stand.textContent = 'Datei wählen …';
+  try {
+    const r = await api('/api/onenote', 'POST', {});
+    if (r.abgebrochen) { stand.textContent = ''; return; }
+    stand.textContent = `Angelegt: „${r.notizbuch}" mit ${r.abschnitte} Abschnitten, `
+      + `${r.seiten} Seiten und ${r.anhaenge} Dateien.`
+      + (r.uebersprungen && r.uebersprungen.length
+         ? ' Nicht lesbar: ' + r.uebersprungen.join('; ') : '');
+    await baumLaden();
+  } catch (f) {
+    stand.textContent = f.message;
+  } finally {
+    knopf.disabled = false;
+  }
+});
 
 function sperrhinweis(text) { $('#e-sperre-hinweis').textContent = text; }
 

@@ -23,6 +23,7 @@ import time
 from pathlib import Path
 
 import aktualisieren
+import einfuhr
 import konfig
 import reinigen
 import speicher
@@ -639,6 +640,36 @@ class Bruecke:
     def update_stand(self) -> dict:
         return aktualisieren.protokoll()
 
+    # --- Aus OneNote einlesen ---------------------------------------------
+
+    @_gefasst
+    def onenote_einlesen(self, rumpf: dict | None = None) -> dict:
+        """Eine .one- oder .onepkg-Datei als neues Notizbuch anlegen.
+
+        Immer als **neues** Notizbuch: ein Einlesen, das vorhandene Notizen
+        anfasst, waere im Zweifel nicht rueckgaengig zu machen.
+        """
+        pfad = str((rumpf or {}).get("pfad") or "").strip()
+        if not pfad:
+            pfad = self._dialog_oeffnen(("OneNote (*.one;*.onepkg)", "Alle Dateien (*.*)"))
+            if not pfad:
+                return {"abgebrochen": True}
+        quelle = Path(pfad).expanduser()
+        if not quelle.is_file():
+            raise Abbruch(f"Gibt es nicht: {quelle}")
+        if quelle.stat().st_size > 500 * 1024 * 1024:
+            raise Abbruch("Die Datei ist größer als 500 MB")
+        try:
+            bericht = einfuhr.einlesen(quelle, reinigen.text((rumpf or {}).get("name"), 80))
+        except einfuhr.EinfuhrFehler as f:
+            raise Abbruch(str(f))
+        if not bericht["seiten"]:
+            # Nicht mit "fertig" antworten, wenn nichts herausgekommen ist - das
+            # ist der Fall, der nach Erfolg aussieht und keiner ist.
+            raise Abbruch("Aus der Datei ließ sich kein Text lesen. Ist der Abschnitt "
+                          "mit einem Passwort geschützt?")
+        return bericht
+
     # --- Dialoge des Fensters ---------------------------------------------
 
     def _dialog_ordner(self) -> str | None:
@@ -647,6 +678,17 @@ class Bruecke:
             return None
         gewaehlt = self.fenster.create_file_dialog(webview.FOLDER_DIALOG)
         return gewaehlt[0] if gewaehlt else None
+
+    def _dialog_oeffnen(self, muster: tuple[str, ...] | None = None) -> str | None:
+        import webview
+        if not self.fenster:
+            return None
+        gewaehlt = self.fenster.create_file_dialog(
+            webview.OPEN_DIALOG, allow_multiple=False,
+            file_types=muster or ("Alle Dateien (*.*)",))
+        if not gewaehlt:
+            return None
+        return gewaehlt if isinstance(gewaehlt, str) else gewaehlt[0]
 
     def _dialog_speichern(self, vorschlag: str) -> str | None:
         import webview

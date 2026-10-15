@@ -220,6 +220,20 @@ window.addEventListener('unhandledrejection', function (ev) {
 
 
       <section>
+        <h3>Aus OneNote übernehmen</h3>
+        <p class="knoepfe">
+          <button type="button" id="e-onenote">OneNote-Datei einlesen …</button>
+        </p>
+        <p class="hinweis">Eine <code>.one</code> (ein Abschnitt) oder
+          <code>.onepkg</code> (ein ganzes Notizbuch) wird als <strong>neues</strong>
+          Notizbuch angelegt — vorhandene Notizen bleiben unangetastet.
+          Übernommen werden Text, Bilder und angehängte Dateien; die genaue Lage
+          der Kästen, Tabellen, Freihand und Tags nicht. Abschnitte mit Passwort
+          lassen sich nicht lesen.</p>
+        <p class="hinweis" id="e-onenote-stand"></p>
+      </section>
+
+      <section>
         <h3>Sperre</h3>
         <p class="zeile2"><span>Zustand</span><span id="e-sperre-stand">…</span></p>
 

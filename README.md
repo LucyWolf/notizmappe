@@ -107,13 +107,15 @@ app/fenster.py       das Fenster (pywebview) und die Diagnose
 app/bruecke.py       was die Oberfläche aufrufen darf - direkt, ohne Netz
 app/speicher.py      Dateien: Notizbuch/Abschnitt/Seite, Anhänge, Papierkorb
 app/tresor.py        Sperre: Schlüssel, Verschlüsseln, Wiederherstellung
+app/einfuhr.py       OneNote einlesen (.one, .onepkg)
 app/reinigen.py      HTML säubern, Bilder erkennen
 app/aktualisieren.py Updates von GitHub
 app/konfig.py        Einstellungen dieses Rechners
 app/oberflaeche/     index.html, mappe.js, stil.css - wird als Datei geladen
 ```
 
-Abhängigkeiten sind `pywebview` und — für die Sperre — `cryptography`. Früher lag zwischen Fenster und
+Abhängigkeiten: `pywebview`, `cryptography` (Sperre) sowie `pyOneNote` und
+`cabarchive` (OneNote übernehmen) — alles reines Python, nichts zu übersetzen. Früher lag zwischen Fenster und
 Programm ein kleiner Webserver (FastAPI, uvicorn); das Paket ist seit dem Wegfall
 von 14 MB auf gut 1 MB geschrumpft, und der Start dauert spürbar kürzer, weil
 pydantic und uvicorn nicht mehr geladen werden.
@@ -124,6 +126,11 @@ pydantic und uvicorn nicht mehr geladen werden.
 tests/alle.sh              # alles, baut auch das Paket (~3 Minuten)
 tests/alle.sh --schnell    # nur API und Update
 ```
+
+`tests/test_einfuhr.py` prüft das Übernehmen. Eine echte `.one` lässt sich für
+einen Test nicht nachbauen, also wird alles drumherum geprüft: Dateierkennung,
+ein echtes CAB-Paket, das Anlegen von Notizbuch/Seiten/Anhängen — und vor allem,
+dass Unlesbares **gemeldet** statt verschluckt wird.
 
 `tests/test_stift.py` prüft die Striche: was durch die Reinigung geht (Farben,
 Deckel, kaputte Punkte) und dass eine gemalte Seite Speichern und Wiederöffnen
@@ -162,6 +169,43 @@ direkt an dem Rechner, auf dem die Notizmappe läuft.
 Die Wahl steht in `~/.config/notizmappe/einstellungen.json` (Windows:
 `%APPDATA%\notizmappe`), nicht im Datenordner selbst. Ist `NOTIZEN_ORDNER` gesetzt,
 gewinnt das und die Wahl ist gesperrt — Tests und Docker verlassen sich darauf.
+
+## Aus OneNote übernehmen
+
+Einstellungen → **Aus OneNote übernehmen** → Datei wählen. Gedacht als
+Umstiegshilfe: wer schon ein Notizbuch in OneNote hat, soll wechseln können,
+ohne etwas zu verlieren.
+
+| Datei | was passiert |
+|---|---|
+| `.one` | ein Abschnitt — wird zu einem Notizbuch mit diesem Abschnitt |
+| `.onepkg` | ein ganzes Notizbuch (innen ein CAB-Archiv) — alle Abschnitte darin |
+| `.onetoc2` | nur das Inhaltsverzeichnis; die Seiten stehen in den `.one` daneben |
+
+Angelegt wird **immer ein neues** Notizbuch. Vorhandene Notizen werden nicht
+angefasst — ein Einlesen, das in bestehende Seiten schreibt, wäre im Zweifel
+nicht rückgängig zu machen.
+
+**Übernommen** werden Text, Bilder und angehängte Dateien. **Nicht** übernommen
+werden die genaue Lage der Kästen, Tabellen, Freihand und Tags; die Textblöcke
+landen untereinander auf der Seite. Abschnitte mit Passwort lassen sich gar
+nicht lesen — das wird gemeldet, nicht übergangen.
+
+Das ist die Grenze des frei verfügbaren Lesers: `pyOneNote` ist für die
+Virenanalyse gebaut, nicht für originalgetreues Umwandeln. Ein besserer Leser
+müsste für jedes Betriebssystem übersetzt mitgeliefert werden — und genau das
+soll dieses Programm nicht. Gerettet wird also der **Inhalt**, nicht das
+Aussehen.
+
+Welcher Anhang zu welcher Seite gehört, gibt das Format nicht verlässlich her.
+Deshalb sammelt eine eigene Seite „Dateien aus OneNote" alle Bilder und Dateien
+eines Abschnitts — lieber an einer Stelle als wahllos verteilt oder weggeworfen.
+
+Nachsehen, was in einer Datei steckt, ohne etwas anzulegen:
+
+```bash
+.venv/bin/python tools/one_lesen.py ~/pfad/datei.onepkg
+```
 
 ## Zeichnen
 

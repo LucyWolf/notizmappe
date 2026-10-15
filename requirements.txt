@@ -1,2 +1,4 @@
 pywebview
 cryptography
+pyOneNote
+cabarchive

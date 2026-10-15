@@ -40,7 +40,9 @@ VERBOTEN = ("fastapi", "uvicorn", "starlette", "flask", "jinja2", "aiohttp",
 anforderungen = (WURZEL / "requirements.txt").read_text(encoding="utf-8").split()
 # Eine knappe, ausdrueckliche Liste statt "nur pywebview": was hier nicht steht,
 # kommt auch nicht herein. Nachschieben soll auffallen.
-ERLAUBT = {"pywebview", "cryptography"}
+# pyOneNote/cabarchive lesen OneNote-Dateien beim Uebernehmen - reines Python,
+# keine Netzpakete.
+ERLAUBT = {"pywebview", "cryptography", "pyOneNote", "cabarchive"}
 pruefe("requirements.txt enthaelt nur das Fenster und die Verschluesselung",
        set(anforderungen) <= ERLAUBT, anforderungen)
 
