@@ -88,6 +88,7 @@ const WEGE = {
   'POST /api/update':          (p, b) => b.update(),
   'GET /api/update/stand':     (p, b) => b.update_stand(),
   'POST /api/onenote':         (p, b, r) => b.onenote_einlesen(r),
+  'POST /api/datei/speichern': (p, b, r) => b.datei_speichern(r),
   'GET /api/verlauf':          (p, b) => b.versionen(p.notizbuch, p.abschnitt, p.name),
   'GET /api/verlauf/fassung':  (p, b) => b.version_lesen(p.notizbuch, p.abschnitt, p.name, p.marke),
   'POST /api/verlauf/zurueck': (p, b, r) => b.version_zurueck(r),
@@ -2052,19 +2053,57 @@ function werkzeugSetzen(name, nummer) {
   allesMalen();
 }
 
+const BANDLEISTEN = {
+  start: 'werkzeuge', einfuegen: 'einfuegen', zeichnen: 'malzeug',
+  verlauf: 'verlaufzeug', ansicht: 'ansicht', hilfe: 'hilfe',
+};
+
 function reiterSetzen(name) {
+  // "Datei" ist kein Reiter mit Leiste, sondern eine Ebene darüber.
+  if (name === 'datei') { dateiZeigen(true); return; }
   for (const k of document.querySelectorAll('#reiter .reiter')) {
     k.setAttribute('aria-selected', String(k.dataset.reiter === name));
   }
-  $('#werkzeuge').hidden = name !== 'start';
-  $('#malzeug').hidden = name !== 'zeichnen';
-  $('#verlaufzeug').hidden = name !== 'verlauf';
+  for (const [reiter, leiste] of Object.entries(BANDLEISTEN)) {
+    $('#' + leiste).hidden = reiter !== name;
+  }
   merker.legen('reiter', name);
+  if (name === 'hilfe') $('#hilfe-version').textContent = 'Notizmappe ' + ($('#version').textContent || '');
   // Beim Verlassen des Reiters nicht weitermalen: sonst fängt der nächste Klick
   // in den Text einen Strich an.
   werkzeugSetzen(name === 'zeichnen' ? (werkzeug === 'auswahl' ? 'stift' : werkzeug) : 'auswahl',
                  stiftnummer);
 }
+
+$('#leiste-schalten').addEventListener('click', () => {
+  $('#leiste').classList.toggle('versteckt');
+  flaecheMessen();
+});
+$('#hilfe-pruefen').addEventListener('click', () => zuDenEinstellungen('e-pruefen'));
+$('#hilfe-diagnose').addEventListener('click', () => { reiterSetzen('start'); dateiZeigen(true); dateiPunkt('info'); });
+$('#neue-seite-band').addEventListener('click', async () => {
+  // Dort anlegen, wo man gerade ist - sonst in dem ersten Abschnitt, den es gibt.
+  const erste = erstesSeitchen();
+  const buch = offen ? offen.notizbuch : (erste && erste[0]);
+  const ab = offen ? offen.abschnitt : (erste && erste[1]);
+  if (!buch || !ab) { melden('Erst ein Notizbuch und einen Abschnitt anlegen.'); return; }
+  try {
+    const r = await api('/api/seite', 'POST', { notizbuch: buch, abschnitt: ab, titel: 'Neue Seite' });
+    await baumLaden();
+    await seiteOeffnen(buch, ab, r.name);
+    $('#titel').select();
+  } catch (f) { melden(f.message); }
+});
+$('#neuer-abschnitt-band').addEventListener('click', async () => {
+  const buch = offen ? offen.notizbuch : (baumDaten[0] && baumDaten[0].name);
+  if (!buch) { melden('Erst ein Notizbuch anlegen.'); return; }
+  const n = prompt('Name des Abschnitts:');
+  if (!n) return;
+  try {
+    await api('/api/abschnitt', 'POST', { notizbuch: buch, name: n });
+    await baumLaden();
+  } catch (f) { melden(f.message); }
+});
 
 $('#reiter').addEventListener('click', (ev) => {
   const k = ev.target.closest('.reiter');
@@ -2537,6 +2576,139 @@ $('#e-onenote').addEventListener('click', async () => {
     stand.textContent = f.message;
   } finally {
     knopf.disabled = false;
+  }
+});
+
+/* --------------------------------------------------------------- Datei
+ *
+ * Die Ebene über den Notizen: was man sonst in einem Menü "Datei" sucht -
+ * wo liegt das hier, was ist neu, drucken, exportieren, Konto, Optionen.
+ */
+
+function dateiZeigen(an) {
+  $('#dateischirm').hidden = !an;
+  if (an) {
+    dateiPunkt(document.querySelector('#dateileiste .dateipunkt[aria-selected="true"]')
+      ? document.querySelector('#dateileiste .dateipunkt[aria-selected="true"]').dataset.punkt
+      : 'info');
+  } else {
+    // Zurück auf den Reiter, auf dem man vorher war.
+    reiterSetzen(merker.holen('reiter', 'start') === 'datei' ? 'start'
+      : merker.holen('reiter', 'start'));
+  }
+}
+
+function dateiPunkt(punkt) {
+  for (const k of document.querySelectorAll('#dateileiste .dateipunkt')) {
+    k.setAttribute('aria-selected', String(k.dataset.punkt === punkt));
+  }
+  for (const s of document.querySelectorAll('.dateiseite')) {
+    s.hidden = s.dataset.punkt !== punkt;
+  }
+  if (punkt === 'info') dateiInfoFuellen();
+  if (punkt === 'konto') dateiKontoFuellen();
+}
+
+$('#dateileiste').addEventListener('click', (ev) => {
+  const k = ev.target.closest('.dateipunkt');
+  if (k) dateiPunkt(k.dataset.punkt);
+});
+$('#datei-zurueck').addEventListener('click', () => dateiZeigen(false));
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape' && !$('#dateischirm').hidden) dateiZeigen(false);
+});
+
+async function dateiInfoFuellen() {
+  $('#d-seite').textContent = offen ? `${offen.notizbuch} / ${offen.abschnitt} / ${$('#titel').value}`
+                                    : 'keine offen';
+  try {
+    const e = await api('/api/einstellungen');
+    $('#d-ordner').textContent = e.ordner;
+    $('#d-seiten').textContent = e.seiten;
+    $('#d-papierkorb').textContent = e.papierkorb;
+    $('#d-frei').textContent = groesse(e.frei);
+    $('#d-version').textContent = e.version;
+    $('#d-info-hinweis').textContent = e.ferne && e.ferne.aktiv
+      ? 'Dieses Fenster arbeitet gerade auf einem Server.'
+      : 'Die Notizen liegen als Ordner und Dateien auf dieser Platte.';
+  } catch (f) { $('#d-info-hinweis').textContent = f.message; }
+  try {
+    const sp = await api('/api/sperre');
+    $('#d-sperre').textContent = !sp.eingerichtet ? 'aus'
+      : (sp.offen ? 'eingeschaltet, offen' : 'eingeschaltet, zugesperrt');
+  } catch (f) { $('#d-sperre').textContent = '—'; }
+}
+
+async function dateiKontoFuellen() {
+  try {
+    const f = await api('/api/ferne');
+    $('#d-konto-stand').textContent = f.aktiv
+      ? `verbunden mit ${f.adresse} als ${f.benutzer}`
+      : (f.angemeldet ? `angemeldet an ${f.adresse}, arbeitet örtlich` : 'nicht verbunden');
+  } catch (e) { $('#d-konto-stand').textContent = 'nur in der Fensterfassung'; }
+}
+
+function zuDenEinstellungen(punkt) {
+  dateiZeigen(false);
+  tafelZeigen(true);
+  if (punkt) setTimeout(() => {
+    const ziel = $('#' + punkt);
+    if (ziel) ziel.scrollIntoView({ block: 'center' });
+  }, 80);
+}
+
+$('#d-optionen').addEventListener('click', () => zuDenEinstellungen());
+$('#d-konto-einstellungen').addEventListener('click', () => zuDenEinstellungen('e-ferne-abschnitt'));
+$('#d-server').addEventListener('click', () => zuDenEinstellungen('e-ferne-abschnitt'));
+$('#d-ordner-waehlen').addEventListener('click', () => zuDenEinstellungen('e-ordnerwahl'));
+$('#d-onenote').addEventListener('click', () => zuDenEinstellungen('e-onenote'));
+$('#d-neu-buch').addEventListener('click', () => { dateiZeigen(false); $('#neues-buch').click(); });
+$('#d-neu-abschnitt').addEventListener('click', () => { dateiZeigen(false); $('#neuer-abschnitt-band').click(); });
+$('#d-neu-seite').addEventListener('click', () => { dateiZeigen(false); $('#neue-seite-band').click(); });
+$('#d-drucken').addEventListener('click', () => { dateiZeigen(false); setTimeout(() => window.print(), 150); });
+
+/* Export: die Seite als eine Datei, die ohne dieses Programm aufgeht. Bilder
+ * kommen als data:-Adresse mit hinein - sonst wäre es eine Datei mit Löchern. */
+async function seiteAlsHtml() {
+  if (!offen) throw new Error('Keine Seite offen');
+  const stuecke = [];
+  for (const e of elemente) {
+    if (e.typ === 'text') {
+      stuecke.push(`<div class="kasten">${e.html || ''}</div>`);
+    } else if (e.typ === 'bild') {
+      try {
+        const b = await bruecke();
+        const r = await b.anhang_bild(offen.notizbuch, offen.abschnitt, offen.name, e.datei);
+        if (r && r.daten) {
+          stuecke.push(`<div class="kasten"><img src="data:${r.medientyp};base64,${r.daten}"></div>`);
+        }
+      } catch (f) { stuecke.push(`<div class="kasten">[Bild fehlt: ${e.datei}]</div>`); }
+    } else if (e.typ === 'datei') {
+      stuecke.push(`<div class="kasten">[Datei: ${e.datei}]</div>`);
+    } else if (e.typ === 'stift') {
+      stuecke.push(`<div class="kasten">[Zeichnung mit ${(e.striche || []).length} Strichen - `
+        + `beim Export noch nicht dabei]</div>`);
+    }
+  }
+  const titel = ($('#titel').value || offen.name).replace(/[<>&]/g, '');
+  return `<!doctype html>\n<html lang="de"><head><meta charset="utf-8">\n`
+    + `<title>${titel}</title>\n<style>\n`
+    + `body { font: 15px/1.6 system-ui, sans-serif; max-width: 48rem; margin: 2rem auto; padding: 0 1rem; }\n`
+    + `h1 { font-size: 1.6rem; } .kasten { margin: 0 0 1.2rem; } img { max-width: 100%; }\n`
+    + `</style></head><body>\n<h1>${titel}</h1>\n${stuecke.join('\n')}\n`
+    + `<hr><p style="color:#888;font-size:.8rem">Aus der Notizmappe, `
+    + `${new Date().toLocaleDateString()}</p>\n</body></html>\n`;
+}
+
+$('#d-export-html').addEventListener('click', async () => {
+  $('#d-export-hinweis').textContent = 'wird gebaut …';
+  try {
+    const html = await seiteAlsHtml();
+    const name = (($('#titel').value || 'Seite') + '.html').replace(/[\\/:*?"<>|]/g, '-');
+    const r = await api('/api/datei/speichern', 'POST', { name, text: html });
+    $('#d-export-hinweis').textContent = r.abgebrochen ? '' : 'Gespeichert: ' + r.ziel;
+  } catch (f) {
+    $('#d-export-hinweis').textContent = f.message;
   }
 });
 

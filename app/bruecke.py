@@ -741,6 +741,30 @@ class Bruecke:
     def update_stand(self) -> dict:
         return aktualisieren.protokoll()
 
+    @_gefasst
+    def datei_speichern(self, rumpf: dict) -> dict:
+        """Etwas aus der Oberflaeche als Datei ablegen - zum Beispiel den Export.
+
+        Der Inhalt kommt als Text; wohin, entscheidet der Dialog des Systems.
+        Nicht in den Notizordner schreiben: was exportiert wird, ist zum
+        Weitergeben gedacht und nicht Teil der Ablage.
+        """
+        d = _woerterbuch(rumpf)
+        text = d.get("text")
+        if not isinstance(text, str) or not text:
+            raise Abbruch("Nichts zu speichern")
+        if len(text) > 80 * 1024 * 1024:
+            raise Abbruch("Das ist zu groß")
+        name = speicher.slug(reinigen.text(d.get("name"), 120)) or "Export.html"
+        ziel = self._dialog_speichern(name)
+        if not ziel:
+            return {"abgebrochen": True}
+        try:
+            Path(ziel).write_text(text, encoding="utf-8")
+        except OSError as f:
+            raise Abbruch(f"Ließ sich nicht schreiben: {f}")
+        return {"ok": True, "ziel": str(ziel)}
+
     # --- Verbindung zu einem Server ---------------------------------------
 
     @_gefasst

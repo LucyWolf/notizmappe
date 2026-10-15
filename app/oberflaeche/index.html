@@ -30,37 +30,24 @@ window.addEventListener('unhandledrejection', function (ev) {
 </script>
 </head>
 <body>
-<div id="rahmen">
-
-  <aside id="leiste">
-    <header>
-      <strong>Notizmappe</strong>
-      <code id="ordner" title="Datenordner"></code>
-    </header>
-    <nav id="baum" aria-label="Notizbücher"></nav>
-    <footer>
-      <button type="button" id="neues-buch">+ Notizbuch</button>
-      <span class="fussrechts">
-        <span id="version"></span>
-        <button type="button" id="sperren" title="Sperren" hidden>🔒</button>
-        <button type="button" id="zahnrad" title="Einstellungen">⚙</button>
-      </span>
-    </footer>
-  </aside>
-
-  <main id="haupt">
-    <div id="kopf">
-      <div class="kopfzeile">
-        <input id="titel" type="text" placeholder="Seitentitel" autocomplete="off" disabled>
-        <nav id="reiter" aria-label="Werkzeuge">
-          <button type="button" class="reiter" data-reiter="start" aria-selected="true">Start</button>
-          <button type="button" class="reiter" data-reiter="zeichnen" aria-selected="false">Zeichnen</button>
-          <button type="button" class="reiter" data-reiter="verlauf" aria-selected="false">Verlauf</button>
-        </nav>
-        <button type="button" id="update" hidden></button>
-        <span id="zustand"></span>
-      </div>
-      <div id="werkzeuge">
+<!-- Das Band liegt über allem, auch über der Seitenleiste - wie in OneNote.
+     Darunter erst die Aufteilung in Leiste und Seite. -->
+<div id="band">
+  <nav id="reiter" aria-label="Werkzeuge">
+    <button type="button" class="reiter datei" data-reiter="datei">Datei</button>
+    <button type="button" class="reiter" data-reiter="start" aria-selected="true">Start</button>
+    <button type="button" class="reiter" data-reiter="einfuegen" aria-selected="false">Einfügen</button>
+    <button type="button" class="reiter" data-reiter="zeichnen" aria-selected="false">Zeichnen</button>
+    <button type="button" class="reiter" data-reiter="verlauf" aria-selected="false">Verlauf</button>
+    <button type="button" class="reiter" data-reiter="ansicht" aria-selected="false">Ansicht</button>
+    <button type="button" class="reiter" data-reiter="hilfe" aria-selected="false">Hilfe</button>
+    <span class="bandrechts">
+      <button type="button" id="update" hidden></button>
+      <span id="zustand"></span>
+    </span>
+  </nav>
+  <div id="bandinhalt">
+      <div id="werkzeuge" class="bandleiste">
         <button type="button" data-befehl="bold" title="Fett (Strg+B)"><b>B</b></button>
         <button type="button" data-befehl="italic" title="Kursiv (Strg+I)"><i>I</i></button>
         <button type="button" data-befehl="underline" title="Unterstrichen (Strg+U)"><u>U</u></button>
@@ -77,28 +64,15 @@ window.addEventListener('unhandledrejection', function (ev) {
           <option value="6">sehr groß</option>
           <option value="7">riesig</option>
         </select>
-        <span class="trenner"></span>
-        <button type="button" id="anhang" title="Bild oder Datei einfügen (geht auch per Ziehen und Strg+V)">📎</button>
+      </div>
+      <div id="einfuegen" class="bandleiste" hidden>
+        <button type="button" id="anhang" title="Bild oder Datei einfügen (geht auch per Ziehen und Strg+V)">📎 Bild oder Datei</button>
         <input type="file" id="dateiwahl" multiple hidden>
         <span class="trenner"></span>
-        <button type="button" id="raus" title="Kleiner (Strg+-)">−</button>
-        <span id="zoomwert">100%</span>
-        <button type="button" id="rein" title="Größer (Strg++)">+</button>
+        <button type="button" id="neue-seite-band">＋ Seite</button>
+        <button type="button" id="neuer-abschnitt-band">＋ Abschnitt</button>
       </div>
-
-      <!-- Verlauf: frühere Fassungen und Gelöschtes. Beides liegt als Datei im
-           Datenordner und wandert mit dem Sync mit. -->
-      <div id="verlaufzeug" hidden>
-        <button type="button" id="v-versionen">🕐 Seitenversionen</button>
-        <button type="button" id="v-papierkorb">🗑 Papierkorb</button>
-        <button type="button" id="v-letzte">📝 Letzte Änderungen</button>
-        <span id="v-hinweis"></span>
-      </div>
-
-      <!-- Zeichnen. Die Striche liegen als Linien in der Seite, nicht als Bild:
-           beim Zoomen bleiben sie scharf, die Datei bleibt klein, und ein
-           einzelner Strich laesst sich wieder loeschen. -->
-      <div id="malzeug" hidden>
+      <div id="malzeug" class="bandleiste" hidden>
         <button type="button" id="m-zurueck" title="Rückgängig (Strg+Z)">↶</button>
         <button type="button" id="m-vor" title="Wiederholen (Strg+Y)">↷</button>
         <span class="trenner"></span>
@@ -128,6 +102,49 @@ window.addEventListener('unhandledrejection', function (ev) {
           <input type="checkbox" id="m-nurstift"> nur Stift</label>
         <span id="m-hinweis"></span>
       </div>
+      <div id="verlaufzeug" class="bandleiste" hidden>
+        <button type="button" id="v-versionen">🕐 Seitenversionen</button>
+        <button type="button" id="v-papierkorb">🗑 Papierkorb</button>
+        <button type="button" id="v-letzte">📝 Letzte Änderungen</button>
+        <span id="v-hinweis"></span>
+      </div>
+      <div id="ansicht" class="bandleiste" hidden>
+        <button type="button" id="raus" title="Kleiner (Strg+-)">−</button>
+        <span id="zoomwert">100%</span>
+        <button type="button" id="rein" title="Größer (Strg++)">+</button>
+        <span class="trenner"></span>
+        <button type="button" id="leiste-schalten" title="Seitenleiste ein- oder ausblenden">Seitenleiste</button>
+      </div>
+      <div id="hilfe" class="bandleiste" hidden>
+        <span id="hilfe-version">Notizmappe</span>
+        <span class="trenner"></span>
+        <button type="button" id="hilfe-pruefen">Nach Updates suchen</button>
+        <button type="button" id="hilfe-diagnose">Was ist wo?</button>
+      </div>
+  </div>
+</div>
+
+<div id="rahmen">
+
+  <aside id="leiste">
+    <header>
+      <strong>Notizmappe</strong>
+      <code id="ordner" title="Datenordner"></code>
+    </header>
+    <nav id="baum" aria-label="Notizbücher"></nav>
+    <footer>
+      <button type="button" id="neues-buch">+ Notizbuch</button>
+      <span class="fussrechts">
+        <span id="version"></span>
+        <button type="button" id="sperren" title="Sperren" hidden>🔒</button>
+        <button type="button" id="zahnrad" title="Einstellungen">⚙</button>
+      </span>
+    </footer>
+  </aside>
+
+  <main id="haupt">
+    <div id="kopf">
+      <input id="titel" type="text" placeholder="Seitentitel" autocomplete="off" disabled>
     </div>
 
     <div id="meldung" hidden></div>
@@ -367,6 +384,94 @@ window.addEventListener('unhandledrejection', function (ev) {
           <button type="button" id="e-zoom-rein">größer</button>
         </p>
         <p class="hinweis" id="e-lage"></p>
+      </section>
+    </div>
+  </div>
+
+  <!-- Datei: die Übersicht, die OneNote hinter "Datei" zeigt. Links die
+       Punkte, rechts das, was dazugehört. Deckt das ganze Fenster ab - man ist
+       dann nicht mehr in der Seite, sondern eine Ebene darüber. -->
+  <div id="dateischirm" hidden>
+    <div id="dateileiste">
+      <button type="button" id="datei-zurueck" title="Zurück zu den Notizen">←</button>
+      <button type="button" class="dateipunkt" data-punkt="info" aria-selected="true">Informationen</button>
+      <button type="button" class="dateipunkt" data-punkt="neu">Neu</button>
+      <button type="button" class="dateipunkt" data-punkt="oeffnen">Öffnen</button>
+      <span class="dateitrenner"></span>
+      <button type="button" class="dateipunkt" data-punkt="drucken">Drucken</button>
+      <button type="button" class="dateipunkt" data-punkt="exportieren">Exportieren</button>
+      <span class="dateitrenner"></span>
+      <button type="button" class="dateipunkt" data-punkt="konto">Konto</button>
+      <button type="button" class="dateipunkt" data-punkt="optionen">Optionen</button>
+    </div>
+    <div id="dateiinhalt">
+      <section class="dateiseite" data-punkt="info">
+        <h2>Informationen</h2>
+        <p class="zeile2"><span>Notizen liegen</span><code id="d-ordner">…</code></p>
+        <p class="zeile2"><span>Seiten insgesamt</span><span id="d-seiten">…</span></p>
+        <p class="zeile2"><span>Im Papierkorb</span><span id="d-papierkorb">…</span></p>
+        <p class="zeile2"><span>Frei auf dem Laufwerk</span><span id="d-frei">…</span></p>
+        <p class="zeile2"><span>Sperre</span><span id="d-sperre">…</span></p>
+        <p class="zeile2"><span>Fassung</span><span id="d-version">…</span></p>
+        <p class="zeile2"><span>Offene Seite</span><span id="d-seite">…</span></p>
+        <p class="hinweis" id="d-info-hinweis"></p>
+      </section>
+
+      <section class="dateiseite" data-punkt="neu" hidden>
+        <h2>Neu</h2>
+        <p class="knoepfe">
+          <button type="button" id="d-neu-buch">Notizbuch</button>
+          <button type="button" id="d-neu-abschnitt">Abschnitt</button>
+          <button type="button" id="d-neu-seite">Seite</button>
+        </p>
+        <p class="hinweis">Abschnitt und Seite entstehen in dem Notizbuch, in dem
+          du gerade bist.</p>
+      </section>
+
+      <section class="dateiseite" data-punkt="oeffnen" hidden>
+        <h2>Öffnen</h2>
+        <p class="hinweis">Notizen sind Ordner und Dateien. „Öffnen" heißt hier
+          also: woanders hinsehen.</p>
+        <p class="knoepfe">
+          <button type="button" id="d-ordner-waehlen">Anderer Ordner …</button>
+          <button type="button" id="d-server">Mit einem Server verbinden …</button>
+          <button type="button" id="d-onenote">Aus OneNote übernehmen …</button>
+        </p>
+        <p class="hinweis" id="d-oeffnen-hinweis"></p>
+      </section>
+
+      <section class="dateiseite" data-punkt="drucken" hidden>
+        <h2>Drucken</h2>
+        <p class="hinweis">Gedruckt wird die offene Seite, so wie sie dasteht —
+          ohne Leiste, ohne Band.</p>
+        <p class="knoepfe"><button type="button" id="d-drucken">Seite drucken …</button></p>
+      </section>
+
+      <section class="dateiseite" data-punkt="exportieren" hidden>
+        <h2>Exportieren</h2>
+        <p class="hinweis">Die offene Seite als HTML-Datei — Text und Bilder darin,
+          ohne Programm zum Öffnen. Zum Weitergeben oder Aufheben.</p>
+        <p class="knoepfe">
+          <button type="button" id="d-export-html">Seite als HTML speichern …</button>
+        </p>
+        <p class="hinweis" id="d-export-hinweis"></p>
+      </section>
+
+      <section class="dateiseite" data-punkt="konto" hidden>
+        <h2>Konto</h2>
+        <p class="zeile2"><span>Server</span><span id="d-konto-stand">…</span></p>
+        <p class="knoepfe">
+          <button type="button" id="d-konto-einstellungen">Verbindung einrichten …</button>
+        </p>
+        <p class="hinweis">Am eigenen Rechner gibt es kein Konto — die Notizen
+          liegen in einem Ordner. Ein Konto hat man nur auf einem Server.</p>
+      </section>
+
+      <section class="dateiseite" data-punkt="optionen" hidden>
+        <h2>Optionen</h2>
+        <p class="hinweis">Schriften, Darstellung, Sperre, Updates und der
+          Datenordner.</p>
+        <p class="knoepfe"><button type="button" id="d-optionen">Einstellungen öffnen</button></p>
       </section>
     </div>
   </div>

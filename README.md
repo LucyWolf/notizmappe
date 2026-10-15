@@ -289,6 +289,30 @@ Nachsehen, was in einer Datei steckt, ohne etwas anzulegen:
 .venv/bin/python tools/one_lesen.py ~/pfad/datei.onepkg
 ```
 
+## Das Band oben
+
+Über allem liegt ein Band mit Reitern, auch über der Seitenleiste — wie in
+OneNote:
+
+`Datei · Start · Einfügen · Zeichnen · Verlauf · Ansicht · Hilfe`
+
+**Datei** ist kein Reiter mit Werkzeugen, sondern eine Ebene darüber: eine
+ganzseitige Übersicht mit **Informationen** (wo die Notizen liegen, wie viele
+Seiten, Papierkorb, Platz, Sperre, Fassung), **Neu**, **Öffnen** (anderer
+Ordner, Server, OneNote), **Drucken**, **Exportieren**, **Konto** und
+**Optionen**. Zurück mit dem Pfeil oder `Esc`.
+
+**Exportieren** schreibt die offene Seite als eine HTML-Datei, die ohne dieses
+Programm aufgeht — Bilder stecken als `data:`-Adresse mit drin, sonst wäre es
+eine Datei mit Löchern. Zeichnungen sind dabei noch nicht enthalten.
+
+**Drucken** druckt die Seite, nicht das Programm drumherum: Band, Leiste und
+Dialoge verschwinden im Druck.
+
+Nicht übernommen aus OneNote: **Freigeben** und **Senden** — dafür müsste das
+Programm Mail können oder einen Dienst kennen, und beides soll es nicht.
+„Kopie speichern" ist dasselbe wie Exportieren und steht deshalb nur einmal da.
+
 ## Zeichnen
 
 Oben gibt es zwei Reiter: **Start** (Text, Schrift, Anhänge, Zoom) und

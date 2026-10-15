@@ -31,7 +31,88 @@ body {
   background: var(--papier);
   overflow: hidden;
 }
-#rahmen { display: flex; height: 100%; }
+/* Band oben über die ganze Breite, darunter erst Leiste und Seite - wie in
+   OneNote. Deshalb ist der Körper eine Spalte und nicht mehr nur der Rahmen. */
+body { display: flex; flex-direction: column; }
+#rahmen { display: flex; flex: 1; min-height: 0; }
+
+#band {
+  flex: 0 0 auto; background: var(--leiste);
+  border-bottom: 1px solid var(--linie);
+}
+#band #reiter {
+  display: flex; align-items: center; gap: 2px; padding: 4px 10px 0;
+  border-bottom: 1px solid var(--linie);
+}
+#band .bandrechts { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+#band .reiter.datei {
+  background: var(--akzent); color: #fff; border-color: var(--akzent);
+  font-weight: 600; margin-right: 8px;
+}
+#band .reiter.datei:hover { filter: brightness(1.1); color: #fff; }
+#bandinhalt { padding: 6px 12px; min-height: 40px; }
+.bandleiste { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+.bandleiste button {
+  min-width: 28px; height: 28px; padding: 0 8px; border: 1px solid var(--linie);
+  background: var(--papier); color: var(--schrift); border-radius: 6px;
+  cursor: pointer; font: inherit; font-size: 13px;
+}
+.bandleiste button:hover { border-color: var(--akzent); }
+.bandleiste .trenner { width: 1px; height: 20px; background: var(--linie); margin: 0 6px; }
+.bandleiste select {
+  height: 28px; border: 1px solid var(--linie); border-radius: 6px;
+  background: var(--papier); color: var(--schrift); font-size: 13px; max-width: 150px;
+}
+#hilfe-version { font-size: 12px; color: var(--matt); }
+#leiste.versteckt { display: none; }
+
+/* --- Datei: die Übersicht hinter dem ersten Reiter --- */
+#dateischirm {
+  position: fixed; inset: 0; z-index: 35; display: flex;
+  background: var(--papier);
+}
+#dateileiste {
+  width: 240px; flex: 0 0 240px; background: var(--leiste);
+  border-right: 1px solid var(--linie); padding: 10px 0;
+  display: flex; flex-direction: column; gap: 2px; overflow: auto;
+}
+#dateileiste button {
+  text-align: left; padding: 9px 18px; border: 0; background: transparent;
+  color: var(--schrift); font: inherit; font-size: 14px; cursor: pointer;
+}
+#dateileiste button:hover { background: color-mix(in srgb, var(--akzent) 14%, transparent); }
+#dateileiste button[aria-selected="true"] {
+  background: color-mix(in srgb, var(--akzent) 22%, transparent);
+  box-shadow: inset 3px 0 0 var(--akzent); font-weight: 600;
+}
+#datei-zurueck {
+  font-size: 18px !important; width: 44px; flex: 0 0 auto; margin-bottom: 6px;
+}
+.dateitrenner { height: 1px; background: var(--linie); margin: 8px 14px; }
+#dateiinhalt { flex: 1; padding: 28px 34px; overflow: auto; }
+.dateiseite h2 { margin: 0 0 18px; font-size: 24px; font-weight: 600; }
+.dateiseite .zeile2 {
+  display: flex; justify-content: space-between; gap: 16px; margin: 7px 0;
+  padding-bottom: 7px; border-bottom: 1px solid var(--linie); max-width: 640px;
+}
+.dateiseite .zeile2 span:first-child { color: var(--matt); }
+.dateiseite .knoepfe { display: flex; gap: 8px; margin: 18px 0 0; flex-wrap: wrap; }
+.dateiseite button {
+  padding: 8px 14px; border: 1px solid var(--linie); border-radius: 6px;
+  background: var(--papier); color: var(--schrift); font: inherit; cursor: pointer;
+}
+.dateiseite button:hover { border-color: var(--akzent); }
+.dateiseite .hinweis { color: var(--matt); font-size: 13px; margin: 10px 0 0; max-width: 640px; }
+
+/* Gedruckt wird die Seite, nicht das Programm drumherum. */
+@media print {
+  #band, #leiste, #kopf, #meldung, #dateischirm, #einstellungen,
+  #verlauffenster, #minileiste, #rechtsmenue, #leerhinweis { display: none !important; }
+  #rahmen, #haupt, #buehne { display: block; height: auto; overflow: visible; }
+  #flaeche { transform: none !important; }
+  body { background: #fff; color: #000; }
+  .kasten { break-inside: avoid; }
+}
 
 /* --- Seitenleiste --- */
 #leiste {
