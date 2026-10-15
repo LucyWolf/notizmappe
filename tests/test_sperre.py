@@ -233,6 +233,24 @@ pruefe("Und ist weiter lesbar",
        b.seite_lesen(buch, absch, seite)["elemente"][0]["html"] == "Neu geschrieben")
 pruefe("Ohne Sperre ist alles offen", b.sperre_stand()["eingerichtet"] is False)
 
+print("\nAbschalten, wenn eine Datei klemmt")
+klemm_buch = b.notizbuch_anlegen("Klemmt")["name"]
+klemm_ab = b.abschnitt_anlegen(klemm_buch, "A")["name"]
+klemm_seite = b.seite_anlegen(klemm_buch, klemm_ab, "Festgefahren")["name"]
+b.sperre_einrichten({"passwort": "klemmpasswort"})
+klemmt = DATEN / klemm_buch / klemm_ab / f"{klemm_seite}.json"
+os.chmod(klemmt.parent, 0o555)
+aus = b.sperre_aus({"passwort": "klemmpasswort"})
+os.chmod(klemmt.parent, 0o755)
+pruefe("Abschalten bricht ab, wenn etwas klemmt", "fehler" in aus, aus)
+pruefe("Und sagt, dass die Sperre an bleibt", "bleibt an" in aus.get("fehler", ""), aus)
+pruefe("Der Tresorschlüssel ist NICHT gelöscht", (DATEN / ".tresor.json").exists())
+pruefe("Die Notizen sind weiter lesbar",
+       "elemente" in b.seite_lesen(klemm_buch, klemm_ab, klemm_seite))
+aus = b.sperre_aus({"passwort": "klemmpasswort"})
+pruefe("Und wenn es nicht mehr klemmt, geht es", "fehler" not in aus, aus)
+pruefe("Jetzt ist der Schlüssel weg", not (DATEN / ".tresor.json").exists())
+
 print("\nHalb umgestellt (Abbruch mitten im Verschlüsseln)")
 an2 = b.sperre_einrichten({"passwort": "nochmal!!12"})
 pruefe("Zweites Einschalten geht", "fehler" not in an2, an2)
@@ -241,7 +259,7 @@ pruefe("Zweites Einschalten geht", "fehler" not in an2, an2)
 seitendatei.write_bytes(b'{"titel": "Montag", "elemente": [], "rev": 9}')
 pruefe("Eine Klartextdatei im verschlüsselten Ordner ist weiter lesbar",
        b.seite_lesen(buch, absch, seite).get("rev") == 9)
-pruefe("Der zweite Lauf holt sie nach", speicher.umstellen(True) == 1)
+pruefe("Der zweite Lauf holt sie nach", speicher.umstellen(True)["getan"] == 1)
 pruefe("Jetzt ist sie verschlüsselt", tresor.ist_verschluesselt(seitendatei.read_bytes()))
 
 print()

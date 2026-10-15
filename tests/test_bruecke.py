@@ -317,6 +317,32 @@ pruefe("Loeschen mit falscher Pfadlaenge abgelehnt", "fehler" in b.loeschen("sei
 pruefe("Notizbuch geloescht",
        "fehler" not in b.loeschen("notizbuch", [buch]) and not (DATEN / "Arbeit").exists())
 
+# --- Eine kaputte Datei darf nicht den ganzen Baum kosten --------------------
+#
+# Der Datenordner liegt im Sync. Halb uebertragene Dateien kommen dort wirklich
+# vor - und der Baum fasst jede Seite an, um ihren Titel zu holen. Faellt er
+# dabei um, ist die Seitenleiste leer, obwohl saemtliche Notizen da sind.
+heil = b.seite_anlegen(buch2, absch2, "Heile Seite")["name"] if False else None
+kaputt_buch = b.notizbuch_anlegen("Kaputt")["name"]
+kaputt_absch = b.abschnitt_anlegen(kaputt_buch, "A")["name"]
+heil = b.seite_anlegen(kaputt_buch, kaputt_absch, "Heil")["name"]
+hin = b.seite_anlegen(kaputt_buch, kaputt_absch, "Hinueber")["name"]
+for was, inhalt in (("halb übertragen", b'{"titel": "ab'), ("leer", b""),
+                    ("kein Wörterbuch", b'["liste"]')):
+    (DATEN / kaputt_buch / kaputt_absch / f"{hin}.json").write_bytes(inhalt)
+    baum = b.baum()
+    seiten = {s["name"]: s for bu in baum["notizbuecher"] for a in bu["abschnitte"]
+              for s in a["seiten"]}
+    pruefe(f"Baum überlebt: {was}", "fehler" not in baum and heil in seiten, baum)
+    pruefe(f"Kaputte Seite ist markiert: {was}", seiten.get(hin, {}).get("kaputt") is True,
+           seiten.get(hin))
+    antwort = b.seite_lesen(kaputt_buch, kaputt_absch, hin)
+    pruefe(f"Lesen sagt warum: {was}",
+           "beschädigt" in antwort.get("fehler", "") or "keine Seite" in antwort.get("fehler", ""),
+           antwort)
+    pruefe(f"Und ist kein roher Programmfehler: {was}", "wo" not in antwort, antwort)
+b.loeschen("notizbuch", [kaputt_buch])
+
 # --- Was die Oberflaeche aus den Einstellungen liest, muss es geben ----------
 #
 # Hier ist schon einmal ein Feld verschwunden ("hier", beim Wegfall des

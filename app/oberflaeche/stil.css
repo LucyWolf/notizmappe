@@ -67,6 +67,8 @@ body {
 .seite { margin-left: 24px; }
 .seite.aktiv { background: color-mix(in srgb, var(--akzent) 22%, transparent); }
 .seite.konflikt .name::after { content: " ⚠"; color: var(--warnung); }
+.seite.kaputt .name::after { content: " ⛔"; color: var(--warnung); }
+.seite.kaputt .name { text-decoration: line-through; opacity: .7; }
 .zeile button {
   border: 0; background: transparent; color: var(--matt);
   cursor: pointer; font-size: 13px; padding: 0 3px; border-radius: 4px;

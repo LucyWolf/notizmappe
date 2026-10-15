@@ -306,6 +306,26 @@ die man nur anschaut, ein Element dazu.
 **Noch nicht dabei** (aus dem OneNote-Band): Formerkennung, Freihand in Text,
 Mathe, Wiedergabe der Striche, Hintergrund formatieren, Ganzseitenansicht.
 
+## Wenn etwas auf der Platte klemmt
+
+Der Datenordner liegt im Sync, auf einem NAS oder auf einem Laufwerk, das auch
+mal nicht da ist. Dafür gilt:
+
+* **Keine Schreibrechte, kein Platz, Laufwerk weg** → ein Satz, der sagt, was
+  los ist und wo, statt `PermissionError: [Errno 13] … '.Seite.json.neu'`.
+* **Beschädigte Datei** (halb übertragen, Konfliktkopie) → die Seite wird in
+  der Leiste mit ⛔ markiert und durchgestrichen, der Rest des Baums bleibt
+  stehen. Vorher konnte **eine** kaputte Datei die ganze Seitenleiste leeren —
+  und es sah aus, als wären alle Notizen weg. Beim Öffnen steht dann, dass es
+  unter Verlauf → Seitenversionen meist eine frühere Fassung gibt.
+* **Sperre abschalten, wenn etwas klemmt** → bricht ab und lässt die Sperre an.
+  Den Schlüssel zu löschen, während noch verschlüsselte Dateien dastehen, hieße
+  sie für immer zuzusperren.
+* **Sperre einschalten, wenn etwas klemmt** → sagt, wie viele Dateien **nicht**
+  verschlüsselt werden konnten, mit Knopf zum Nachholen. Eine Meldung
+  „eingeschaltet", während ein Teil im Klartext liegt, wäre eine falsche
+  Zusicherung.
+
 ## Sperre (Passwort und Verschlüsselung)
 
 Einstellungen → **Sperre**. Eingeschaltet passiert zweierlei: beim Öffnen der

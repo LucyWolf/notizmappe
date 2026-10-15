@@ -1656,3 +1656,136 @@ Traceback (most recent call last):
                               ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
   File "<frozen posixpath>", line 451, in realpath
 ValueError: lstat: embedded null character in path
+
+--- 2026-10-15 16:27:58  bei seite_speichern
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 243, in seite_speichern
+    ergebnis = speicher.seite_speichern(
+        buch, absch, name, rev,
+    ...<2 lines>...
+        reinigen.text(rumpf.get("geraet"), 40),
+    )
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 687, in seite_speichern
+    _schreiben(datei, neu)
+    ~~~~~~~~~~^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 664, in _schreiben
+    _roh_schreiben(datei, json.dumps(daten, ensure_ascii=False, indent=1).encode("utf-8"))
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 332, in _roh_schreiben
+    with tmp.open("wb") as f:
+         ~~~~~~~~^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 539, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [Errno 13] Permission denied: '/tmp/tmpoqv6rkp7/Test/A/.Wichtig.json.neu'
+
+--- 2026-10-15 16:27:58  bei notizbuch_anlegen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 207, in notizbuch_anlegen
+    return {"name": speicher.notizbuch_anlegen(name)}
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 374, in notizbuch_anlegen
+    pfad_von([name]).mkdir()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 724, in mkdir
+    os.mkdir(self, mode)
+    ~~~~~~~~^^^^^^^^^^^^
+PermissionError: [Errno 13] Permission denied: '/tmp/tmpoqv6rkp7/Neu'
+
+--- 2026-10-15 16:29:09  bei seite_lesen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 228, in seite_lesen
+    return speicher.seite_lesen(notizbuch, abschnitt, name)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 697, in seite_lesen
+    daten = _json_lesen(datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 380, in _json_lesen
+    return json.loads(_roh_lesen(datei).decode("utf-8"))
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/usr/lib/python3.13/json/decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/json/decoder.py", line 361, in raw_decode
+    obj, end = self.scan_once(s, idx)
+               ~~~~~~~~~~~~~~^^^^^^^^
+json.decoder.JSONDecodeError: Unterminated string starting at: line 1 column 11 (char 10)
+
+--- 2026-10-15 16:29:09  bei seite_lesen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 228, in seite_lesen
+    return speicher.seite_lesen(notizbuch, abschnitt, name)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 697, in seite_lesen
+    daten = _json_lesen(datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 380, in _json_lesen
+    return json.loads(_roh_lesen(datei).decode("utf-8"))
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/usr/lib/python3.13/json/decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/json/decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+--- 2026-10-15 16:29:09  bei seite_lesen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 228, in seite_lesen
+    return speicher.seite_lesen(notizbuch, abschnitt, name)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 697, in seite_lesen
+    daten = _json_lesen(datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 380, in _json_lesen
+    return json.loads(_roh_lesen(datei).decode("utf-8"))
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/usr/lib/python3.13/json/decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/json/decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+--- 2026-10-15 16:29:09  bei seite_lesen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 228, in seite_lesen
+    return speicher.seite_lesen(notizbuch, abschnitt, name)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 698, in seite_lesen
+    daten.setdefault("elemente", [])
+    ^^^^^^^^^^^^^^^^
+AttributeError: 'list' object has no attribute 'setdefault'
+
+--- 2026-10-15 16:29:09  bei baum
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 200, in baum
+    return {"notizbuecher": speicher.baum(), "ordner": str(speicher.wurzel())}
+                            ~~~~~~~~~~~~~^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 402, in baum
+    "titel": _titel_aus(datei),
+             ~~~~~~~~~~^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 385, in _titel_aus
+    return _json_lesen(datei).get("titel") or datei.stem
+           ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'list' object has no attribute 'get'

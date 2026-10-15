@@ -93,6 +93,7 @@ const WEGE = {
   'POST /api/papierkorb/leeren': (p, b) => b.papierkorb_leeren(),
   'GET /api/sperre':           (p, b) => b.sperre_stand(),
   'POST /api/sperre/an':       (p, b, r) => b.sperre_einrichten(r),
+  'POST /api/sperre/nachholen': (p, b) => b.sperre_nachholen(),
   'POST /api/sperre/auf':      (p, b, r) => b.entsperren(r),
   'POST /api/sperre/zu':       (p, b) => b.sperren(),
   'POST /api/sperre/passwort':      (p, b, r) => b.sperre_passwort(r),
@@ -270,6 +271,14 @@ function baumZeichnen() {
         sd.classList.add('seite');
         if (s.konflikt) sd.classList.add('konflikt');
         if (s.konflikt) sd.title = 'Konfliktkopie vom Sync - hier stehen zwei Fassungen derselben Seite';
+        // Beschädigt: die Datei lässt sich nicht lesen. Das gehört in die
+        // Leiste, nicht erst in eine Fehlermeldung beim Anklicken - sonst
+        // sucht man den Grund bei sich.
+        if (s.kaputt) {
+          sd.classList.add('kaputt');
+          sd.title = 'Diese Datei lässt sich nicht lesen - vermutlich halb übertragen. '
+            + 'Unter Verlauf → Seitenversionen liegt meist eine frühere Fassung.';
+        }
         if (offen && offen.notizbuch === buch.name && offen.abschnitt === ab.name && offen.name === s.name) sd.classList.add('aktiv');
         sd.querySelector('.name').addEventListener('click', () => seiteOeffnen(buch.name, ab.name, s.name));
         ad.append(sd);
@@ -2549,7 +2558,27 @@ $('#e-sperre-an').addEventListener('click', async () => {
     const r = await api('/api/sperre/an', 'POST', { passwort: pw });
     $('#e-sperre-pw1').value = '';
     $('#e-sperre-pw2').value = '';
-    sperrhinweis(`Eingeschaltet, ${r.umgestellt} Dateien verschlüsselt.`);
+    if (r.nicht_umgestellt && r.nicht_umgestellt.length) {
+      // Das darf nicht untergehen: der Benutzer hielte seine Notizen sonst für
+      // geschützt, während ein Teil davon weiter im Klartext auf der Platte
+      // liegt. Lieber eine unbequeme Meldung als eine falsche Zusicherung.
+      sperrhinweis(`Achtung: ${r.nicht_umgestellt.length} Dateien konnten NICHT `
+        + `verschlüsselt werden und liegen weiter im Klartext. ${r.nicht_umgestellt[0]}`);
+      melden(`Die Sperre ist an, aber ${r.nicht_umgestellt.length} Dateien liegen noch `
+        + `im Klartext: ${r.nicht_umgestellt[0]}`, [
+        ['Nochmal versuchen', async () => {
+          try {
+            const w = await api('/api/sperre/nachholen', 'POST', {});
+            meldungWeg();
+            sperrhinweis(w.offen
+              ? `Noch immer ${w.offen} Dateien im Klartext.`
+              : 'Jetzt ist alles verschlüsselt.');
+          } catch (f) { melden(f.message); }
+        }],
+      ]);
+    } else {
+      sperrhinweis(`Eingeschaltet, ${r.umgestellt} Dateien verschlüsselt.`);
+    }
     rettungZeigen(r.rettung);
     await sperreTafelFuellen();
   } catch (f) {

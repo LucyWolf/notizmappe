@@ -381,7 +381,23 @@ class Bruecke:
             rettung = tresor.einrichten(speicher.wurzel(), passwort)
         except tresor.TresorFehler as f:
             raise Abbruch(str(f))
-        return {"rettung": rettung, "umgestellt": speicher.umstellen(True)}
+        ergebnis = speicher.umstellen(True)
+        return {"rettung": rettung, "umgestellt": ergebnis["getan"],
+                "nicht_umgestellt": ergebnis["schief"][:10]}
+
+    @_gefasst
+    def sperre_nachholen(self) -> dict:
+        """Dateien nachtraeglich verschluesseln, die beim Einschalten klemmten.
+
+        Zum Beispiel, weil ein Netzlaufwerk gerade nicht da war. Ohne das bliebe
+        nur, die Sperre ab- und wieder einzuschalten - und dabei liegt alles
+        zwischendurch im Klartext.
+        """
+        if not speicher.verschluesselt():
+            raise Abbruch("Die Sperre ist gar nicht eingeschaltet")
+        ergebnis = speicher.umstellen(True)
+        return {"nachgeholt": ergebnis["getan"], "offen": len(ergebnis["schief"]),
+                "grund": ergebnis["schief"][0] if ergebnis["schief"] else ""}
 
     @_gefasst
     def entsperren(self, rumpf: dict) -> dict:
@@ -441,11 +457,18 @@ class Bruecke:
         wurzel = speicher.wurzel()
         try:
             tresor.entsperren(wurzel, passwort)        # erst beweisen, dann aufmachen
-            offen = speicher.umstellen(False)
-            tresor.abschalten(wurzel, passwort)
+            ergebnis = speicher.umstellen(False)
         except tresor.TresorFehler as f:
             raise Abbruch(str(f))
-        return {"ok": True, "umgestellt": offen}
+        if ergebnis["schief"]:
+            # Den Schluessel jetzt zu loeschen, hiesse diese Dateien wegzuwerfen.
+            # Lieber bleibt die Sperre an und sagt, woran es liegt.
+            raise Abbruch(
+                f"{len(ergebnis['schief'])} Dateien ließen sich nicht entschlüsseln - "
+                "die Sperre bleibt an, sonst wären sie für immer zu. "
+                + ergebnis["schief"][0])
+        tresor.abschalten(wurzel, passwort)
+        return {"ok": True, "umgestellt": ergebnis["getan"]}
 
     @_gefasst
     def sperre_minuten(self, rumpf: dict) -> dict:

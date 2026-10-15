@@ -320,6 +320,39 @@ def _roh_lesen(datei: Path) -> bytes:
     return tresor.entschluesseln(datei.read_bytes())
 
 
+def _anlegbar(ordner: Path) -> None:
+    """Vorher nachsehen, ob sich dort ueberhaupt etwas anlegen laesst."""
+    if not os.access(ordner, os.W_OK):
+        raise SpeicherFehler(
+            f"Keine Schreibrechte im Ordner {ordner}. Unter Einstellungen → Daten "
+            "lässt sich ein anderer wählen.")
+
+
+def schreibfehler(ziel: Path, f: OSError) -> SpeicherFehler:
+    """Aus einem Fehler des Dateisystems einen Satz machen, mit dem man etwas
+    anfangen kann.
+
+    Vorher stand im Fenster "PermissionError: [Errno 13] Permission denied:
+    '/.../.Wichtig.json.neu'" - englisch, mit dem Namen einer Hilfsdatei, die
+    es gar nicht geben sollte, und ohne zu sagen, was zu tun ist. Das sind
+    genau die zwei Faelle, die beim Schreiben wirklich vorkommen: kein Recht
+    und kein Platz.
+    """
+    import errno
+    ordner = ziel.parent
+    if f.errno in (errno.EACCES, errno.EPERM, errno.EROFS):
+        return SpeicherFehler(
+            f"Keine Schreibrechte im Ordner {ordner}. Liegt er auf einem Netzlaufwerk, "
+            "das nur zum Lesen eingehängt ist? Unter Einstellungen → Daten lässt sich "
+            "ein anderer Ordner wählen.")
+    if f.errno == errno.ENOSPC:
+        return SpeicherFehler(f"Auf dem Laufwerk von {ordner} ist kein Platz mehr frei.")
+    if f.errno in (errno.ENOENT, errno.ENOTDIR):
+        return SpeicherFehler(
+            f"Den Ordner {ordner} gibt es nicht mehr - ist das Laufwerk noch eingehängt?")
+    return SpeicherFehler(f"Konnte nicht schreiben ({f.strerror}): {ordner}")
+
+
 def _roh_schreiben(datei: Path, roh: bytes, chiffrieren: bool | None = None) -> None:
     """Erst daneben schreiben, dann umbenennen. Sonst steht bei einem Absturz
     mitten im Schreiben eine halbe Seite auf der Platte - und der Sync-Client
@@ -329,21 +362,51 @@ def _roh_schreiben(datei: Path, roh: bytes, chiffrieren: bool | None = None) -> 
     if chiffrieren:
         roh = tresor.verschluesseln(roh)
     tmp = datei.with_name(f".{datei.name}.neu")
-    with tmp.open("wb") as f:
-        f.write(roh)
-        f.flush()
-        os.fsync(f.fileno())
-    os.replace(tmp, datei)
+    try:
+        with tmp.open("wb") as f:
+            f.write(roh)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, datei)
+    except OSError as f:
+        try:
+            tmp.unlink(missing_ok=True)         # keine halben Dateien liegen lassen
+        except OSError:
+            pass
+        raise schreibfehler(datei, f)
 
 
 def _json_lesen(datei: Path) -> dict:
-    return json.loads(_roh_lesen(datei).decode("utf-8"))
+    """Eine Seite von der Platte lesen - und sagen, wenn sie kaputt ist.
+
+    Der Datenordner liegt im Sync. Eine halb uebertragene Datei, ein
+    abgebrochener Schreibvorgang auf einem NAS oder eine Konfliktkopie, die
+    kein JSON ist, kommen dort wirklich vor. Vorher gab das einen rohen
+    JSONDecodeError - und eine einzige kaputte Datei hat sogar den ganzen Baum
+    mitgerissen, weil der jede Seite anfasst, um ihren Titel zu holen.
+    """
+    roh = _roh_lesen(datei)
+    try:
+        daten = json.loads(roh.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        raise SpeicherFehler(
+            f"Die Datei {datei.name} ist beschädigt - vermutlich halb übertragen. "
+            "Unter Verlauf → Seitenversionen liegt meist eine frühere Fassung.")
+    if not isinstance(daten, dict):
+        raise SpeicherFehler(f"In {datei.name} steht keine Seite.")
+    return daten
 
 
 def _titel_aus(datei: Path) -> str:
+    """Nur der Titel fuer den Baum - und niemals ein Fehler.
+
+    Haelt der Baum hier nicht alles aus, ist die Seitenleiste leer, obwohl
+    saemtliche Notizen da sind. Das ist der denkbar schlechteste Tausch: eine
+    kaputte Datei gegen den Eindruck, alles sei weg.
+    """
     try:
         return _json_lesen(datei).get("titel") or datei.stem
-    except (OSError, ValueError, tresor.TresorFehler):
+    except Exception:                           # noqa: BLE001 - der Baum stirbt nicht an einer Datei
         return datei.stem
 
 
@@ -357,11 +420,27 @@ def baum() -> list[dict]:
         for abs_ in sorted(p for p in buch.iterdir() if p.is_dir() and not p.name.startswith(".")):
             seiten = []
             for datei in sorted(abs_.glob("*.json")):
+                # Einmal lesen, beides daraus: Titel und ob die Datei heil ist.
+                # Zweimal zu lesen hiesse, den ganzen Ordner doppelt von der
+                # Platte zu holen - und bei einem Datenordner auf dem NAS ist
+                # das der Unterschied zwischen flott und zaeh.
+                kaputt = False
+                try:
+                    titel = _json_lesen(datei).get("titel") or datei.stem
+                except SpeicherFehler:
+                    titel, kaputt = datei.stem, True
+                except Exception:               # noqa: BLE001 - zugesperrt o.ae.
+                    titel = datei.stem
+                try:
+                    geaendert = int(datei.stat().st_mtime)
+                except OSError:
+                    continue                    # gerade verschwunden: ueberspringen
                 seiten.append({
                     "name": datei.stem,
-                    "titel": _titel_aus(datei),
+                    "titel": titel,
                     "konflikt": bool(KONFLIKT_MUSTER.search(datei.name)),
-                    "geaendert": int(datei.stat().st_mtime),
+                    "kaputt": kaputt,
+                    "geaendert": geaendert,
                 })
             abschnitte.append({"name": abs_.name, "seiten": seiten})
         aus.append({"name": buch.name, "abschnitte": abschnitte})
@@ -370,6 +449,7 @@ def baum() -> list[dict]:
 
 def notizbuch_anlegen(name: str) -> str:
     wach()
+    _anlegbar(wurzel())
     name = frei(wurzel(), slug(name))
     pfad_von([name]).mkdir()
     return name
@@ -377,6 +457,7 @@ def notizbuch_anlegen(name: str) -> str:
 
 def abschnitt_anlegen(buch: str, name: str) -> str:
     wach()
+    _anlegbar(pfad_von([buch]))
     ordner = pfad_von([buch])
     if not ordner.is_dir():
         raise SpeicherFehler("Notizbuch gibt es nicht")
@@ -779,11 +860,20 @@ def inhalte() -> list[Path]:
     return aus
 
 
-def umstellen(chiffrieren: bool) -> int:
-    """Bestehende Notizen ver- oder entschluesseln. Jede Datei einzeln und mit
-    Umbenennen - bricht es dazwischen ab, ist keine Datei halb geschrieben, und
-    der naechste Lauf macht da weiter, wo dieser stehen geblieben ist."""
+def umstellen(chiffrieren: bool) -> dict:
+    """Bestehende Notizen ver- oder entschluesseln.
+
+    Jede Datei einzeln und mit Umbenennen - bricht es dazwischen ab, ist keine
+    Datei halb geschrieben, und der naechste Lauf macht da weiter, wo dieser
+    stehen geblieben ist.
+
+    Gibt zurueck, was geklappt hat **und was nicht**. Das ist kein Beiwerk: wer
+    die Sperre abschaltet, loescht hinterher den Schluessel. Bliebe dabei auch
+    nur eine Datei verschluesselt zurueck, waere sie fuer immer zu - und der
+    Knopf hiesse "Sperre abschalten", nicht "Notizen wegwerfen".
+    """
     getan = 0
+    schief = []
     for pfad in inhalte():
         try:
             roh = pfad.read_bytes()
@@ -791,9 +881,9 @@ def umstellen(chiffrieren: bool) -> int:
                 continue                                # schon so, wie es sein soll
             _roh_schreiben(pfad, tresor.entschluesseln(roh), chiffrieren)
             getan += 1
-        except (OSError, tresor.TresorFehler):
-            continue
-    return getan
+        except (OSError, SpeicherFehler, tresor.TresorFehler) as f:
+            schief.append(f"{pfad.name}: {f}")
+    return {"getan": getan, "schief": schief}
 
 
 # --- Papierkorb --------------------------------------------------------------
