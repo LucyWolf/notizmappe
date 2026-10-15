@@ -1559,17 +1559,18 @@ async function updateBeimStart() {
 
 /* ----------------------------------------------------------- Einstellungen */
 
-const tafel = $('#einstellungen');
-
-function tafelZeigen(an) {
-  tafel.hidden = !an;
-  if (an) einstellungenLaden();
+/* Die Einstellungen sind kein eigenes Fenster mehr, sondern eine Seite in der
+ * Datei-Ebene. tafelZeigen() bleibt trotzdem stehen: es wird von einem Dutzend
+ * Stellen gerufen ("Einstellungen öffnen" in Meldungen, aus der Leiste, aus
+ * dem Zahnrad) - die sollen alle weiter funktionieren. */
+function tafelZeigen(an, punkt) {
+  if (!an) { dateiZeigen(false); return; }
+  dateiZeigen(true);
+  dateiPunkt(punkt || 'optionen');
+  einstellungenLaden();
 }
 
 $('#zahnrad').addEventListener('click', () => tafelZeigen(true));
-$('#zu').addEventListener('click', () => tafelZeigen(false));
-tafel.addEventListener('click', (ev) => { if (ev.target === tafel) tafelZeigen(false); });
-document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !tafel.hidden) tafelZeigen(false); });
 
 $('#e-ordner-waehlen').addEventListener('click', async () => {
   try {
@@ -2649,15 +2650,14 @@ async function dateiKontoFuellen() {
 }
 
 function zuDenEinstellungen(punkt) {
-  dateiZeigen(false);
-  tafelZeigen(true);
+  // Updates stehen unter "Informationen", alles andere unter "Optionen".
+  tafelZeigen(true, punkt === 'e-pruefen' ? 'info' : 'optionen');
   if (punkt) setTimeout(() => {
     const ziel = $('#' + punkt);
     if (ziel) ziel.scrollIntoView({ block: 'center' });
   }, 80);
 }
 
-$('#d-optionen').addEventListener('click', () => zuDenEinstellungen());
 $('#d-konto-einstellungen').addEventListener('click', () => zuDenEinstellungen('e-ferne-abschnitt'));
 $('#d-server').addEventListener('click', () => zuDenEinstellungen('e-ferne-abschnitt'));
 $('#d-ordner-waehlen').addEventListener('click', () => zuDenEinstellungen('e-ordnerwahl'));

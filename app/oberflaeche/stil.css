@@ -281,18 +281,36 @@ body { display: flex; flex-direction: column; }
   background: var(--papier); color: var(--schrift); cursor: pointer; font-size: 14px;
 }
 #zahnrad:hover { border-color: var(--akzent); }
-#einstellungen {
-  position: fixed; inset: 0; z-index: 20; display: flex;
-  align-items: flex-start; justify-content: center; padding: 40px 16px;
-  background: color-mix(in srgb, #000 45%, transparent);
-  overflow: auto;
-}
+/* Die Einstellungen sind kein schwebendes Fenster mehr, sondern eine Seite
+   hinter "Datei". Die Auswahlregeln bleiben gleich, damit alles Bestehende
+   weiter passt - nur der Rahmen drumherum ist ein anderer. */
+#einstellungen { display: block; }
 #einstellungen .tafel {
-  width: min(560px, 100%); background: var(--papier); color: var(--schrift);
-  border: 1px solid var(--linie); border-radius: 10px; padding: 0 0 8px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, .35);
+  width: 100%; max-width: 760px; background: transparent; color: var(--schrift);
+  border: 0; border-radius: 0; padding: 0;
 }
-#einstellungen header {
+#einstellungen-oben { max-width: 760px; margin-top: 22px; }
+#einstellungen-oben section { padding: 0; border: 0; }
+#einstellungen-oben h3 {
+  margin: 0 0 8px; font-size: 13px; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--matt);
+}
+#einstellungen-oben .zeile2 {
+  display: flex; justify-content: space-between; gap: 16px; margin: 7px 0;
+  padding-bottom: 7px; border-bottom: 1px solid var(--linie); max-width: 640px;
+}
+#einstellungen-oben .knoepfe { display: flex; gap: 8px; margin: 14px 0 2px; flex-wrap: wrap; }
+#einstellungen-oben button {
+  padding: 8px 14px; border: 1px solid var(--linie); border-radius: 6px;
+  background: var(--papier); color: var(--schrift); font: inherit; cursor: pointer;
+}
+#einstellungen-oben button:hover { border-color: var(--akzent); }
+#einstellungen-oben .hinweis, #einstellungen-oben .notizen {
+  color: var(--matt); font-size: 12px; margin: 8px 0 0;
+}
+#einstellungen-oben .haken { display: flex; align-items: center; gap: 6px; font-size: 13px; margin: 6px 0; }
+#einstellungen header { display: none; }
+#einstellungen header.alt {
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px 16px; border-bottom: 1px solid var(--linie);
 }

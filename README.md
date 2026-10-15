@@ -297,10 +297,21 @@ OneNote:
 `Datei · Start · Einfügen · Zeichnen · Verlauf · Ansicht · Hilfe`
 
 **Datei** ist kein Reiter mit Werkzeugen, sondern eine Ebene darüber: eine
-ganzseitige Übersicht mit **Informationen** (wo die Notizen liegen, wie viele
-Seiten, Papierkorb, Platz, Sperre, Fassung), **Neu**, **Öffnen** (anderer
+ganzseitige Übersicht mit **Informationen**, **Neu**, **Öffnen** (anderer
 Ordner, Server, OneNote), **Drucken**, **Exportieren**, **Konto** und
 **Optionen**. Zurück mit dem Pfeil oder `Esc`.
+
+Dort wohnen auch die Einstellungen — ein eigenes Einstellungsfenster gibt es
+nicht mehr:
+
+* **Informationen**: wo die Notizen liegen, Seitenzahl, Papierkorb, Platz,
+  Sperre, Fassung — und darunter die **Updates** (prüfen, installieren, beim
+  Start nachsehen, automatisch einspielen).
+* **Optionen**: Datenordner, Serververbindung, OneNote übernehmen, Sperre,
+  Schriften, Darstellung.
+
+Das Zahnrad unten in der Leiste führt jetzt ebenfalls dorthin, und jede Meldung
+mit „Einstellungen öffnen" auch.
 
 **Exportieren** schreibt die offene Seite als eine HTML-Datei, die ohne dieses
 Programm aufgeht — Bilder stecken als `data:`-Adresse mit drin, sonst wäre es

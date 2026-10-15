@@ -194,14 +194,37 @@ window.addEventListener('unhandledrejection', function (ev) {
     <button type="button" data-tun="alles">Alles markieren</button>
   </div>
 
-  <div id="einstellungen" hidden>
-    <div class="tafel" role="dialog" aria-label="Einstellungen">
-      <header>
-        <strong>Einstellungen</strong>
-        <button type="button" id="zu" title="Schließen">✕</button>
-      </header>
 
-      <section>
+  <!-- Datei: die Übersicht, die OneNote hinter "Datei" zeigt. Links die
+       Punkte, rechts das, was dazugehört. Deckt das ganze Fenster ab - man ist
+       dann nicht mehr in der Seite, sondern eine Ebene darüber. -->
+  <div id="dateischirm" hidden>
+    <div id="dateileiste">
+      <button type="button" id="datei-zurueck" title="Zurück zu den Notizen">←</button>
+      <button type="button" class="dateipunkt" data-punkt="info" aria-selected="true">Informationen</button>
+      <button type="button" class="dateipunkt" data-punkt="neu">Neu</button>
+      <button type="button" class="dateipunkt" data-punkt="oeffnen">Öffnen</button>
+      <span class="dateitrenner"></span>
+      <button type="button" class="dateipunkt" data-punkt="drucken">Drucken</button>
+      <button type="button" class="dateipunkt" data-punkt="exportieren">Exportieren</button>
+      <span class="dateitrenner"></span>
+      <button type="button" class="dateipunkt" data-punkt="konto">Konto</button>
+      <button type="button" class="dateipunkt" data-punkt="optionen">Optionen</button>
+    </div>
+    <div id="dateiinhalt">
+      <section class="dateiseite" data-punkt="info">
+        <h2>Informationen</h2>
+        <p class="zeile2"><span>Notizen liegen</span><code id="d-ordner">…</code></p>
+        <p class="zeile2"><span>Seiten insgesamt</span><span id="d-seiten">…</span></p>
+        <p class="zeile2"><span>Im Papierkorb</span><span id="d-papierkorb">…</span></p>
+        <p class="zeile2"><span>Frei auf dem Laufwerk</span><span id="d-frei">…</span></p>
+        <p class="zeile2"><span>Sperre</span><span id="d-sperre">…</span></p>
+        <p class="zeile2"><span>Fassung</span><span id="d-version">…</span></p>
+        <p class="zeile2"><span>Offene Seite</span><span id="d-seite">…</span></p>
+        <p class="hinweis" id="d-info-hinweis"></p>
+
+        <div id="einstellungen-oben">
+          <section>
         <h3>Version</h3>
         <p class="zeile2"><span>Installiert</span><code id="e-version">…</code></p>
         <p class="zeile2"><span>Im neuesten Release</span><code id="e-verfuegbar">wird geprüft …</code></p>
@@ -217,10 +240,64 @@ window.addEventListener('unhandledrejection', function (ev) {
           Updates automatisch installieren</label>
         <p class="hinweis">Läuft nur auf dem Rechner, auf dem die Notizmappe geöffnet ist.
           Offene Änderungen werden vorher gespeichert, danach startet sie neu.</p>
+          </section>
+        </div>
       </section>
 
-      <!-- Nur am eigenen Rechner zu sehen (e.hier): in der Serverfassung waere
-           "mit einem Server verbinden" sinnlos. -->
+      <section class="dateiseite" data-punkt="neu" hidden>
+        <h2>Neu</h2>
+        <p class="knoepfe">
+          <button type="button" id="d-neu-buch">Notizbuch</button>
+          <button type="button" id="d-neu-abschnitt">Abschnitt</button>
+          <button type="button" id="d-neu-seite">Seite</button>
+        </p>
+        <p class="hinweis">Abschnitt und Seite entstehen in dem Notizbuch, in dem
+          du gerade bist.</p>
+      </section>
+
+      <section class="dateiseite" data-punkt="oeffnen" hidden>
+        <h2>Öffnen</h2>
+        <p class="hinweis">Notizen sind Ordner und Dateien. „Öffnen" heißt hier
+          also: woanders hinsehen.</p>
+        <p class="knoepfe">
+          <button type="button" id="d-ordner-waehlen">Anderer Ordner …</button>
+          <button type="button" id="d-server">Mit einem Server verbinden …</button>
+          <button type="button" id="d-onenote">Aus OneNote übernehmen …</button>
+        </p>
+        <p class="hinweis" id="d-oeffnen-hinweis"></p>
+      </section>
+
+      <section class="dateiseite" data-punkt="drucken" hidden>
+        <h2>Drucken</h2>
+        <p class="hinweis">Gedruckt wird die offene Seite, so wie sie dasteht —
+          ohne Leiste, ohne Band.</p>
+        <p class="knoepfe"><button type="button" id="d-drucken">Seite drucken …</button></p>
+      </section>
+
+      <section class="dateiseite" data-punkt="exportieren" hidden>
+        <h2>Exportieren</h2>
+        <p class="hinweis">Die offene Seite als HTML-Datei — Text und Bilder darin,
+          ohne Programm zum Öffnen. Zum Weitergeben oder Aufheben.</p>
+        <p class="knoepfe">
+          <button type="button" id="d-export-html">Seite als HTML speichern …</button>
+        </p>
+        <p class="hinweis" id="d-export-hinweis"></p>
+      </section>
+
+      <section class="dateiseite" data-punkt="konto" hidden>
+        <h2>Konto</h2>
+        <p class="zeile2"><span>Server</span><span id="d-konto-stand">…</span></p>
+        <p class="knoepfe">
+          <button type="button" id="d-konto-einstellungen">Verbindung einrichten …</button>
+        </p>
+        <p class="hinweis">Am eigenen Rechner gibt es kein Konto — die Notizen
+          liegen in einem Ordner. Ein Konto hat man nur auf einem Server.</p>
+      </section>
+
+      <section class="dateiseite" data-punkt="optionen" hidden>
+        <h2>Optionen</h2>
+        <div id="einstellungen">
+          <div class="tafel">
       <section id="e-ferne-abschnitt" hidden>
         <h3>Mit einem Server verbinden</h3>
         <p class="zeile2"><span>Zustand</span><span id="e-ferne-stand">…</span></p>
@@ -251,9 +328,8 @@ window.addEventListener('unhandledrejection', function (ev) {
           läuft nach zwei Wochen ab und endet sofort, wenn du dort das Passwort
           änderst.</p>
         <p class="hinweis" id="e-ferne-hinweis"></p>
-      </section>
-
-      <section>
+</section>
+            <section>
         <h3>Daten</h3>
         <p class="zeile2"><span>Ordner</span><code id="e-ordner">…</code></p>
         <p class="zeile2"><span>Seiten</span><span id="e-seiten">…</span></p>
@@ -274,13 +350,8 @@ window.addEventListener('unhandledrejection', function (ev) {
         <p class="hinweis" id="e-ordner-hinweis">Am besten ein Ordner im Nextcloud- oder
           NAS-Ordner, dann sind die Notizen auf allen Geräten da. Kopiert wird nur, was
           im neuen Ordner noch nicht liegt; der alte Ordner bleibt unangetastet.</p>
-      </section>
-
-
-
-
-
-      <section>
+            </section>
+            <section>
         <h3>Aus OneNote übernehmen</h3>
         <p class="knoepfe">
           <button type="button" id="e-onenote">OneNote-Datei einlesen …</button>
@@ -292,9 +363,8 @@ window.addEventListener('unhandledrejection', function (ev) {
           der Kästen, Tabellen, Freihand und Tags nicht. Abschnitte mit Passwort
           lassen sich nicht lesen.</p>
         <p class="hinweis" id="e-onenote-stand"></p>
-      </section>
-
-      <section>
+            </section>
+            <section>
         <h3>Sperre</h3>
         <p class="zeile2"><span>Zustand</span><span id="e-sperre-stand">…</span></p>
 
@@ -358,9 +428,8 @@ window.addEventListener('unhandledrejection', function (ev) {
           </details>
         </div>
         <p class="hinweis" id="e-sperre-hinweis"></p>
-      </section>
-
-      <section>
+            </section>
+            <section>
         <h3>Schriften</h3>
         <p class="hinweis">Mit dem Stern kommt eine Schrift nach oben in die Auswahl,
           damit du sie nicht jedes Mal suchen musst.</p>
@@ -373,9 +442,8 @@ window.addEventListener('unhandledrejection', function (ev) {
           <div id="e-schriftliste" class="schriftliste lang"></div>
         </details>
         <p class="hinweis" id="e-schrift-hinweis"></p>
-      </section>
-
-      <section>
+            </section>
+            <section>
         <h3>Fenster</h3>
         <p class="zeile2"><span>Darstellung</span><span id="e-zoom">100 %</span></p>
         <p class="knoepfe">
@@ -384,94 +452,9 @@ window.addEventListener('unhandledrejection', function (ev) {
           <button type="button" id="e-zoom-rein">größer</button>
         </p>
         <p class="hinweis" id="e-lage"></p>
-      </section>
-    </div>
-  </div>
-
-  <!-- Datei: die Übersicht, die OneNote hinter "Datei" zeigt. Links die
-       Punkte, rechts das, was dazugehört. Deckt das ganze Fenster ab - man ist
-       dann nicht mehr in der Seite, sondern eine Ebene darüber. -->
-  <div id="dateischirm" hidden>
-    <div id="dateileiste">
-      <button type="button" id="datei-zurueck" title="Zurück zu den Notizen">←</button>
-      <button type="button" class="dateipunkt" data-punkt="info" aria-selected="true">Informationen</button>
-      <button type="button" class="dateipunkt" data-punkt="neu">Neu</button>
-      <button type="button" class="dateipunkt" data-punkt="oeffnen">Öffnen</button>
-      <span class="dateitrenner"></span>
-      <button type="button" class="dateipunkt" data-punkt="drucken">Drucken</button>
-      <button type="button" class="dateipunkt" data-punkt="exportieren">Exportieren</button>
-      <span class="dateitrenner"></span>
-      <button type="button" class="dateipunkt" data-punkt="konto">Konto</button>
-      <button type="button" class="dateipunkt" data-punkt="optionen">Optionen</button>
-    </div>
-    <div id="dateiinhalt">
-      <section class="dateiseite" data-punkt="info">
-        <h2>Informationen</h2>
-        <p class="zeile2"><span>Notizen liegen</span><code id="d-ordner">…</code></p>
-        <p class="zeile2"><span>Seiten insgesamt</span><span id="d-seiten">…</span></p>
-        <p class="zeile2"><span>Im Papierkorb</span><span id="d-papierkorb">…</span></p>
-        <p class="zeile2"><span>Frei auf dem Laufwerk</span><span id="d-frei">…</span></p>
-        <p class="zeile2"><span>Sperre</span><span id="d-sperre">…</span></p>
-        <p class="zeile2"><span>Fassung</span><span id="d-version">…</span></p>
-        <p class="zeile2"><span>Offene Seite</span><span id="d-seite">…</span></p>
-        <p class="hinweis" id="d-info-hinweis"></p>
-      </section>
-
-      <section class="dateiseite" data-punkt="neu" hidden>
-        <h2>Neu</h2>
-        <p class="knoepfe">
-          <button type="button" id="d-neu-buch">Notizbuch</button>
-          <button type="button" id="d-neu-abschnitt">Abschnitt</button>
-          <button type="button" id="d-neu-seite">Seite</button>
-        </p>
-        <p class="hinweis">Abschnitt und Seite entstehen in dem Notizbuch, in dem
-          du gerade bist.</p>
-      </section>
-
-      <section class="dateiseite" data-punkt="oeffnen" hidden>
-        <h2>Öffnen</h2>
-        <p class="hinweis">Notizen sind Ordner und Dateien. „Öffnen" heißt hier
-          also: woanders hinsehen.</p>
-        <p class="knoepfe">
-          <button type="button" id="d-ordner-waehlen">Anderer Ordner …</button>
-          <button type="button" id="d-server">Mit einem Server verbinden …</button>
-          <button type="button" id="d-onenote">Aus OneNote übernehmen …</button>
-        </p>
-        <p class="hinweis" id="d-oeffnen-hinweis"></p>
-      </section>
-
-      <section class="dateiseite" data-punkt="drucken" hidden>
-        <h2>Drucken</h2>
-        <p class="hinweis">Gedruckt wird die offene Seite, so wie sie dasteht —
-          ohne Leiste, ohne Band.</p>
-        <p class="knoepfe"><button type="button" id="d-drucken">Seite drucken …</button></p>
-      </section>
-
-      <section class="dateiseite" data-punkt="exportieren" hidden>
-        <h2>Exportieren</h2>
-        <p class="hinweis">Die offene Seite als HTML-Datei — Text und Bilder darin,
-          ohne Programm zum Öffnen. Zum Weitergeben oder Aufheben.</p>
-        <p class="knoepfe">
-          <button type="button" id="d-export-html">Seite als HTML speichern …</button>
-        </p>
-        <p class="hinweis" id="d-export-hinweis"></p>
-      </section>
-
-      <section class="dateiseite" data-punkt="konto" hidden>
-        <h2>Konto</h2>
-        <p class="zeile2"><span>Server</span><span id="d-konto-stand">…</span></p>
-        <p class="knoepfe">
-          <button type="button" id="d-konto-einstellungen">Verbindung einrichten …</button>
-        </p>
-        <p class="hinweis">Am eigenen Rechner gibt es kein Konto — die Notizen
-          liegen in einem Ordner. Ein Konto hat man nur auf einem Server.</p>
-      </section>
-
-      <section class="dateiseite" data-punkt="optionen" hidden>
-        <h2>Optionen</h2>
-        <p class="hinweis">Schriften, Darstellung, Sperre, Updates und der
-          Datenordner.</p>
-        <p class="knoepfe"><button type="button" id="d-optionen">Einstellungen öffnen</button></p>
+            </section>
+          </div>
+        </div>
       </section>
     </div>
   </div>
