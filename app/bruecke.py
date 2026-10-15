@@ -84,6 +84,16 @@ def zusperren() -> None:
 _klartext_ordner = None
 
 
+def _woerterbuch(wert) -> dict:
+    """Was aus der Oberflaeche kommt, ist nicht zwangslaeufig ein Woerterbuch.
+
+    Kommt statt dessen eine Zahl oder eine Liste an, gaebe es ohne das hier
+    einen rohen Programmfehler statt einer Meldung - und im Fenster stuende
+    eine Zeile, die nach einem kaputten Programm aussieht.
+    """
+    return wert if isinstance(wert, dict) else {}
+
+
 def _ins_protokoll(wo: str, x: Exception) -> None:
     """Fehler mit Spur in eine Datei schreiben.
 
@@ -219,6 +229,7 @@ class Bruecke:
 
     @_gefasst
     def seite_speichern(self, rumpf: dict) -> dict:
+        rumpf = _woerterbuch(rumpf)
         buch = reinigen.text(rumpf.get("notizbuch"), 80)
         absch = reinigen.text(rumpf.get("abschnitt"), 80)
         name = reinigen.text(rumpf.get("name"), 120)
@@ -260,7 +271,7 @@ class Bruecke:
         Die Art kommt von der Oberflaeche und wird nicht aus dem Pfad geraten, damit
         nicht ein Abschnitt namens "Seite" versehentlich als Datei behandelt wird."""
         art = reinigen.text(art, 20)
-        teile = [reinigen.text(t, 120) for t in (pfad or []) if reinigen.text(t, 120)]
+        teile = [reinigen.text(t, 120) for t in (pfad if isinstance(pfad, list) else []) if reinigen.text(t, 120)]
         erwartet = {"notizbuch": 1, "abschnitt": 2, "seite": 3}
         if art not in erwartet or len(teile) != erwartet[art]:
             raise Abbruch("Art oder Pfad passt nicht")
@@ -363,7 +374,7 @@ class Bruecke:
     @_gefasst
     def sperre_einrichten(self, rumpf: dict) -> dict:
         """Sperre anlegen und vorhandene Notizen verschluesseln."""
-        passwort = str((rumpf or {}).get("passwort") or "")
+        passwort = str(_woerterbuch(rumpf).get("passwort") or "")
         if speicher.verschluesselt():
             raise Abbruch("Die Sperre ist schon eingerichtet")
         try:
@@ -374,7 +385,7 @@ class Bruecke:
 
     @_gefasst
     def entsperren(self, rumpf: dict) -> dict:
-        geheim = str((rumpf or {}).get("geheim") or "").strip()
+        geheim = str(_woerterbuch(rumpf).get("geheim") or "").strip()
         if not speicher.verschluesselt():
             return {"ok": True}
         try:
@@ -393,7 +404,7 @@ class Bruecke:
 
     @_gefasst
     def sperre_passwort(self, rumpf: dict) -> dict:
-        d = rumpf or {}
+        d = _woerterbuch(rumpf)
         try:
             tresor.passwort_aendern(speicher.wurzel(), str(d.get("alt") or ""),
                                     str(d.get("neu") or ""))
@@ -404,7 +415,7 @@ class Bruecke:
     @_gefasst
     def sperre_zuruecksetzen(self, rumpf: dict) -> dict:
         """Neues Passwort mit dem Wiederherstellungsschluessel."""
-        d = rumpf or {}
+        d = _woerterbuch(rumpf)
         try:
             tresor.passwort_zuruecksetzen(speicher.wurzel(), str(d.get("rettung") or ""),
                                           str(d.get("neu") or ""))
@@ -416,7 +427,7 @@ class Bruecke:
     @_gefasst
     def sperre_rettung_neu(self, rumpf: dict) -> dict:
         try:
-            neu = tresor.rettung_erneuern(speicher.wurzel(), str((rumpf or {}).get("passwort") or ""))
+            neu = tresor.rettung_erneuern(speicher.wurzel(), str(_woerterbuch(rumpf).get("passwort") or ""))
         except tresor.TresorFehler as f:
             raise Abbruch(str(f))
         return {"rettung": neu}
@@ -424,7 +435,7 @@ class Bruecke:
     @_gefasst
     def sperre_aus(self, rumpf: dict) -> dict:
         """Sperre abschalten: alles wieder im Klartext auf die Platte."""
-        passwort = str((rumpf or {}).get("passwort") or "")
+        passwort = str(_woerterbuch(rumpf).get("passwort") or "")
         if not speicher.verschluesselt():
             return {"ok": True}
         wurzel = speicher.wurzel()
@@ -439,7 +450,7 @@ class Bruecke:
     @_gefasst
     def sperre_minuten(self, rumpf: dict) -> dict:
         try:
-            minuten = max(0, min(int((rumpf or {}).get("minuten") or 0), 24 * 60))
+            minuten = max(0, min(int(_woerterbuch(rumpf).get("minuten") or 0), 24 * 60))
         except (TypeError, ValueError):
             raise Abbruch("Keine Zahl")
         konfig.aendern(sperre_minuten=minuten)
@@ -460,7 +471,7 @@ class Bruecke:
         """Den Wiederherstellungsschluessel in eine Datei legen.
 
         Mit "pfad" genau dorthin, sonst ueber den Dialog des Systems."""
-        d = rumpf or {}
+        d = _woerterbuch(rumpf)
         schluessel = str(d.get("rettung") or "").strip()
         if not schluessel:
             raise Abbruch("Kein Schlüssel übergeben")
@@ -552,11 +563,11 @@ class Bruecke:
             "schriften": sauber,
             "vorschlaege": reinigen.SCHRIFT_GRUPPEN,
             "empfohlen": empfohlen,
-            "favoriten": self.favoriten_lesen(),
+            "favoriten": self._favoriten_lesen(),
         }
 
     @staticmethod
-    def favoriten_lesen() -> list:
+    def _favoriten_lesen() -> list:
         roh = konfig.lesen().get("schrift_favoriten")
         if not isinstance(roh, list):
             return []
@@ -568,7 +579,7 @@ class Bruecke:
         name = str(name or "").strip()
         if not reinigen.schriftname_ok(name):
             raise Abbruch("Das ist kein gültiger Schriftname")
-        liste = self.favoriten_lesen()
+        liste = self._favoriten_lesen()
         if an and name not in liste:
             liste.append(name)
         elif not an and name in liste:
@@ -617,7 +628,7 @@ class Bruecke:
     @_gefasst
     def optionen_setzen(self, rumpf: dict) -> dict:
         try:
-            return aktualisieren.optionen_schreiben(rumpf or {})
+            return aktualisieren.optionen_schreiben(_woerterbuch(rumpf))
         except RuntimeError as f:
             raise Abbruch(str(f))
 
@@ -674,7 +685,7 @@ class Bruecke:
 
     @_gefasst
     def version_zurueck(self, rumpf: dict) -> dict:
-        d = rumpf or {}
+        d = _woerterbuch(rumpf)
         return speicher.verlauf_zurueck(d.get("notizbuch", ""), d.get("abschnitt", ""),
                                         d.get("name", ""), reinigen.text(d.get("marke"), 40))
 
@@ -684,14 +695,14 @@ class Bruecke:
 
     @_gefasst
     def papierkorb_zurueck(self, rumpf: dict) -> dict:
-        eintrag = str((rumpf or {}).get("eintrag") or "")
+        eintrag = str(_woerterbuch(rumpf).get("eintrag") or "")
         if not eintrag:
             raise Abbruch("Kein Eintrag angegeben")
         return speicher.papierkorb_zurueck(eintrag)
 
     @_gefasst
     def papierkorb_weg(self, rumpf: dict) -> dict:
-        eintrag = str((rumpf or {}).get("eintrag") or "")
+        eintrag = str(_woerterbuch(rumpf).get("eintrag") or "")
         if not eintrag:
             raise Abbruch("Kein Eintrag angegeben")
         return speicher.papierkorb_weg(eintrag)
@@ -709,7 +720,7 @@ class Bruecke:
         Immer als **neues** Notizbuch: ein Einlesen, das vorhandene Notizen
         anfasst, waere im Zweifel nicht rueckgaengig zu machen.
         """
-        pfad = str((rumpf or {}).get("pfad") or "").strip()
+        pfad = str(_woerterbuch(rumpf).get("pfad") or "").strip()
         if not pfad:
             pfad = self._dialog_oeffnen(("OneNote (*.one;*.onepkg)", "Alle Dateien (*.*)"))
             if not pfad:
@@ -720,7 +731,7 @@ class Bruecke:
         if quelle.stat().st_size > 500 * 1024 * 1024:
             raise Abbruch("Die Datei ist größer als 500 MB")
         try:
-            bericht = einfuhr.einlesen(quelle, reinigen.text((rumpf or {}).get("name"), 80))
+            bericht = einfuhr.einlesen(quelle, reinigen.text(_woerterbuch(rumpf).get("name"), 80))
         except einfuhr.EinfuhrFehler as f:
             raise Abbruch(str(f))
         if not bericht["seiten"]:

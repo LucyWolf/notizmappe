@@ -13,3 +13,1646 @@ Traceback (most recent call last):
     name = unicodedata.normalize("NFC", name).strip()
            ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
 TypeError: normalize() argument 2 must be str, not None
+
+--- 2026-10-15 15:36:42  bei anhang_bild
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 302, in anhang_bild
+    daten = speicher.anhang_inhalt(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 440, in anhang_inhalt
+    return _roh_lesen(anhang_lesen(buch, abschnitt, seite, datei))
+                      ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 421, in anhang_lesen
+    name = slug(datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 223, in slug
+    name = unicodedata.normalize("NFC", name).strip()
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+TypeError: normalize() argument 2 must be str, not None
+
+--- 2026-10-15 15:36:42  bei anhang_oeffnen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 314, in anhang_oeffnen
+    pfad = self._zum_oeffnen(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 343, in _zum_oeffnen
+    pfad = speicher.anhang_lesen(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 421, in anhang_lesen
+    name = slug(datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 223, in slug
+    name = unicodedata.normalize("NFC", name).strip()
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+TypeError: normalize() argument 2 must be str, not None
+
+--- 2026-10-15 15:36:42  bei anhang_speichern_unter
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 329, in anhang_speichern_unter
+    pfad = speicher.anhang_lesen(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 421, in anhang_lesen
+    name = slug(datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 223, in slug
+    name = unicodedata.normalize("NFC", name).strip()
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+TypeError: normalize() argument 2 must be str, not None
+
+--- 2026-10-15 15:36:42  bei seite_lesen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 218, in seite_lesen
+    return speicher.seite_lesen(notizbuch, abschnitt, name)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 620, in seite_lesen
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+                                          ~~~~^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 223, in slug
+    name = unicodedata.normalize("NFC", name).strip()
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+TypeError: normalize() argument 2 must be str, not None
+
+--- 2026-10-15 15:36:42  bei seite_speichern
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 222, in seite_speichern
+    buch = reinigen.text(rumpf.get("notizbuch"), 80)
+                         ^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'get'
+
+--- 2026-10-15 15:36:43  bei stand
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 255, in stand
+    return speicher.stand(notizbuch, abschnitt, name)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 912, in stand
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+                                          ~~~~^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 223, in slug
+    name = unicodedata.normalize("NFC", name).strip()
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+TypeError: normalize() argument 2 must be str, not None
+
+--- 2026-10-15 15:36:43  bei version_lesen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 673, in version_lesen
+    return speicher.verlauf_lesen(notizbuch, abschnitt, name, reinigen.text(marke, 40))
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 586, in verlauf_lesen
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+                                          ~~~~^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 223, in slug
+    name = unicodedata.normalize("NFC", name).strip()
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+TypeError: normalize() argument 2 must be str, not None
+
+--- 2026-10-15 15:36:43  bei versionen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 669, in versionen
+    return {"versionen": speicher.verlauf_liste(notizbuch, abschnitt, name)}
+                         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 493, in verlauf_liste
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+                                          ~~~~^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 223, in slug
+    name = unicodedata.normalize("NFC", name).strip()
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+TypeError: normalize() argument 2 must be str, not None
+
+--- 2026-10-15 15:37:05  bei anhang_bild
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 303, in anhang_bild
+    daten = speicher.anhang_inhalt(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 452, in anhang_inhalt
+    return _roh_lesen(anhang_lesen(buch, abschnitt, seite, datei))
+                      ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 436, in anhang_lesen
+    pfad = anhang_ordner(buch, abschnitt, seite) / name
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 402, in anhang_ordner
+    return pfad_von([buch, abschnitt]) / f"{slug(name)}{ANHANG}"
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 264, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+                              ~~~~~~~~^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 256, in _pruefen
+    if not t or t in {".", ".."} or "/" in t or "\\" in t or t.startswith("."):
+                                    ^^^^^^^^
+TypeError: argument of type 'int' is not iterable
+
+--- 2026-10-15 15:37:05  bei anhang_bild
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 303, in anhang_bild
+    daten = speicher.anhang_inhalt(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 452, in anhang_inhalt
+    return _roh_lesen(anhang_lesen(buch, abschnitt, seite, datei))
+                      ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 436, in anhang_lesen
+    pfad = anhang_ordner(buch, abschnitt, seite) / name
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 402, in anhang_ordner
+    return pfad_von([buch, abschnitt]) / f"{slug(name)}{ANHANG}"
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 264, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+                              ~~~~~~~~^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 256, in _pruefen
+    if not t or t in {".", ".."} or "/" in t or "\\" in t or t.startswith("."):
+                ^^^^^^^^^^^^^^^^
+TypeError: unhashable type: 'list'
+
+--- 2026-10-15 15:37:05  bei anhang_oeffnen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 315, in anhang_oeffnen
+    pfad = self._zum_oeffnen(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 344, in _zum_oeffnen
+    pfad = speicher.anhang_lesen(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 436, in anhang_lesen
+    pfad = anhang_ordner(buch, abschnitt, seite) / name
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 402, in anhang_ordner
+    return pfad_von([buch, abschnitt]) / f"{slug(name)}{ANHANG}"
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 264, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+                              ~~~~~~~~^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 256, in _pruefen
+    if not t or t in {".", ".."} or "/" in t or "\\" in t or t.startswith("."):
+                                    ^^^^^^^^
+TypeError: argument of type 'int' is not iterable
+
+--- 2026-10-15 15:37:05  bei anhang_oeffnen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 315, in anhang_oeffnen
+    pfad = self._zum_oeffnen(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 344, in _zum_oeffnen
+    pfad = speicher.anhang_lesen(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 436, in anhang_lesen
+    pfad = anhang_ordner(buch, abschnitt, seite) / name
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 402, in anhang_ordner
+    return pfad_von([buch, abschnitt]) / f"{slug(name)}{ANHANG}"
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 264, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+                              ~~~~~~~~^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 256, in _pruefen
+    if not t or t in {".", ".."} or "/" in t or "\\" in t or t.startswith("."):
+                ^^^^^^^^^^^^^^^^
+TypeError: unhashable type: 'list'
+
+--- 2026-10-15 15:37:05  bei anhang_speichern_unter
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 330, in anhang_speichern_unter
+    pfad = speicher.anhang_lesen(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 436, in anhang_lesen
+    pfad = anhang_ordner(buch, abschnitt, seite) / name
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 402, in anhang_ordner
+    return pfad_von([buch, abschnitt]) / f"{slug(name)}{ANHANG}"
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 264, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+                              ~~~~~~~~^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 256, in _pruefen
+    if not t or t in {".", ".."} or "/" in t or "\\" in t or t.startswith("."):
+                                    ^^^^^^^^
+TypeError: argument of type 'int' is not iterable
+
+--- 2026-10-15 15:37:05  bei anhang_speichern_unter
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 330, in anhang_speichern_unter
+    pfad = speicher.anhang_lesen(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 436, in anhang_lesen
+    pfad = anhang_ordner(buch, abschnitt, seite) / name
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 402, in anhang_ordner
+    return pfad_von([buch, abschnitt]) / f"{slug(name)}{ANHANG}"
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 264, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+                              ~~~~~~~~^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 256, in _pruefen
+    if not t or t in {".", ".."} or "/" in t or "\\" in t or t.startswith("."):
+                ^^^^^^^^^^^^^^^^
+TypeError: unhashable type: 'list'
+
+--- 2026-10-15 15:37:05  bei entsperren
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 378, in entsperren
+    geheim = str((rumpf or {}).get("geheim") or "").strip()
+                 ^^^^^^^^^^^^^^^^^
+AttributeError: 'int' object has no attribute 'get'
+
+--- 2026-10-15 15:37:05  bei entsperren
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 378, in entsperren
+    geheim = str((rumpf or {}).get("geheim") or "").strip()
+                 ^^^^^^^^^^^^^^^^^
+AttributeError: 'list' object has no attribute 'get'
+
+--- 2026-10-15 15:37:05  bei loeschen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 264, in loeschen
+    teile = [reinigen.text(t, 120) for t in (pfad or []) if reinigen.text(t, 120)]
+                                             ^^^^^^^^^^
+TypeError: 'int' object is not iterable
+
+--- 2026-10-15 15:37:05  bei onenote_einlesen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 713, in onenote_einlesen
+    pfad = str((rumpf or {}).get("pfad") or "").strip()
+               ^^^^^^^^^^^^^^^^^
+AttributeError: 'int' object has no attribute 'get'
+
+--- 2026-10-15 15:37:05  bei onenote_einlesen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 713, in onenote_einlesen
+    pfad = str((rumpf or {}).get("pfad") or "").strip()
+               ^^^^^^^^^^^^^^^^^
+AttributeError: 'list' object has no attribute 'get'
+
+--- 2026-10-15 15:37:05  bei optionen_setzen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 621, in optionen_setzen
+    return aktualisieren.optionen_schreiben(rumpf or {})
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/aktualisieren.py", line 105, in optionen_schreiben
+    if schluessel in neu:
+       ^^^^^^^^^^^^^^^^^
+TypeError: argument of type 'int' is not iterable
+
+--- 2026-10-15 15:37:05  bei papierkorb_weg
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 695, in papierkorb_weg
+    eintrag = str((rumpf or {}).get("eintrag") or "")
+                  ^^^^^^^^^^^^^^^^^
+AttributeError: 'int' object has no attribute 'get'
+
+--- 2026-10-15 15:37:05  bei papierkorb_weg
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 695, in papierkorb_weg
+    eintrag = str((rumpf or {}).get("eintrag") or "")
+                  ^^^^^^^^^^^^^^^^^
+AttributeError: 'list' object has no attribute 'get'
+
+--- 2026-10-15 15:37:05  bei papierkorb_zurueck
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 688, in papierkorb_zurueck
+    eintrag = str((rumpf or {}).get("eintrag") or "")
+                  ^^^^^^^^^^^^^^^^^
+AttributeError: 'int' object has no attribute 'get'
+
+--- 2026-10-15 15:37:05  bei papierkorb_zurueck
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 688, in papierkorb_zurueck
+    eintrag = str((rumpf or {}).get("eintrag") or "")
+                  ^^^^^^^^^^^^^^^^^
+AttributeError: 'list' object has no attribute 'get'
+
+--- 2026-10-15 15:37:05  bei rettung_speichern
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 465, in rettung_speichern
+    schluessel = str(d.get("rettung") or "").strip()
+                     ^^^^^
+AttributeError: 'int' object has no attribute 'get'
+
+--- 2026-10-15 15:37:05  bei rettung_speichern
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 465, in rettung_speichern
+    schluessel = str(d.get("rettung") or "").strip()
+                     ^^^^^
+AttributeError: 'list' object has no attribute 'get'
+
+--- 2026-10-15 15:37:05  bei seite_lesen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 218, in seite_lesen
+    return speicher.seite_lesen(notizbuch, abschnitt, name)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 632, in seite_lesen
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 264, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+                              ~~~~~~~~^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 256, in _pruefen
+    if not t or t in {".", ".."} or "/" in t or "\\" in t or t.startswith("."):
+                                    ^^^^^^^^
+TypeError: argument of type 'int' is not iterable
+
+--- 2026-10-15 15:37:05  bei seite_lesen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 218, in seite_lesen
+    return speicher.seite_lesen(notizbuch, abschnitt, name)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 632, in seite_lesen
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 264, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+                              ~~~~~~~~^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 256, in _pruefen
+    if not t or t in {".", ".."} or "/" in t or "\\" in t or t.startswith("."):
+                ^^^^^^^^^^^^^^^^
+TypeError: unhashable type: 'list'
+
+--- 2026-10-15 15:37:05  bei seite_speichern
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 223, in seite_speichern
+    buch = reinigen.text(rumpf.get("notizbuch"), 80)
+                         ^^^^^^^^^
+AttributeError: 'int' object has no attribute 'get'
+
+--- 2026-10-15 15:37:05  bei seite_speichern
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 223, in seite_speichern
+    buch = reinigen.text(rumpf.get("notizbuch"), 80)
+                         ^^^^^^^^^
+AttributeError: 'list' object has no attribute 'get'
+
+--- 2026-10-15 15:37:05  bei sperre_aus
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 428, in sperre_aus
+    passwort = str((rumpf or {}).get("passwort") or "")
+                   ^^^^^^^^^^^^^^^^^
+AttributeError: 'int' object has no attribute 'get'
+
+--- 2026-10-15 15:37:05  bei sperre_aus
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 428, in sperre_aus
+    passwort = str((rumpf or {}).get("passwort") or "")
+                   ^^^^^^^^^^^^^^^^^
+AttributeError: 'list' object has no attribute 'get'
+
+--- 2026-10-15 15:37:05  bei sperre_einrichten
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 367, in sperre_einrichten
+    passwort = str((rumpf or {}).get("passwort") or "")
+                   ^^^^^^^^^^^^^^^^^
+AttributeError: 'int' object has no attribute 'get'
+
+--- 2026-10-15 15:37:05  bei sperre_einrichten
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 367, in sperre_einrichten
+    passwort = str((rumpf or {}).get("passwort") or "")
+                   ^^^^^^^^^^^^^^^^^
+AttributeError: 'list' object has no attribute 'get'
+
+--- 2026-10-15 15:37:05  bei sperre_minuten
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 443, in sperre_minuten
+    minuten = max(0, min(int((rumpf or {}).get("minuten") or 0), 24 * 60))
+                             ^^^^^^^^^^^^^^^^^
+AttributeError: 'int' object has no attribute 'get'
+
+--- 2026-10-15 15:37:05  bei sperre_minuten
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 443, in sperre_minuten
+    minuten = max(0, min(int((rumpf or {}).get("minuten") or 0), 24 * 60))
+                             ^^^^^^^^^^^^^^^^^
+AttributeError: 'list' object has no attribute 'get'
+
+--- 2026-10-15 15:37:05  bei sperre_passwort
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 399, in sperre_passwort
+    tresor.passwort_aendern(speicher.wurzel(), str(d.get("alt") or ""),
+                                                   ^^^^^
+AttributeError: 'int' object has no attribute 'get'
+
+--- 2026-10-15 15:37:05  bei sperre_passwort
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 399, in sperre_passwort
+    tresor.passwort_aendern(speicher.wurzel(), str(d.get("alt") or ""),
+                                                   ^^^^^
+AttributeError: 'list' object has no attribute 'get'
+
+--- 2026-10-15 15:37:05  bei sperre_rettung_neu
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 420, in sperre_rettung_neu
+    neu = tresor.rettung_erneuern(speicher.wurzel(), str((rumpf or {}).get("passwort") or ""))
+                                                         ^^^^^^^^^^^^^^^^^
+AttributeError: 'int' object has no attribute 'get'
+
+--- 2026-10-15 15:37:06  bei sperre_rettung_neu
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 420, in sperre_rettung_neu
+    neu = tresor.rettung_erneuern(speicher.wurzel(), str((rumpf or {}).get("passwort") or ""))
+                                                         ^^^^^^^^^^^^^^^^^
+AttributeError: 'list' object has no attribute 'get'
+
+--- 2026-10-15 15:37:07  bei sperre_zuruecksetzen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 410, in sperre_zuruecksetzen
+    tresor.passwort_zuruecksetzen(speicher.wurzel(), str(d.get("rettung") or ""),
+                                                         ^^^^^
+AttributeError: 'int' object has no attribute 'get'
+
+--- 2026-10-15 15:37:07  bei sperre_zuruecksetzen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 410, in sperre_zuruecksetzen
+    tresor.passwort_zuruecksetzen(speicher.wurzel(), str(d.get("rettung") or ""),
+                                                         ^^^^^
+AttributeError: 'list' object has no attribute 'get'
+
+--- 2026-10-15 15:37:07  bei stand
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 256, in stand
+    return speicher.stand(notizbuch, abschnitt, name)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 924, in stand
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 264, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+                              ~~~~~~~~^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 256, in _pruefen
+    if not t or t in {".", ".."} or "/" in t or "\\" in t or t.startswith("."):
+                                    ^^^^^^^^
+TypeError: argument of type 'int' is not iterable
+
+--- 2026-10-15 15:37:07  bei stand
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 256, in stand
+    return speicher.stand(notizbuch, abschnitt, name)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 924, in stand
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 264, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+                              ~~~~~~~~^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 256, in _pruefen
+    if not t or t in {".", ".."} or "/" in t or "\\" in t or t.startswith("."):
+                ^^^^^^^^^^^^^^^^
+TypeError: unhashable type: 'list'
+
+--- 2026-10-15 15:37:07  bei version_lesen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 674, in version_lesen
+    return speicher.verlauf_lesen(notizbuch, abschnitt, name, reinigen.text(marke, 40))
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 598, in verlauf_lesen
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 264, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+                              ~~~~~~~~^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 256, in _pruefen
+    if not t or t in {".", ".."} or "/" in t or "\\" in t or t.startswith("."):
+                                    ^^^^^^^^
+TypeError: argument of type 'int' is not iterable
+
+--- 2026-10-15 15:37:07  bei version_lesen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 674, in version_lesen
+    return speicher.verlauf_lesen(notizbuch, abschnitt, name, reinigen.text(marke, 40))
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 598, in verlauf_lesen
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 264, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+                              ~~~~~~~~^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 256, in _pruefen
+    if not t or t in {".", ".."} or "/" in t or "\\" in t or t.startswith("."):
+                ^^^^^^^^^^^^^^^^
+TypeError: unhashable type: 'list'
+
+--- 2026-10-15 15:37:07  bei version_zurueck
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 679, in version_zurueck
+    return speicher.verlauf_zurueck(d.get("notizbuch", ""), d.get("abschnitt", ""),
+                                    ^^^^^
+AttributeError: 'int' object has no attribute 'get'
+
+--- 2026-10-15 15:37:07  bei version_zurueck
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 679, in version_zurueck
+    return speicher.verlauf_zurueck(d.get("notizbuch", ""), d.get("abschnitt", ""),
+                                    ^^^^^
+AttributeError: 'list' object has no attribute 'get'
+
+--- 2026-10-15 15:37:07  bei versionen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 670, in versionen
+    return {"versionen": speicher.verlauf_liste(notizbuch, abschnitt, name)}
+                         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 505, in verlauf_liste
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 264, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+                              ~~~~~~~~^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 256, in _pruefen
+    if not t or t in {".", ".."} or "/" in t or "\\" in t or t.startswith("."):
+                                    ^^^^^^^^
+TypeError: argument of type 'int' is not iterable
+
+--- 2026-10-15 15:37:07  bei versionen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 116, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 670, in versionen
+    return {"versionen": speicher.verlauf_liste(notizbuch, abschnitt, name)}
+                         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 505, in verlauf_liste
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 264, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+                              ~~~~~~~~^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 256, in _pruefen
+    if not t or t in {".", ".."} or "/" in t or "\\" in t or t.startswith("."):
+                ^^^^^^^^^^^^^^^^
+TypeError: unhashable type: 'list'
+
+--- 2026-10-15 15:37:46  bei anhang_bild
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 313, in anhang_bild
+    daten = speicher.anhang_inhalt(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 453, in anhang_inhalt
+    return _roh_lesen(anhang_lesen(buch, abschnitt, seite, datei))
+                      ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 437, in anhang_lesen
+    pfad = anhang_ordner(buch, abschnitt, seite) / name
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 403, in anhang_ordner
+    return pfad_von([buch, abschnitt]) / f"{slug(name)}{ANHANG}"
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 265, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+  File "/usr/lib/python3.13/pathlib/_local.py", line 146, in joinpath
+    return self.with_segments(self, *pathsegments)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 135, in with_segments
+    return type(self)(*pathsegments)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 505, in __init__
+    super().__init__(*args)
+    ~~~~~~~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 132, in __init__
+    raise TypeError(
+    ...<2 lines>...
+        f"not {type(path).__name__!r}")
+TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'int'
+
+--- 2026-10-15 15:37:46  bei anhang_bild
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 313, in anhang_bild
+    daten = speicher.anhang_inhalt(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 453, in anhang_inhalt
+    return _roh_lesen(anhang_lesen(buch, abschnitt, seite, datei))
+                      ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 437, in anhang_lesen
+    pfad = anhang_ordner(buch, abschnitt, seite) / name
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 403, in anhang_ordner
+    return pfad_von([buch, abschnitt]) / f"{slug(name)}{ANHANG}"
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 265, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+  File "/usr/lib/python3.13/pathlib/_local.py", line 146, in joinpath
+    return self.with_segments(self, *pathsegments)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 135, in with_segments
+    return type(self)(*pathsegments)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 505, in __init__
+    super().__init__(*args)
+    ~~~~~~~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 132, in __init__
+    raise TypeError(
+    ...<2 lines>...
+        f"not {type(path).__name__!r}")
+TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'list'
+
+--- 2026-10-15 15:37:46  bei anhang_bild
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 313, in anhang_bild
+    daten = speicher.anhang_inhalt(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 453, in anhang_inhalt
+    return _roh_lesen(anhang_lesen(buch, abschnitt, seite, datei))
+                      ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 437, in anhang_lesen
+    pfad = anhang_ordner(buch, abschnitt, seite) / name
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 403, in anhang_ordner
+    return pfad_von([buch, abschnitt]) / f"{slug(name)}{ANHANG}"
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 265, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+  File "/usr/lib/python3.13/pathlib/_local.py", line 146, in joinpath
+    return self.with_segments(self, *pathsegments)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 135, in with_segments
+    return type(self)(*pathsegments)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 505, in __init__
+    super().__init__(*args)
+    ~~~~~~~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 132, in __init__
+    raise TypeError(
+    ...<2 lines>...
+        f"not {type(path).__name__!r}")
+TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'dict'
+
+--- 2026-10-15 15:37:46  bei anhang_oeffnen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 325, in anhang_oeffnen
+    pfad = self._zum_oeffnen(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 354, in _zum_oeffnen
+    pfad = speicher.anhang_lesen(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 437, in anhang_lesen
+    pfad = anhang_ordner(buch, abschnitt, seite) / name
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 403, in anhang_ordner
+    return pfad_von([buch, abschnitt]) / f"{slug(name)}{ANHANG}"
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 265, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+  File "/usr/lib/python3.13/pathlib/_local.py", line 146, in joinpath
+    return self.with_segments(self, *pathsegments)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 135, in with_segments
+    return type(self)(*pathsegments)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 505, in __init__
+    super().__init__(*args)
+    ~~~~~~~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 132, in __init__
+    raise TypeError(
+    ...<2 lines>...
+        f"not {type(path).__name__!r}")
+TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'int'
+
+--- 2026-10-15 15:37:46  bei anhang_oeffnen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 325, in anhang_oeffnen
+    pfad = self._zum_oeffnen(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 354, in _zum_oeffnen
+    pfad = speicher.anhang_lesen(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 437, in anhang_lesen
+    pfad = anhang_ordner(buch, abschnitt, seite) / name
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 403, in anhang_ordner
+    return pfad_von([buch, abschnitt]) / f"{slug(name)}{ANHANG}"
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 265, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+  File "/usr/lib/python3.13/pathlib/_local.py", line 146, in joinpath
+    return self.with_segments(self, *pathsegments)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 135, in with_segments
+    return type(self)(*pathsegments)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 505, in __init__
+    super().__init__(*args)
+    ~~~~~~~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 132, in __init__
+    raise TypeError(
+    ...<2 lines>...
+        f"not {type(path).__name__!r}")
+TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'list'
+
+--- 2026-10-15 15:37:46  bei anhang_oeffnen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 325, in anhang_oeffnen
+    pfad = self._zum_oeffnen(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 354, in _zum_oeffnen
+    pfad = speicher.anhang_lesen(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 437, in anhang_lesen
+    pfad = anhang_ordner(buch, abschnitt, seite) / name
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 403, in anhang_ordner
+    return pfad_von([buch, abschnitt]) / f"{slug(name)}{ANHANG}"
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 265, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+  File "/usr/lib/python3.13/pathlib/_local.py", line 146, in joinpath
+    return self.with_segments(self, *pathsegments)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 135, in with_segments
+    return type(self)(*pathsegments)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 505, in __init__
+    super().__init__(*args)
+    ~~~~~~~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 132, in __init__
+    raise TypeError(
+    ...<2 lines>...
+        f"not {type(path).__name__!r}")
+TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'dict'
+
+--- 2026-10-15 15:37:46  bei anhang_speichern_unter
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 340, in anhang_speichern_unter
+    pfad = speicher.anhang_lesen(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 437, in anhang_lesen
+    pfad = anhang_ordner(buch, abschnitt, seite) / name
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 403, in anhang_ordner
+    return pfad_von([buch, abschnitt]) / f"{slug(name)}{ANHANG}"
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 265, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+  File "/usr/lib/python3.13/pathlib/_local.py", line 146, in joinpath
+    return self.with_segments(self, *pathsegments)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 135, in with_segments
+    return type(self)(*pathsegments)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 505, in __init__
+    super().__init__(*args)
+    ~~~~~~~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 132, in __init__
+    raise TypeError(
+    ...<2 lines>...
+        f"not {type(path).__name__!r}")
+TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'int'
+
+--- 2026-10-15 15:37:46  bei anhang_speichern_unter
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 340, in anhang_speichern_unter
+    pfad = speicher.anhang_lesen(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 437, in anhang_lesen
+    pfad = anhang_ordner(buch, abschnitt, seite) / name
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 403, in anhang_ordner
+    return pfad_von([buch, abschnitt]) / f"{slug(name)}{ANHANG}"
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 265, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+  File "/usr/lib/python3.13/pathlib/_local.py", line 146, in joinpath
+    return self.with_segments(self, *pathsegments)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 135, in with_segments
+    return type(self)(*pathsegments)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 505, in __init__
+    super().__init__(*args)
+    ~~~~~~~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 132, in __init__
+    raise TypeError(
+    ...<2 lines>...
+        f"not {type(path).__name__!r}")
+TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'list'
+
+--- 2026-10-15 15:37:46  bei anhang_speichern_unter
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 340, in anhang_speichern_unter
+    pfad = speicher.anhang_lesen(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 437, in anhang_lesen
+    pfad = anhang_ordner(buch, abschnitt, seite) / name
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 403, in anhang_ordner
+    return pfad_von([buch, abschnitt]) / f"{slug(name)}{ANHANG}"
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 265, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+  File "/usr/lib/python3.13/pathlib/_local.py", line 146, in joinpath
+    return self.with_segments(self, *pathsegments)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 135, in with_segments
+    return type(self)(*pathsegments)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 505, in __init__
+    super().__init__(*args)
+    ~~~~~~~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 132, in __init__
+    raise TypeError(
+    ...<2 lines>...
+        f"not {type(path).__name__!r}")
+TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'dict'
+
+--- 2026-10-15 15:37:46  bei optionen_setzen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 631, in optionen_setzen
+    return aktualisieren.optionen_schreiben_woerterbuch(rumpf)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'aktualisieren' has no attribute 'optionen_schreiben_woerterbuch'
+
+--- 2026-10-15 15:37:46  bei optionen_setzen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 631, in optionen_setzen
+    return aktualisieren.optionen_schreiben_woerterbuch(rumpf)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'aktualisieren' has no attribute 'optionen_schreiben_woerterbuch'
+
+--- 2026-10-15 15:37:46  bei optionen_setzen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 631, in optionen_setzen
+    return aktualisieren.optionen_schreiben_woerterbuch(rumpf)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'aktualisieren' has no attribute 'optionen_schreiben_woerterbuch'
+
+--- 2026-10-15 15:37:46  bei optionen_setzen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 631, in optionen_setzen
+    return aktualisieren.optionen_schreiben_woerterbuch(rumpf)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'aktualisieren' has no attribute 'optionen_schreiben_woerterbuch'
+
+--- 2026-10-15 15:37:46  bei optionen_setzen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 631, in optionen_setzen
+    return aktualisieren.optionen_schreiben_woerterbuch(rumpf)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'aktualisieren' has no attribute 'optionen_schreiben_woerterbuch'
+
+--- 2026-10-15 15:37:46  bei optionen_setzen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 631, in optionen_setzen
+    return aktualisieren.optionen_schreiben_woerterbuch(rumpf)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'aktualisieren' has no attribute 'optionen_schreiben_woerterbuch'
+
+--- 2026-10-15 15:37:46  bei seite_lesen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 228, in seite_lesen
+    return speicher.seite_lesen(notizbuch, abschnitt, name)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 633, in seite_lesen
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 265, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+  File "/usr/lib/python3.13/pathlib/_local.py", line 146, in joinpath
+    return self.with_segments(self, *pathsegments)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 135, in with_segments
+    return type(self)(*pathsegments)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 505, in __init__
+    super().__init__(*args)
+    ~~~~~~~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 132, in __init__
+    raise TypeError(
+    ...<2 lines>...
+        f"not {type(path).__name__!r}")
+TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'int'
+
+--- 2026-10-15 15:37:46  bei seite_lesen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 228, in seite_lesen
+    return speicher.seite_lesen(notizbuch, abschnitt, name)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 633, in seite_lesen
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 265, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+  File "/usr/lib/python3.13/pathlib/_local.py", line 146, in joinpath
+    return self.with_segments(self, *pathsegments)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 135, in with_segments
+    return type(self)(*pathsegments)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 505, in __init__
+    super().__init__(*args)
+    ~~~~~~~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 132, in __init__
+    raise TypeError(
+    ...<2 lines>...
+        f"not {type(path).__name__!r}")
+TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'list'
+
+--- 2026-10-15 15:37:46  bei seite_lesen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 228, in seite_lesen
+    return speicher.seite_lesen(notizbuch, abschnitt, name)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 633, in seite_lesen
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 265, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+  File "/usr/lib/python3.13/pathlib/_local.py", line 146, in joinpath
+    return self.with_segments(self, *pathsegments)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 135, in with_segments
+    return type(self)(*pathsegments)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 505, in __init__
+    super().__init__(*args)
+    ~~~~~~~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 132, in __init__
+    raise TypeError(
+    ...<2 lines>...
+        f"not {type(path).__name__!r}")
+TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'dict'
+
+--- 2026-10-15 15:37:49  bei stand
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 266, in stand
+    return speicher.stand(notizbuch, abschnitt, name)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 925, in stand
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 265, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+  File "/usr/lib/python3.13/pathlib/_local.py", line 146, in joinpath
+    return self.with_segments(self, *pathsegments)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 135, in with_segments
+    return type(self)(*pathsegments)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 505, in __init__
+    super().__init__(*args)
+    ~~~~~~~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 132, in __init__
+    raise TypeError(
+    ...<2 lines>...
+        f"not {type(path).__name__!r}")
+TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'int'
+
+--- 2026-10-15 15:37:49  bei stand
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 266, in stand
+    return speicher.stand(notizbuch, abschnitt, name)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 925, in stand
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 265, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+  File "/usr/lib/python3.13/pathlib/_local.py", line 146, in joinpath
+    return self.with_segments(self, *pathsegments)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 135, in with_segments
+    return type(self)(*pathsegments)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 505, in __init__
+    super().__init__(*args)
+    ~~~~~~~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 132, in __init__
+    raise TypeError(
+    ...<2 lines>...
+        f"not {type(path).__name__!r}")
+TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'list'
+
+--- 2026-10-15 15:37:49  bei stand
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 266, in stand
+    return speicher.stand(notizbuch, abschnitt, name)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 925, in stand
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 265, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+  File "/usr/lib/python3.13/pathlib/_local.py", line 146, in joinpath
+    return self.with_segments(self, *pathsegments)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 135, in with_segments
+    return type(self)(*pathsegments)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 505, in __init__
+    super().__init__(*args)
+    ~~~~~~~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 132, in __init__
+    raise TypeError(
+    ...<2 lines>...
+        f"not {type(path).__name__!r}")
+TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'dict'
+
+--- 2026-10-15 15:37:49  bei version_lesen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 684, in version_lesen
+    return speicher.verlauf_lesen(notizbuch, abschnitt, name, reinigen.text(marke, 40))
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 599, in verlauf_lesen
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 265, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+  File "/usr/lib/python3.13/pathlib/_local.py", line 146, in joinpath
+    return self.with_segments(self, *pathsegments)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 135, in with_segments
+    return type(self)(*pathsegments)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 505, in __init__
+    super().__init__(*args)
+    ~~~~~~~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 132, in __init__
+    raise TypeError(
+    ...<2 lines>...
+        f"not {type(path).__name__!r}")
+TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'int'
+
+--- 2026-10-15 15:37:49  bei version_lesen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 684, in version_lesen
+    return speicher.verlauf_lesen(notizbuch, abschnitt, name, reinigen.text(marke, 40))
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 599, in verlauf_lesen
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 265, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+  File "/usr/lib/python3.13/pathlib/_local.py", line 146, in joinpath
+    return self.with_segments(self, *pathsegments)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 135, in with_segments
+    return type(self)(*pathsegments)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 505, in __init__
+    super().__init__(*args)
+    ~~~~~~~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 132, in __init__
+    raise TypeError(
+    ...<2 lines>...
+        f"not {type(path).__name__!r}")
+TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'list'
+
+--- 2026-10-15 15:37:49  bei version_lesen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 684, in version_lesen
+    return speicher.verlauf_lesen(notizbuch, abschnitt, name, reinigen.text(marke, 40))
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 599, in verlauf_lesen
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 265, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+  File "/usr/lib/python3.13/pathlib/_local.py", line 146, in joinpath
+    return self.with_segments(self, *pathsegments)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 135, in with_segments
+    return type(self)(*pathsegments)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 505, in __init__
+    super().__init__(*args)
+    ~~~~~~~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 132, in __init__
+    raise TypeError(
+    ...<2 lines>...
+        f"not {type(path).__name__!r}")
+TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'dict'
+
+--- 2026-10-15 15:37:49  bei versionen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 680, in versionen
+    return {"versionen": speicher.verlauf_liste(notizbuch, abschnitt, name)}
+                         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 506, in verlauf_liste
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 265, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+  File "/usr/lib/python3.13/pathlib/_local.py", line 146, in joinpath
+    return self.with_segments(self, *pathsegments)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 135, in with_segments
+    return type(self)(*pathsegments)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 505, in __init__
+    super().__init__(*args)
+    ~~~~~~~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 132, in __init__
+    raise TypeError(
+    ...<2 lines>...
+        f"not {type(path).__name__!r}")
+TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'int'
+
+--- 2026-10-15 15:37:49  bei versionen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 680, in versionen
+    return {"versionen": speicher.verlauf_liste(notizbuch, abschnitt, name)}
+                         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 506, in verlauf_liste
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 265, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+  File "/usr/lib/python3.13/pathlib/_local.py", line 146, in joinpath
+    return self.with_segments(self, *pathsegments)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 135, in with_segments
+    return type(self)(*pathsegments)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 505, in __init__
+    super().__init__(*args)
+    ~~~~~~~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 132, in __init__
+    raise TypeError(
+    ...<2 lines>...
+        f"not {type(path).__name__!r}")
+TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'list'
+
+--- 2026-10-15 15:37:49  bei versionen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 680, in versionen
+    return {"versionen": speicher.verlauf_liste(notizbuch, abschnitt, name)}
+                         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 506, in verlauf_liste
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 265, in pfad_von
+    ziel = wurzel().joinpath(*_pruefen(teile))
+  File "/usr/lib/python3.13/pathlib/_local.py", line 146, in joinpath
+    return self.with_segments(self, *pathsegments)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 135, in with_segments
+    return type(self)(*pathsegments)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 505, in __init__
+    super().__init__(*args)
+    ~~~~~~~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 132, in __init__
+    raise TypeError(
+    ...<2 lines>...
+        f"not {type(path).__name__!r}")
+TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'dict'
+
+--- 2026-10-15 15:37:50  bei optionen_setzen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 631, in optionen_setzen
+    return aktualisieren.optionen_schreiben_woerterbuch(rumpf)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'aktualisieren' has no attribute 'optionen_schreiben_woerterbuch'
+
+--- 2026-10-15 15:38:22  bei anhang_bild
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 313, in anhang_bild
+    daten = speicher.anhang_inhalt(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 464, in anhang_inhalt
+    return _roh_lesen(anhang_lesen(buch, abschnitt, seite, datei))
+                      ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 453, in anhang_lesen
+    if not pfad.is_file():
+           ~~~~~~~~~~~~^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 482, in is_file
+    return S_ISREG(self.stat(follow_symlinks=follow_symlinks).st_mode)
+                   ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 517, in stat
+    return os.stat(self, follow_symlinks=follow_symlinks)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: [Errno 36] File name too long: '/tmp/tmpc3l8ts6_/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.anhang/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+
+--- 2026-10-15 15:38:22  bei anhang_oeffnen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 325, in anhang_oeffnen
+    pfad = self._zum_oeffnen(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 354, in _zum_oeffnen
+    pfad = speicher.anhang_lesen(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 453, in anhang_lesen
+    if not pfad.is_file():
+           ~~~~~~~~~~~~^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 482, in is_file
+    return S_ISREG(self.stat(follow_symlinks=follow_symlinks).st_mode)
+                   ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 517, in stat
+    return os.stat(self, follow_symlinks=follow_symlinks)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: [Errno 36] File name too long: '/tmp/tmpc3l8ts6_/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.anhang/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+
+--- 2026-10-15 15:38:22  bei anhang_speichern_unter
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 340, in anhang_speichern_unter
+    pfad = speicher.anhang_lesen(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 453, in anhang_lesen
+    if not pfad.is_file():
+           ~~~~~~~~~~~~^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 482, in is_file
+    return S_ISREG(self.stat(follow_symlinks=follow_symlinks).st_mode)
+                   ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 517, in stat
+    return os.stat(self, follow_symlinks=follow_symlinks)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: [Errno 36] File name too long: '/tmp/tmpc3l8ts6_/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.anhang/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+
+--- 2026-10-15 15:38:22  bei optionen_setzen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 631, in optionen_setzen
+    return aktualisieren.optionen_schreiben_woerterbuch(rumpf)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'aktualisieren' has no attribute 'optionen_schreiben_woerterbuch'
+
+--- 2026-10-15 15:38:22  bei optionen_setzen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 631, in optionen_setzen
+    return aktualisieren.optionen_schreiben_woerterbuch(rumpf)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'aktualisieren' has no attribute 'optionen_schreiben_woerterbuch'
+
+--- 2026-10-15 15:38:22  bei optionen_setzen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 631, in optionen_setzen
+    return aktualisieren.optionen_schreiben_woerterbuch(rumpf)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'aktualisieren' has no attribute 'optionen_schreiben_woerterbuch'
+
+--- 2026-10-15 15:38:22  bei optionen_setzen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 631, in optionen_setzen
+    return aktualisieren.optionen_schreiben_woerterbuch(rumpf)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'aktualisieren' has no attribute 'optionen_schreiben_woerterbuch'
+
+--- 2026-10-15 15:38:22  bei optionen_setzen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 631, in optionen_setzen
+    return aktualisieren.optionen_schreiben_woerterbuch(rumpf)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'aktualisieren' has no attribute 'optionen_schreiben_woerterbuch'
+
+--- 2026-10-15 15:38:22  bei optionen_setzen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 631, in optionen_setzen
+    return aktualisieren.optionen_schreiben_woerterbuch(rumpf)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'aktualisieren' has no attribute 'optionen_schreiben_woerterbuch'
+
+--- 2026-10-15 15:38:22  bei optionen_setzen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 631, in optionen_setzen
+    return aktualisieren.optionen_schreiben_woerterbuch(rumpf)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'aktualisieren' has no attribute 'optionen_schreiben_woerterbuch'
+
+--- 2026-10-15 15:38:22  bei optionen_setzen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 631, in optionen_setzen
+    return aktualisieren.optionen_schreiben_woerterbuch(rumpf)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'aktualisieren' has no attribute 'optionen_schreiben_woerterbuch'
+
+--- 2026-10-15 15:38:22  bei seite_lesen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 228, in seite_lesen
+    return speicher.seite_lesen(notizbuch, abschnitt, name)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 645, in seite_lesen
+    if not datei.is_file():
+           ~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 482, in is_file
+    return S_ISREG(self.stat(follow_symlinks=follow_symlinks).st_mode)
+                   ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 517, in stat
+    return os.stat(self, follow_symlinks=follow_symlinks)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: [Errno 36] File name too long: '/tmp/tmpc3l8ts6_/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.json'
+
+--- 2026-10-15 15:38:26  bei stand
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 266, in stand
+    return speicher.stand(notizbuch, abschnitt, name)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 937, in stand
+    if not datei.is_file():
+           ~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 482, in is_file
+    return S_ISREG(self.stat(follow_symlinks=follow_symlinks).st_mode)
+                   ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 517, in stat
+    return os.stat(self, follow_symlinks=follow_symlinks)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: [Errno 36] File name too long: '/tmp/tmpc3l8ts6_/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.json'
+
+--- 2026-10-15 15:38:26  bei version_lesen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 684, in version_lesen
+    return speicher.verlauf_lesen(notizbuch, abschnitt, name, reinigen.text(marke, 40))
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 615, in verlauf_lesen
+    if not quelle.is_file():
+           ~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 482, in is_file
+    return S_ISREG(self.stat(follow_symlinks=follow_symlinks).st_mode)
+                   ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 517, in stat
+    return os.stat(self, follow_symlinks=follow_symlinks)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: [Errno 36] File name too long: '/tmp/tmpc3l8ts6_/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/.verlauf/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.json'
+
+--- 2026-10-15 15:38:26  bei versionen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 680, in versionen
+    return {"versionen": speicher.verlauf_liste(notizbuch, abschnitt, name)}
+                         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 519, in verlauf_liste
+    if not ordner.is_dir():
+           ~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 465, in is_dir
+    return S_ISDIR(self.stat(follow_symlinks=follow_symlinks).st_mode)
+                   ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 517, in stat
+    return os.stat(self, follow_symlinks=follow_symlinks)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: [Errno 36] File name too long: '/tmp/tmpc3l8ts6_/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/.verlauf/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+
+--- 2026-10-15 15:38:27  bei optionen_setzen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 631, in optionen_setzen
+    return aktualisieren.optionen_schreiben_woerterbuch(rumpf)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'aktualisieren' has no attribute 'optionen_schreiben_woerterbuch'
+
+--- 2026-10-15 15:39:09  bei optionen_setzen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 631, in optionen_setzen
+    return aktualisieren.optionen_schreiben_woerterbuch(rumpf)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'aktualisieren' has no attribute 'optionen_schreiben_woerterbuch'
+
+--- 2026-10-15 15:39:37  bei anhang_bild
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 313, in anhang_bild
+    daten = speicher.anhang_inhalt(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 467, in anhang_inhalt
+    return _roh_lesen(anhang_lesen(buch, abschnitt, seite, datei))
+                      ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 451, in anhang_lesen
+    pfad = anhang_ordner(buch, abschnitt, seite) / name
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 417, in anhang_ordner
+    return pfad_von([buch, abschnitt]) / f"{slug(name)}{ANHANG}"
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 282, in pfad_von
+    if not str(ziel.resolve()).startswith(str(w)):
+               ~~~~~~~~~~~~^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 672, in resolve
+    return self.with_segments(os.path.realpath(self, strict=strict))
+                              ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen posixpath>", line 451, in realpath
+ValueError: lstat: embedded null character in path
+
+--- 2026-10-15 15:39:37  bei anhang_oeffnen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 325, in anhang_oeffnen
+    pfad = self._zum_oeffnen(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 354, in _zum_oeffnen
+    pfad = speicher.anhang_lesen(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 451, in anhang_lesen
+    pfad = anhang_ordner(buch, abschnitt, seite) / name
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 417, in anhang_ordner
+    return pfad_von([buch, abschnitt]) / f"{slug(name)}{ANHANG}"
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 282, in pfad_von
+    if not str(ziel.resolve()).startswith(str(w)):
+               ~~~~~~~~~~~~^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 672, in resolve
+    return self.with_segments(os.path.realpath(self, strict=strict))
+                              ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen posixpath>", line 451, in realpath
+ValueError: lstat: embedded null character in path
+
+--- 2026-10-15 15:39:37  bei anhang_speichern_unter
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 340, in anhang_speichern_unter
+    pfad = speicher.anhang_lesen(notizbuch, abschnitt, name, datei)
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 451, in anhang_lesen
+    pfad = anhang_ordner(buch, abschnitt, seite) / name
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 417, in anhang_ordner
+    return pfad_von([buch, abschnitt]) / f"{slug(name)}{ANHANG}"
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 282, in pfad_von
+    if not str(ziel.resolve()).startswith(str(w)):
+               ~~~~~~~~~~~~^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 672, in resolve
+    return self.with_segments(os.path.realpath(self, strict=strict))
+                              ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen posixpath>", line 451, in realpath
+ValueError: lstat: embedded null character in path
+
+--- 2026-10-15 15:39:37  bei seite_lesen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 228, in seite_lesen
+    return speicher.seite_lesen(notizbuch, abschnitt, name)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 647, in seite_lesen
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 282, in pfad_von
+    if not str(ziel.resolve()).startswith(str(w)):
+               ~~~~~~~~~~~~^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 672, in resolve
+    return self.with_segments(os.path.realpath(self, strict=strict))
+                              ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen posixpath>", line 451, in realpath
+ValueError: lstat: embedded null character in path
+
+--- 2026-10-15 15:39:42  bei stand
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 266, in stand
+    return speicher.stand(notizbuch, abschnitt, name)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 939, in stand
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 282, in pfad_von
+    if not str(ziel.resolve()).startswith(str(w)):
+               ~~~~~~~~~~~~^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 672, in resolve
+    return self.with_segments(os.path.realpath(self, strict=strict))
+                              ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen posixpath>", line 451, in realpath
+ValueError: lstat: embedded null character in path
+
+--- 2026-10-15 15:39:42  bei version_lesen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 684, in version_lesen
+    return speicher.verlauf_lesen(notizbuch, abschnitt, name, reinigen.text(marke, 40))
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 613, in verlauf_lesen
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 282, in pfad_von
+    if not str(ziel.resolve()).startswith(str(w)):
+               ~~~~~~~~~~~~^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 672, in resolve
+    return self.with_segments(os.path.realpath(self, strict=strict))
+                              ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen posixpath>", line 451, in realpath
+ValueError: lstat: embedded null character in path
+
+--- 2026-10-15 15:39:42  bei versionen
+Traceback (most recent call last):
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 126, in innen
+    return f(*args, **kwargs)
+  File "/home/lucy-wolf/projekte/notizmappe/app/bruecke.py", line 680, in versionen
+    return {"versionen": speicher.verlauf_liste(notizbuch, abschnitt, name)}
+                         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 520, in verlauf_liste
+    datei = pfad_von([buch, abschnitt, f"{slug(name)}.json"])
+  File "/home/lucy-wolf/projekte/notizmappe/app/speicher.py", line 282, in pfad_von
+    if not str(ziel.resolve()).startswith(str(w)):
+               ~~~~~~~~~~~~^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 672, in resolve
+    return self.with_segments(os.path.realpath(self, strict=strict))
+                              ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen posixpath>", line 451, in realpath
+ValueError: lstat: embedded null character in path

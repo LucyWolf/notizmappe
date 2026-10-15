@@ -217,9 +217,21 @@ def ordner_pruefen(roh: str) -> Path:
 
 # --- Namen und Pfade ----------------------------------------------------------
 
-def slug(name: str) -> str:
+def slug(name) -> str:
     """Dateiname aus einem Titel. Der echte Titel steht im JSON, das hier ist nur
-    der Dateiname - er darf haesslich sein, aber nicht gefaehrlich."""
+    der Dateiname - er darf haesslich sein, aber nicht gefaehrlich.
+
+    Nimmt absichtlich alles entgegen, auch None. Die Werte kommen aus der
+    Oberflaeche; fehlt dort ein Feld, kam hier bisher ein roher Programmfehler
+    heraus ("normalize() argument 2 must be str, not None") - acht Methoden auf
+    einmal, und im Fenster stand eine Zeile, die nach einem kaputten Programm
+    aussah. Jetzt wird daraus ein leerer Name, und die Stelle darueber meldet
+    sauber "gibt es nicht".
+    """
+    if name is None:
+        name = ""
+    elif not isinstance(name, str):
+        name = str(name)
     name = unicodedata.normalize("NFC", name).strip()
     name = name.replace("/", "-").replace("\\", "-")
     name = re.sub(r"[\x00-\x1f<>:\"|?*]", "", name)
@@ -239,11 +251,31 @@ def frei(ordner: Path, name: str, endung: str = "") -> str:
     return kandidat
 
 
-def _pruefen(teile: list[str]) -> list[str]:
-    for t in teile:
+def _pruefen(teile) -> list[str]:
+    """Jeden Teil eines Pfades prüfen - und als Text zurückgeben.
+
+    Die Werte kommen aus der Oberflaeche und muessen nicht stimmen. Kam dort
+    eine Zahl oder eine Liste an, gab es einen rohen Programmfehler
+    ("argument of type 'int' is not iterable") und beim Zusammenbauen des
+    Pfades gleich noch einen zweiten. Zu lange Namen fangen wir hier auch ab -
+    sonst meldet erst das Dateisystem "File name too long".
+    """
+    if not isinstance(teile, (list, tuple)):
+        raise SpeicherFehler("Pfad muss eine Liste sein")
+    sauber = []
+    for roh in teile:
+        t = roh if isinstance(roh, str) else ("" if roh is None else str(roh))
         if not t or t in {".", ".."} or "/" in t or "\\" in t or t.startswith("."):
-            raise SpeicherFehler(f"Unerlaubter Name: {t!r}")
-    return teile
+            raise SpeicherFehler(f"Unerlaubter Name: {t[:60]!r}")
+        if len(t) > 120:
+            raise SpeicherFehler(f"Der Name ist zu lang ({len(t)} Zeichen)")
+        # Steuerzeichen, vor allem das Null-Byte: unter Unix endet ein Pfad dort,
+        # wo eines steht - "harmlos.txt\x00/../../woanders" waere also zwei
+        # verschiedene Pfade, je nachdem wer hinsieht.
+        if any(z < " " for z in t):
+            raise SpeicherFehler("Steuerzeichen im Namen")
+        sauber.append(t)
+    return sauber
 
 
 def pfad_von(teile: list[str]) -> Path:
