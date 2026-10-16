@@ -314,6 +314,16 @@ window.addEventListener('unhandledrejection', function (ev) {
             <button type="button" id="e-ferne-anmelden">Anmelden</button>
           </p>
         </div>
+        <div id="e-ferne-zweischritt" hidden>
+          <p class="hinweis">Das Passwort hat gestimmt. Dieser Server fragt noch
+            nach einem Code aus deiner Authenticator-App — oder einem deiner
+            Notfallcodes.</p>
+          <p class="ordnerzeile">
+            <input type="text" id="e-ferne-code" placeholder="123456"
+                   inputmode="numeric" autocomplete="one-time-code" spellcheck="false">
+            <button type="button" id="e-ferne-code-senden">Weiter</button>
+          </p>
+        </div>
         <p class="knoepfe" id="e-ferne-knoepfe" hidden>
           <button type="button" id="e-ferne-ein">Auf dem Server arbeiten</button>
           <button type="button" id="e-ferne-aus">Eigene Notizen</button>

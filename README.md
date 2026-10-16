@@ -188,6 +188,10 @@ Ordner hier: derselbe Baum, dieselben Seiten, derselbe Verlauf.
 Oben in der Seitenleiste steht dann `Server: http://… (name)` statt des
 Ordnerpfads. **Man darf nie im Zweifel sein, wo man gerade schreibt.**
 
+Fragt der Server nach **zwei Schritten**, erscheint gleich darunter das Feld
+für den Code aus der Authenticator-App — oder für einen Notfallcode. Der
+Zwischenzustand dafür gilt fünf Minuten und öffnet nichts.
+
 Gemerkt werden Adresse und Benutzername, **nicht das Passwort** — stattdessen
 das Sitzungs-Kennzeichen des Servers. Es läuft nach zwei Wochen ab, gilt nur
 für diesen Server, und ein Passwortwechsel dort beendet es sofort. Es steht in

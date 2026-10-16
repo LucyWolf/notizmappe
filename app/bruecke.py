@@ -781,6 +781,14 @@ class Bruecke:
             raise Abbruch(str(f))
 
     @_gefasst
+    def ferne_code(self, rumpf: dict) -> dict:
+        """Den zweiten Schritt abschliessen."""
+        try:
+            return ferne.code_senden(str(_woerterbuch(rumpf).get("code") or ""))
+        except ferne.FerneFehler as f:
+            raise Abbruch(str(f))
+
+    @_gefasst
     def ferne_abmelden(self) -> dict:
         return ferne.abmelden()
 

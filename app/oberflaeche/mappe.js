@@ -80,6 +80,7 @@ const WEGE = {
   'GET /api/ferne':            (p, b) => b.ferne_stand(),
   'POST /api/ferne/anmelden':  (p, b, r) => b.ferne_anmelden(r),
   'POST /api/ferne/abmelden':  (p, b) => b.ferne_abmelden(),
+  'POST /api/ferne/code':      (p, b, r) => b.ferne_code(r),
   'POST /api/ferne/umschalten': (p, b, r) => b.ferne_umschalten(r),
   'POST /api/einstellungen':   (p, b, r) => b.optionen_setzen(r),
   'POST /api/ordner/waehlen':  (p, b) => b.ordner_waehlen(),
@@ -2722,7 +2723,9 @@ function ferneZeigen(e) {
     ? `verbunden mit ${f.adresse} als ${f.benutzer}`
     : (f.angemeldet ? `angemeldet an ${f.adresse}, arbeitet gerade örtlich`
                     : 'nicht verbunden');
-  $('#e-ferne-anmeldung').hidden = !!f.angemeldet;
+  $('#e-ferne-anmeldung').hidden = !!f.angemeldet || !!f.braucht_code;
+  // Zwei Schritte: Passwort hat gestimmt, jetzt fehlt der Code aus der App.
+  $('#e-ferne-zweischritt').hidden = !f.braucht_code;
   $('#e-ferne-knoepfe').hidden = !f.angemeldet;
   $('#e-ferne-ein').hidden = !!f.aktiv;
   $('#e-ferne-aus').hidden = !f.aktiv;
@@ -2763,6 +2766,16 @@ $('#e-ferne-anmelden').addEventListener('click', async () => {
   } finally {
     knopf.disabled = false;
   }
+});
+
+$('#e-ferne-code-senden').addEventListener('click', async () => {
+  $('#e-ferne-hinweis').textContent = 'wird geprüft …';
+  try {
+    const r = await api('/api/ferne/code', 'POST', { code: $('#e-ferne-code').value });
+    $('#e-ferne-code').value = '';
+    $('#e-ferne-hinweis').textContent = `Angemeldet an ${r.adresse} als ${r.benutzer}.`;
+    await einstellungenLaden();
+  } catch (f) { $('#e-ferne-hinweis').textContent = f.message; }
 });
 
 $('#e-ferne-ein').addEventListener('click', () => ferneUmschalten(true));

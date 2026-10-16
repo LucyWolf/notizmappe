@@ -27,6 +27,7 @@ import konfig
 ZEIT = 20                       # Sekunden, bis eine Antwort da sein muss
 MAX_ANTWORT = 64 * 1024 * 1024  # ein Anhang kommt als Base64 zurueck
 KEKS = "notizmappe"
+HALBKEKS = "notizmappe_halb"
 
 
 class FerneFehler(Exception):
@@ -52,7 +53,8 @@ def aktiv() -> bool:
 def stand() -> dict:
     e = _einstellung()
     return {"adresse": e["adresse"], "benutzer": e["benutzer"],
-            "angemeldet": bool(e["keks"]), "aktiv": aktiv()}
+            "angemeldet": bool(e["keks"]), "aktiv": aktiv(),
+            "braucht_code": bool(konfig.lesen().get("ferne_halb") and not e["keks"])}
 
 
 def _adresse_pruefen(roh: str) -> str:
@@ -68,6 +70,20 @@ def _adresse_pruefen(roh: str) -> str:
     if not teile.netloc:
         raise FerneFehler("In der Adresse fehlt der Rechnername")
     return f"{teile.scheme}://{teile.netloc}{teile.path}".rstrip("/")
+
+
+def _keks_aus(kopf: dict, name: str) -> str:
+    """Einen bestimmten Keks aus den Kopfzeilen holen.
+
+    Mehrere Set-Cookie-Zeilen kommen zusammengefuegt an; der Name muss genau
+    passen, sonst haelt man den Zwischen-Keks fuer den richtigen.
+    """
+    for teil in (kopf.get("set-cookie") or "").split(","):
+        for stueck in teil.split(";"):
+            stueck = stueck.strip()
+            if stueck.startswith(name + "="):
+                return stueck[len(name) + 1:]
+    return ""
 
 
 def _kopf(roh) -> dict:
@@ -135,18 +151,20 @@ def anmelden(adresse: str, benutzer: str, passwort: str) -> dict:
         adresse, "/anmelden", daten,
         {"Content-Type": "application/x-www-form-urlencoded"}, "POST")
 
-    keks = ""
-    for teil in (kopf.get("set-cookie") or "").split(","):
-        for stueck in teil.split(";"):
-            stueck = stueck.strip()
-            if stueck.startswith(KEKS + "="):
-                keks = stueck[len(KEKS) + 1:]
+    keks = _keks_aus(kopf, KEKS)
     if lage == 303 and keks:
         konfig.aendern(ferne_adresse=adresse, ferne_benutzer=benutzer,
                        ferne_keks=keks, ferne_aktiv=True)
         return {"ok": True, "adresse": adresse, "benutzer": benutzer}
 
     wohin = kopf.get("location") or ""
+    # Zwei Schritte: das Passwort hat gestimmt, jetzt fehlt noch der Code aus
+    # der App. Der Zwischen-Keks oeffnet nichts, er merkt sich nur, wer gerade
+    # dabei ist - deshalb darf er kurz hier liegen.
+    halb = _keks_aus(kopf, HALBKEKS)
+    if lage == 303 and halb and "zweiter-schritt" in wohin:
+        konfig.aendern(ferne_adresse=adresse, ferne_benutzer=benutzer, ferne_halb=halb)
+        return {"braucht_code": True, "adresse": adresse, "benutzer": benutzer}
     if "fehler=" in wohin:
         grund = urllib.parse.unquote_plus(wohin.split("fehler=", 1)[1])
         raise FerneFehler(grund)
@@ -156,8 +174,33 @@ def anmelden(adresse: str, benutzer: str, passwort: str) -> dict:
     raise FerneFehler(f"Anmeldung abgelehnt (Antwort {lage})")
 
 
+def code_senden(code: str) -> dict:
+    """Den zweiten Schritt abschliessen - mit dem Code aus der App oder einem
+    Notfallcode."""
+    e = _einstellung()
+    halb = str(konfig.lesen().get("ferne_halb") or "")
+    if not e["adresse"] or not halb:
+        raise FerneFehler("Erst Adresse, Name und Passwort angeben")
+    daten = urllib.parse.urlencode({"code": (code or "").strip()}).encode()
+    lage, _rumpf, kopf = _schicken(
+        e["adresse"], "/zweiter-schritt", daten,
+        {"Content-Type": "application/x-www-form-urlencoded",
+         "Cookie": f"{HALBKEKS}={halb}"}, "POST")
+    keks = _keks_aus(kopf, KEKS)
+    if lage == 303 and keks:
+        konfig.aendern(ferne_keks=keks, ferne_aktiv=True, ferne_halb=None)
+        return {"ok": True, "adresse": e["adresse"], "benutzer": e["benutzer"]}
+    wohin = kopf.get("location") or ""
+    if "fehler=" in wohin:
+        raise FerneFehler(urllib.parse.unquote_plus(wohin.split("fehler=", 1)[1]))
+    if "anmelden" in wohin:
+        konfig.aendern(ferne_halb=None)
+        raise FerneFehler("Der Zwischenschritt ist abgelaufen - bitte neu anmelden")
+    raise FerneFehler(f"Der Code wurde nicht angenommen (Antwort {lage})")
+
+
 def abmelden() -> dict:
-    konfig.aendern(ferne_keks=None, ferne_aktiv=False)
+    konfig.aendern(ferne_keks=None, ferne_aktiv=False, ferne_halb=None)
     return {"ok": True}
 
 
