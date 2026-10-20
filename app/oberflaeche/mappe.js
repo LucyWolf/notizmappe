@@ -1568,7 +1568,6 @@ function tafelZeigen(an, punkt) {
   if (!an) { dateiZeigen(false); return; }
   dateiZeigen(true);
   dateiPunkt(punkt || 'optionen');
-  einstellungenLaden();
 }
 
 $('#zahnrad').addEventListener('click', () => tafelZeigen(true));
@@ -2609,6 +2608,11 @@ function dateiPunkt(punkt) {
   }
   if (punkt === 'info') dateiInfoFuellen();
   if (punkt === 'konto') dateiKontoFuellen();
+  // "Installiert", die Update-Knoepfe und die beiden Haken stehen in
+  // #einstellungen-oben, und das liegt auf der Informationen-Seite. Gefuellt
+  // werden sie aber von einstellungenLaden() - wer die Datei-Ebene ueber das
+  // Band oeffnet statt ueber das Zahnrad, sah dort nur Punkte.
+  if (punkt === 'info' || punkt === 'optionen') einstellungenLaden();
 }
 
 $('#dateileiste').addEventListener('click', (ev) => {
