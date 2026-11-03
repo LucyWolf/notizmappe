@@ -21,7 +21,70 @@ LEER = {"br", "img"}
 # Nur das, was der Editor selbst setzt. Kein style, kein class, kein on*.
 # Bilder im Text zeigen nur auf einen eigenen Anhang (data-datei), nie per src
 # irgendwohin - die Adresse setzt die Oberflaeche beim Anzeigen.
-ATTRIBUTE = {"a": {"href"}, "img": {"data-datei", "alt"}, "font": {"size", "face", "color"}}
+ATTRIBUTE = {"a": {"href"}, "img": {"data-datei", "alt"},
+             "font": {"size", "face", "color"},
+             "ol": {"data-art"}, "ul": {"data-art"}}
+
+# Welche Zahl oder welches Zeichen vor den Punkten einer Liste steht. Das
+# waere eigentlich list-style-type, also CSS - und freies CSS nimmt die
+# Ablage nicht an. Deshalb steht hier nur die Art, und die Oberflaeche macht
+# daraus eine @counter-style-Regel. Zwei feste Listen statt eines freien
+# Wertes: so laesst sich ueber data-art nichts hineinschreiben.
+LISTENARTEN = {
+    '(1)',
+    '(a)',
+    '1',
+    '1)',
+    '1-',
+    '1.',
+    '1.)',
+    'A',
+    'A)',
+    'A.',
+    'I.',
+    'a',
+    'a)',
+    'a.',
+    'i)',
+    'i.',
+}
+LISTENZEICHEN = {
+    '–',
+    '—',
+    '•',
+    '‣',
+    '›',
+    '→',
+    '⇒',
+    '⋄',
+    '■',
+    '□',
+    '▪',
+    '▫',
+    '▶',
+    '▸',
+    '◆',
+    '◇',
+    '◉',
+    '○',
+    '●',
+    '◦',
+    '◼',
+    '★',
+    '☎',
+    '☺',
+    '♥',
+    '♦',
+    '✉',
+    '✓',
+    '✗',
+    '✦',
+    '✱',
+    '✸',
+    '❉',
+    '❖',
+    '➢',
+}
 
 # <font> ist aus der Mode, aber genau das, was der Editor fuer Groesse und Art
 # erzeugt - und es traegt nur zwei feste Werte statt beliebigem CSS. Ein style-
@@ -181,6 +244,9 @@ class _Reiniger(HTMLParser):
             if name == "face" and not schriftname_ok(wert):
                 continue
             if name == "color" and wert.lower() not in FARBEN:
+                continue
+            if name == "data-art" and wert not in (LISTENARTEN if tag == "ol"
+                                                   else LISTENZEICHEN):
                 continue
             gut.append(f' {name}="{escape(wert, quote=True)}"')
         if tag == "img" and not any(g.startswith(" data-datei=") for g in gut):

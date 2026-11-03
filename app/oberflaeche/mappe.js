@@ -2898,12 +2898,756 @@ $('#e-sperre-aus').addEventListener('click', async () => {
 
 /* ------------------------------------------------------------------ Anlauf */
 
+
+/* ============================================================ Formatieren
+ *
+ * Kam aus der Serverfassung (web/shim.js), wo das zur Laufzeit eingesetzt
+ * wurde. Hier steht es jetzt richtig: beide Fassungen teilen sich diese
+ * Datei, also sieht die Mappe im Fenster und im Browser gleich aus.
+ */
+
+/* Zu einem Kasten das Element finden. Steht hier und nicht viermal
+ * ausgeschrieben wie weiter oben im Text. */
+function kastenDaten(k) {
+  try {
+    if (typeof elemente === 'undefined' || !k) return null;
+    return elemente.find((x) => x.id === k.dataset.id) || null;
+  } catch (f) { return null; }
+}
+
+/* Ein Hinweis, der von selbst wieder verschwindet. In der Serverfassung hing
+ * er an einer eigenen Zeile; hier ist die Zustandsanzeige genau dafuer da. */
+function malsagen(text) {
+  sagen(text, 5000);
+}
+
+/* Kurzschreibweise fuers Bauen - sonst stehen drei Zeilen fuer jeden Knopf. */
+function el(art, eigenschaften, kinder) {
+  const k = document.createElement(art);
+  Object.assign(k, eigenschaften || {});
+  for (const kind of kinder || []) k.append(kind);
+  return k;
+}
+
+
+/* ------------------------------------------------------- Die Formatleiste
+
+   Zwei Reihen, so wie in OneNote: Schriftart, Groesse, Formatvorlage,
+   Einzug, Aufgabe und Kategorie oben; F K U, Marker, Farbe, Listen, Format
+   uebertragen und Loeschen unten.
+
+   Gebaut wird sie einmal und zweimal benutzt: in der schwebenden Leiste,
+   die beim Markieren aufgeht, und unten im Rechtsklick-Menue. Zwei
+   Leisten, die dasselbe tun sollen, sind eine zu viel - eine davon ist
+   eines Tages anders.
+
+   Gerechnet wird wieder nichts selbst: aufAuswahl() drueben setzt das
+   Format, hervorheben() den Marker. Was hier steht, ist die Bedienung.
+
+   Drei Sachen gehen bewusst anders als bei OneNote, weil die Ablage nur
+   bestimmte Auszeichnungen annimmt (kein freies CSS, siehe reinigen.py):
+   der Marker hat eine Farbe statt fuenf, die Groessen sind die sieben, die
+   <font size> kennt, und ein Haken ist ein Zeichen im Text - keine
+   Kontrollkaestchen-Auszeichnung, die beim Speichern wieder herausfiele. */
+
+const FL_VORLAGEN = [['<p>', 'Normal'], ['<h1>', 'Überschrift 1'],
+                     ['<h2>', 'Überschrift 2'], ['<h3>', 'Überschrift 3'],
+                     ['<blockquote>', 'Zitat'], ['<pre>', 'Code']];
+// Diese Zeichen landen im Text, nicht nur in der Leiste - also solche, die
+// jede Schrift hat. Ein Kaestchen mitten im Satz waere schlimmer als kein
+// Zeichen.
+const FL_KATEGORIEN = [['☐', 'Aufgabe'], ['★', 'Wichtig'], ['⚑', 'Fahne'],
+                       ['✔', 'Erledigt'], ['✘', 'Verworfen']];
+const FL_GROESSEN = [['1', '8'], ['2', '10'], ['3', '12'], ['4', '14'],
+                     ['5', '18'], ['6', '24'], ['7', '36']];
+/* Die Nummerierungsbibliothek. Welche Zaehlung und was davor und dahinter
+   steht, sagt der Wert selbst: '1)' sind Ziffern mit Klammer, '(a)' kleine
+   Buchstaben in Klammern. Daraus wird beides gebaut - die Vorschau im Menue
+   und die Regel im Stylesheet. Dieselbe Liste steht in web/listen.py; was
+   dort nicht drinsteht, faellt beim Speichern heraus. */
+const FL_NUMMERN = ['1.', '1)', 'a)', 'A.',
+                    '1.)', 'I.', 'A)', '(1)', '(a)',
+                    'a.', '1-', '1', 'A', 'a',
+                    'i.', 'i)'];
+const FL_ZAEHLER = { '1': 'decimal', a: 'lower-alpha', A: 'upper-alpha',
+                     i: 'lower-roman', I: 'upper-roman' };
+const FL_ZIFFERN = { '1': ['1', '2', '3'], a: ['a', 'b', 'c'], A: ['A', 'B', 'C'],
+                     i: ['i', 'ii', 'iii'], I: ['I', 'II', 'III'] };
+
+/* Dasselbe fuer die Aufzaehlung: das Zeichen ist der Wert. Nur Zeichen aus
+   der Grundebene - ein Emoji faellt in Schriften aus, die es nicht haben,
+   und dann steht ein Kaestchen in der Liste. */
+const FL_ZEICHEN = ['●', '○', '•', '◦', '◉',
+                    '✦', '◆', '◇', '❖', '⋄',
+                    '■', '□', '▪', '▫', '◼',
+                    '▶', '▸', '‣', '→', '⇒',
+                    '›', '➢', '✱', '✸', '❉',
+                    '–', '—', '✓', '✗', '★',
+                    '☺', '☎', '✉', '♦', '♥'];
+
+function nrTeile(art) {
+  const i = String(art).search(/[1aAiI]/);
+  if (i < 0) return null;
+  return { typ: art.charAt(i), vorne: art.slice(0, i), hinten: art.slice(i + 1) };
+}
+
+function nrProbe(art) {
+  const t = nrTeile(art);
+  if (!t) return [];
+  return FL_ZIFFERN[t.typ].map(function (z) { return t.vorne + z + t.hinten; });
+}
+
+function listenRegeln() {
+  let text = '';
+  FL_NUMMERN.forEach(function (art, i) {
+    const t = nrTeile(art);
+    text += `@counter-style nz${i} { system: extends ${FL_ZAEHLER[t.typ]};`
+          + ` prefix: "${t.vorne}"; suffix: "${t.hinten} "; }\n`
+          + `ol[data-art="${art}"] { list-style-type: nz${i}; }\n`;
+  });
+  FL_ZEICHEN.forEach(function (z, i) {
+    // cyclic mit einem einzigen Zeichen: das steht dann vor jeder Zeile.
+    text += `@counter-style az${i} { system: cyclic; symbols: "${z}";`
+          + ` suffix: " "; }\n`
+          + `ul[data-art="${z}"] { list-style-type: az${i}; }\n`;
+  });
+  return text;
+}
+
+// Die Liste, in der die Markierung steht - oder nichts.
+function listeUm(tag) {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return null;
+  let k = sel.getRangeAt(0).startContainer;
+  if (k && k.nodeType !== 1) k = k.parentElement;
+  return k && k.closest ? k.closest(tag) : null;
+}
+
+/* Eine Art setzen heisst: notfalls erst eine Liste daraus machen. Ohne das
+   waere die halbe Bibliothek wirkungslos, solange der Absatz noch keine
+   Liste ist - und genau so greift man danach hinein. */
+function artSetzen(tag, befehl, wert) {
+  const liste = listeUm(tag);
+  if (!wert) {                      // "Keine": die Liste wieder weg
+    if (liste) flBefehl(befehl);
+    return;
+  }
+  if (!liste) flBefehl(befehl);
+  const neue = listeUm(tag);
+  if (!neue) return;
+  neue.setAttribute('data-art', wert);
+  gemerkt();
+}
+
+function flNummerSetzen(art) { artSetzen('ol', 'insertOrderedList', art); }
+function flPunktSetzen(zeichen) { artSetzen('ul', 'insertUnorderedList', zeichen); }
+
+let flPinsel = null;            // gemerktes Format beim Uebertragen
+
+/* Symbole als Strich, nicht als Zeichen. Pfeile, Schild und Pinsel gibt es
+   nicht in jeder Schrift - fehlen sie, zeigt der Browser ein Kaestchen, und
+   eine Leiste voller Kaestchen sagt niemandem etwas. Gezeichnet ist immer
+   da, und es nimmt die Farbe der Schrift mit. */
+function flBild(inhalt) {
+  return '<svg class="fl-bild" viewBox="0 0 16 16" width="15" height="15" '
+       + 'fill="none" stroke="currentColor" stroke-width="1.4" '
+       + 'stroke-linecap="round" stroke-linejoin="round">' + inhalt + '</svg>';
+}
+const FL_EINZUG_RAUS = flBild('<path d="M2 3h12M6 6h8M6 10h8M2 13h12"/>'
+                              + '<path d="M4.5 6.5 2 8l2.5 1.5"/>');
+const FL_EINZUG_REIN = flBild('<path d="M2 3h12M6 6h8M6 10h8M2 13h12"/>'
+                              + '<path d="M1.5 6.5 4 8l-2.5 1.5"/>');
+// Die beiden Listenknoepfe zeigen eine Liste, nicht nur ihr Zeichen: ein
+// einzelner Punkt neben einer "1." sagt nicht, dass es um Absaetze geht.
+const FL_ZEILEN = '<path d="M6 3.5h8M6 8h8M6 12.5h8"/>';
+const FL_PUNKTLISTE = flBild(FL_ZEILEN
+    + '<circle cx="2.6" cy="3.5" r="1.2" fill="currentColor" stroke="none"/>'
+    + '<circle cx="2.6" cy="8" r="1.2" fill="currentColor" stroke="none"/>'
+    + '<circle cx="2.6" cy="12.5" r="1.2" fill="currentColor" stroke="none"/>');
+const FL_NUMMERNLISTE = flBild(FL_ZEILEN
+    + '<text x="0" y="5.4" font-size="5.6" fill="currentColor" stroke="none">1</text>'
+    + '<text x="0" y="9.9" font-size="5.6" fill="currentColor" stroke="none">2</text>'
+    + '<text x="0" y="14.4" font-size="5.6" fill="currentColor" stroke="none">3</text>');
+const FL_SCHILD = flBild('<path d="M8.5 1.5H14v5.5L7 14 2 9z"/>'
+                         + '<circle cx="11.2" cy="4.6" r=".9"/>');
+const FL_PINSEL = flBild('<path d="M11 2.5 13.5 5 7 11.5 4.5 9z"/>'
+                         + '<path d="M4.5 9 3 12.5 6.5 11"/>');
+
+function flBefehl(was, wert) {
+  try {
+    if (typeof aufAuswahl === 'function') aufAuswahl(was, wert);
+  } catch (f) { console.error('[notizmappe] Format:', f); }
+}
+
+function flTaste(inhalt, titel, tun, stand) {
+  const k = el('button', { type: 'button', className: 'fl-taste', title: titel });
+  k.innerHTML = inhalt;
+  if (stand) k.dataset.stand = stand;
+  k.addEventListener('click', function (ev) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    tun(k);
+  });
+  return k;
+}
+
+/* Ein kleines Klappmenue - im Kasten der Leiste, nicht am Koerper: alles
+   ausserhalb schliesst drueben die schwebende Leiste und das Rechtsklick-
+   Menue, und dann waere die Liste weg, bevor man sie anklicken kann. */
+function flKlappe(wirt, titel, inhalt, eintraege, tun) {
+  const knopf = flTaste(inhalt + '<span class="fl-pfeil">▾</span>', titel, function (k) {
+    const alte = wirt.querySelector('.fl-liste');
+    if (alte) {
+      alte.remove();
+      if (alte.dataset.von === titel) return;      // derselbe Knopf: zu
+    }
+    const liste = el('div', { className: 'fl-liste' });
+    liste.dataset.von = titel;
+    for (const [wert, name, zeichen] of eintraege) {
+      const z = el('button', { type: 'button', className: 'fl-eintrag' }, [
+        el('span', { className: 'fl-probe', textContent: zeichen || '' }),
+        el('span', { textContent: name }),
+      ]);
+      if (zeichen && zeichen.charAt(0) === '#') {
+        z.firstChild.style.background = zeichen;
+        z.firstChild.textContent = '';
+        z.firstChild.classList.add('fl-tupfer');
+      }
+      z.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        liste.remove();
+        tun(wert);
+      });
+      liste.append(z);
+    }
+    const r = k.getBoundingClientRect();
+    const w = wirt.getBoundingClientRect();
+    liste.style.left = Math.max(0, r.left - w.left) + 'px';
+    liste.style.top = (r.bottom - w.top + 2) + 'px';
+    wirt.append(liste);
+  });
+  knopf.classList.add('fl-mitpfeil');
+  return knopf;
+}
+
+/* Haken und Kategorien sind Zeichen am Zeilenanfang. Eine eigene
+   Auszeichnung (etwa ein input type=checkbox) faellt beim Speichern wieder
+   heraus - die Ablage nimmt nur die Auszeichnungen an, die der Editor
+   selbst setzt. Ein Zeichen ueberlebt jeden Weg, auch den nach drueben. */
+function flZeichenSetzen(zeichen) {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+  const r = sel.getRangeAt(0);
+  const feld = (r.startContainer.nodeType === 1 ? r.startContainer
+                                                : r.startContainer.parentElement);
+  if (!feld || !feld.closest('[contenteditable]')) return;
+  const anfang = r.cloneRange();
+  anfang.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(anfang);
+  try {
+    document.execCommand('insertText', false, zeichen + ' ');
+  } catch (f) { /* dann eben nicht */ }
+}
+
+/* Ein Klick auf einen Haken im Text setzt ihn um. Das ist der Teil, der aus
+   dem Zeichen eine Aufgabe macht. */
+function flHakenAnschalten() {
+  const grund = document.getElementById('flaeche');
+  if (!grund || grund.dataset.haken === 'ja') return;
+  grund.dataset.haken = 'ja';
+  grund.addEventListener('click', function (ev) {
+    const feld = ev.target.closest && ev.target.closest('.text');
+    if (!feld) return;
+    const stelle = document.caretRangeFromPoint
+      ? document.caretRangeFromPoint(ev.clientX, ev.clientY) : null;
+    if (!stelle || stelle.startContainer.nodeType !== 3) return;
+    const text = stelle.startContainer.nodeValue || '';
+    const i = stelle.startOffset;
+    for (const [auf, zu] of [['☐', '☑'], ['☑', '☐']]) {
+      for (const stern of [i - 1, i]) {
+        if (text.charAt(stern) !== auf) continue;
+        stelle.startContainer.nodeValue =
+          text.slice(0, stern) + zu + text.slice(stern + 1);
+        const e = kastenDaten(feld.closest('.kasten'));
+        if (e) e.html = feld.innerHTML;
+        gemerkt();
+        return;
+      }
+    }
+  });
+}
+
+/* Format uebertragen: einmal klicken merkt, was an der Stelle gilt; die
+   naechste Markierung bekommt es. Mehr macht der Pinsel in OneNote auch
+   nicht. */
+function flPinselNehmen(knopf) {
+  if (flPinsel) { flPinsel = null; flPinselZeigen(); return; }
+  const lies = (was) => {
+    try { return document.queryCommandState(was); } catch (f) { return false; }
+  };
+  const wert = (was) => {
+    try { return String(document.queryCommandValue(was) || ''); } catch (f) { return ''; }
+  };
+  flPinsel = {
+    bold: lies('bold'), italic: lies('italic'), underline: lies('underline'),
+    strikeThrough: lies('strikeThrough'),
+    fontName: wert('fontName').replace(/^['"]|['"]$/g, ''),
+    fontSize: wert('fontSize'), foreColor: wert('foreColor'),
+  };
+  flPinselZeigen();
+}
+
+function flPinselZeigen() {
+  for (const k of document.querySelectorAll('.fl-taste[data-stand="pinsel"]')) {
+    k.classList.toggle('an', !!flPinsel);
+  }
+}
+
+function flPinselAnschalten() {
+  document.addEventListener('mouseup', function () {
+    if (!flPinsel) return;
+    setTimeout(function () {
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed || !sel.anchorNode) return;
+      const knoten = sel.anchorNode.nodeType === 1 ? sel.anchorNode
+                                                   : sel.anchorNode.parentElement;
+      if (!knoten || !knoten.closest('[contenteditable]')) return;
+      const p = flPinsel;
+      flPinsel = null;
+      flPinselZeigen();
+      flBefehl('removeFormat');
+      for (const was of ['bold', 'italic', 'underline', 'strikeThrough']) {
+        if (p[was]) flBefehl(was);
+      }
+      if (p.fontName) flBefehl('fontName', p.fontName);
+      if (p.fontSize) flBefehl('fontSize', p.fontSize);
+      if (p.foreColor) flBefehl('foreColor', p.foreColor);
+    }, 0);
+  });
+}
+
+function flFarben() {
+  const aus = [];
+  for (const k of document.querySelectorAll('#farben button[data-farbe]')) {
+    aus.push([k.dataset.farbe, k.title || k.dataset.farbe, k.dataset.farbe]);
+  }
+  return aus;
+}
+
+// Drei Zeilen Vorschau - so steht es spaeter da.
+function nrKachel(art) {
+  return nrProbe(art).map(function (z) {
+    return el('span', { className: 'fl-kzeile' }, [
+      el('span', { className: 'fl-knr', textContent: z }),
+      el('span', { className: 'fl-kstrich' }),
+    ]);
+  });
+}
+
+function azKachel(zeichen) {
+  return [el('span', { className: 'fl-kzeichen', textContent: zeichen })];
+}
+
+/* Dieselbe Mechanik wie das Klappmenue, nur als Gitter mit Vorschau: ein
+   paar Zeilen "1. 2. 3." sagen mehr als ihr Name. */
+function flGalerie(wirt, titel, inhalt, arten, tun, bauen) {
+  const knopf = flTaste(inhalt + '<span class="fl-pfeil">▾</span>', titel, function (k) {
+    const alte = wirt.querySelector('.fl-liste');
+    if (alte) {
+      alte.remove();
+      if (alte.dataset.von === titel) return;      // derselbe Knopf: zu
+    }
+    const kasten = el('div', { className: 'fl-liste fl-galerie' });
+    kasten.dataset.von = titel;
+    kasten.append(el('p', { className: 'fl-galkopf', textContent: titel }));
+    const gitter = el('div', { className: 'fl-gitter' });
+    for (const art of [''].concat(arten)) {
+      const kachel = el('button', { type: 'button', className: 'fl-kachel' },
+        art ? bauen(art) : [el('span', { className: 'fl-keine', textContent: 'Keine' })]);
+      kachel.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        kasten.remove();
+        tun(art);
+      });
+      gitter.append(kachel);
+    }
+    kasten.append(gitter);
+    wirt.append(kasten);
+    // Das Gitter ist breiter als die Leiste. Es darf ueber ihren Rand
+    // hinausragen, nur nicht aus dem Fenster.
+    const k2 = k.getBoundingClientRect();
+    const w = wirt.getBoundingClientRect();
+    const b = kasten.getBoundingClientRect();
+    const links = Math.max(8, Math.min(k2.left, window.innerWidth - b.width - 8));
+    const oben = Math.max(8, Math.min(k2.bottom + 2, window.innerHeight - b.height - 8));
+    kasten.style.left = (links - w.left) + 'px';
+    kasten.style.top = (oben - w.top) + 'px';
+  });
+  knopf.classList.add('fl-mitpfeil');
+  return knopf;
+}
+
+/* Knopf und Pfeil gehoeren zusammen: links die Liste an- und ausschalten,
+   rechts die Bibliothek. Getrennt standen vier Knoepfe nebeneinander, und
+   keiner sagte, dass je zwei dasselbe meinen. */
+function flGeteilt(knopf, pfeil) {
+  pfeil.classList.add('fl-nurpfeil');
+  return el('span', { className: 'fl-geteilt' }, [knopf, pfeil]);
+}
+
+function formatleisteBauen() {
+  const wirt = el('div', { className: 'formatleiste' });
+
+  const art = el('select', { className: 'fl-art', title: 'Schriftart' });
+  art.addEventListener('change', function () { flBefehl('fontName', art.value); });
+  const groesse = el('select', { className: 'fl-groesse', title: 'Schriftgröße' });
+  for (const [wert, text] of FL_GROESSEN) {
+    // 12 ist die Groesse, in der geschrieben wird - ohne das stand hier 8,
+    // die erste der Liste.
+    groesse.append(el('option', { value: wert, textContent: text,
+                                  selected: wert === '3' }));
+  }
+  groesse.addEventListener('change', function () { flBefehl('fontSize', groesse.value); });
+
+  const reihe1 = el('div', { className: 'fl-reihe' }, [
+    art, groesse,
+    el('span', { className: 'fl-trenner' }),
+    flKlappe(wirt, 'Formatvorlage', '<span class="fl-sinn">¶</span>',
+             FL_VORLAGEN.map(([w, n]) => [w, n, '']),
+             function (w) { flBefehl('formatBlock', w); }),
+    flTaste(FL_EINZUG_RAUS, 'Einzug verkleinern',
+            function () { flBefehl('outdent'); }),
+    flTaste(FL_EINZUG_REIN, 'Einzug vergrößern',
+            function () { flBefehl('indent'); }),
+    el('span', { className: 'fl-trenner' }),
+    flTaste('<span class="fl-haken">☑</span>', 'Aufgabe (zum Abhaken)',
+            function () { flZeichenSetzen('☐'); }),
+    flKlappe(wirt, 'Kategorie', FL_SCHILD,
+             FL_KATEGORIEN.map(([z, n]) => [z, n, z]),
+             function (z) { flZeichenSetzen(z); }),
+  ]);
+
+  const reihe2 = el('div', { className: 'fl-reihe' }, [
+    flTaste('<b>F</b>', 'Fett (Strg+B)', function () { flBefehl('bold'); }, 'bold'),
+    flTaste('<i>K</i>', 'Kursiv (Strg+I)', function () { flBefehl('italic'); }, 'italic'),
+    flTaste('<u>U</u>', 'Unterstrichen (Strg+U)',
+            function () { flBefehl('underline'); }, 'underline'),
+    flTaste('<s>S</s>', 'Durchgestrichen',
+            function () { flBefehl('strikeThrough'); }, 'strikeThrough'),
+    el('span', { className: 'fl-trenner' }),
+    flTaste('<span class="fl-marker">A</span>', 'Hervorheben', function () {
+      try { if (typeof hervorheben === 'function') hervorheben(); } catch (f) { /* egal */ }
+    }),
+    flKlappe(wirt, 'Schriftfarbe', '<span class="fl-buchstabe">A</span>',
+             flFarben(), function (farbe) { flBefehl('foreColor', farbe); }),
+    el('span', { className: 'fl-trenner' }),
+    flGeteilt(
+      flTaste(FL_PUNKTLISTE, 'Aufzählung',
+              function () { flBefehl('insertUnorderedList'); }, 'insertUnorderedList'),
+      flGalerie(wirt, 'Aufzählungszeichenbibliothek', '',
+                FL_ZEICHEN, flPunktSetzen, azKachel)),
+    flGeteilt(
+      flTaste(FL_NUMMERNLISTE, 'Nummerierung',
+              function () { flBefehl('insertOrderedList'); }, 'insertOrderedList'),
+      flGalerie(wirt, 'Nummerierungsbibliothek', '',
+                FL_NUMMERN, flNummerSetzen, nrKachel)),
+    el('span', { className: 'fl-trenner' }),
+    flTaste(FL_PINSEL, 'Format übertragen',
+            flPinselNehmen, 'pinsel'),
+    flTaste('<span class="fl-weg">✕</span>', 'Formatierung entfernen', function () {
+      flBefehl('removeFormat');
+      try { if (typeof hervorhebungWeg === 'function') hervorhebungWeg(); } catch (f) { /* egal */ }
+    }),
+  ]);
+
+  wirt.append(reihe1, reihe2);
+  flSchriftenSpiegeln(wirt);      // gleich, nicht erst beim ersten Auffrischen
+  // Ein Klick in die Leiste darf die Markierung nicht kosten - sonst
+  // formatiert der Knopf nichts. Auswahlfelder brauchen den Fokus, sonst
+  // klappen sie nicht auf.
+  wirt.addEventListener('mousedown', function (ev) {
+    if (ev.target.tagName !== 'SELECT') ev.preventDefault();
+  });
+  return wirt;
+}
+
+/* Was an der Markierung schon gilt, anzeigen - und die Schriftliste
+   nachziehen, die der Server erst nachlaedt. */
+/* Die Schriftliste steht drueben und wird vom Server nachgeladen - sie ist
+   also erst spaeter vollstaendig. Deshalb jedes Mal nachsehen, ob sie
+   gewachsen ist. */
+function flSchriftenSpiegeln(wirt) {
+  const art = wirt && wirt.querySelector('.fl-art');
+  const echt = document.querySelector('#minialt select[data-befehl="fontName"]')
+            || document.querySelector('#minileiste select[data-befehl="fontName"]')
+            || document.getElementById('schriftart');
+  if (!art || !echt || !echt.options.length
+      || art.options.length === echt.options.length) return;
+  const stand = art.value;
+  art.textContent = '';
+  // Mit den Gruppen: die Favoriten stehen drueben in einer eigenen, und
+  // ohne sie waeren sie irgendwo in der Liste - gerade die, die man sucht.
+  for (const kind of echt.children) {
+    if (kind.tagName === 'OPTGROUP') {
+      const g = el('optgroup', { label: kind.label });
+      for (const o of kind.children) {
+        g.append(el('option', { value: o.value, textContent: o.textContent }));
+      }
+      art.append(g);
+    } else {
+      art.append(el('option', { value: kind.value, textContent: kind.textContent }));
+    }
+  }
+  if (stand) art.value = stand;
+}
+
+function formatleisteFrischen(wirt) {
+  if (!wirt) return;
+  flSchriftenSpiegeln(wirt);
+  const klappe = wirt.querySelector('.fl-liste');
+  if (klappe) klappe.remove();
+  for (const [waehler, befehl] of [['.fl-art', 'fontName'], ['.fl-groesse', 'fontSize']]) {
+    const feld = wirt.querySelector(waehler);
+    if (!feld) continue;
+    try {
+      const wert = String(document.queryCommandValue(befehl) || '')
+        .replace(/^['"]|['"]$/g, '');
+      const treffer = Array.from(feld.options).find(function (o) {
+        return o.value === wert || o.value.toLowerCase() === wert.toLowerCase();
+      });
+      if (treffer) feld.value = treffer.value;
+    } catch (f) { /* nicht jede Webansicht kann das */ }
+  }
+  for (const k of wirt.querySelectorAll('.fl-taste[data-stand]')) {
+    const befehl = k.dataset.stand;
+    if (befehl === 'pinsel') { k.classList.toggle('an', !!flPinsel); continue; }
+    let an = false;
+    try { an = document.queryCommandState(befehl); } catch (f) { /* egal */ }
+    k.classList.toggle('an', !!an);
+  }
+}
+
+/* Die schwebende Leiste drueben bekommt denselben Inhalt. Ihre eigenen
+   Knoepfe bleiben stehen, nur versteckt: an ihnen haengen drueben die
+   Schriftliste und die Farben, und von dort werden sie hier gespiegelt. */
+function minileisteUmbauen() {
+  const leiste = document.getElementById('minileiste');
+  if (!leiste || leiste.querySelector('.formatleiste')) return;
+  const alt = el('div', { id: 'minialt', hidden: true });
+  while (leiste.firstChild) alt.append(leiste.firstChild);
+  const neu = formatleisteBauen();
+  leiste.append(alt, neu);
+  document.addEventListener('selectionchange', function () {
+    if (!leiste.hidden) formatleisteFrischen(neu);
+  });
+  // Beim Ziehen mit der Maus geht die Leiste erst beim Loslassen auf - und
+  // dabei kommt kein selectionchange mehr. Deshalb am Zustand der Leiste
+  // selbst haengen: wird sie sichtbar, wird sie auch aufgefrischt.
+  if (window.MutationObserver) {
+    new MutationObserver(function () {
+      if (!leiste.hidden) formatleisteFrischen(neu);
+    }).observe(leiste, { attributes: true, attributeFilter: ['hidden'] });
+  }
+}
+
+function formatleistenBauen() {
+  minileisteUmbauen();
+  flHakenAnschalten();
+  flPinselAnschalten();
+  // Die festen Regeln stehen in der Stildatei. Hier entsteht nur, was von den
+  // Listenarten abhaengt: je Art ein @counter-style, und das laesst sich
+  // nicht vorher hinschreiben.
+  const stil = document.createElement('style');
+  stil.textContent = listenRegeln();
+  document.head.append(stil);
+}
+
+/* --------------------------------------- Rechtsklick: Formatieren gleich mit
+
+   Drueben ist das Rechtsklick-Menue eine Liste mit vier Punkten, und zum
+   Formatieren gibt es eine eigene Leiste, die bei einer Markierung aufgeht.
+   In OneNote ist beides ein Menue: oben zwei Reihen Format, darunter die
+   Punkte. Genau so sieht es hier jetzt aus.
+
+   Gerechnet wird dabei nichts selbst. Geklickt wird auf die Funktionen
+   drueben - aufAuswahl(), hervorheben(), hervorhebungWeg() -, und die
+   Schriftliste und die Farben werden aus der vorhandenen Leiste gespiegelt.
+   Zwei Stellen, die Fett setzen, waeren eine zu viel: eine davon ist eines
+   Tages anders. */
+
+let rmImText = false;
+// Fuer die Fusszeile des Menues. Beides steht schon in Antworten, die der
+// Stellvertreter ohnehin holt - hier nur gemerkt.
+let meinName = '';
+let meinBereich = '';
+
+function rechtsmenueZu() {
+  const menue = document.getElementById('rechtsmenue');
+  if (menue) menue.hidden = true;
+}
+
+/* Beim Rechtsklick ist die schwebende Leiste zu viel: dieselben Knoepfe
+   stehen eine Zeile tiefer noch einmal im Menue. Einmal zumachen genuegt
+   nicht - drueben macht der Mausknopf sie weg und das Loslassen wieder hin,
+   und das Loslassen kommt vor dem Menue. Deshalb bleibt sie zu, solange das
+   Menue offen ist. Geht es zu, gelten wieder die Regeln von drueben: die
+   naechste Markierung holt sie zurueck. */
+function minileisteWeg() {
+  const leiste = document.getElementById('minileiste');
+  if (leiste) leiste.hidden = true;
+}
+
+function minileisteHueten() {
+  const leiste = document.getElementById('minileiste');
+  const menue = document.getElementById('rechtsmenue');
+  if (!leiste || !menue || !window.MutationObserver) return;
+  new MutationObserver(function () {
+    if (!menue.hidden && !leiste.hidden) leiste.hidden = true;
+  }).observe(leiste, { attributes: true, attributeFilter: ['hidden'] });
+}
+
+function rechtsmenueBauen() {
+  const menue = document.getElementById('rechtsmenue');
+  if (!menue || document.getElementById('rm-format')) return;
+
+  // Die vier Punkte drueben bekommen ihr Zeichen davor - geaendert wird an
+  // ihnen sonst nichts, sie haengen weiter an ihrem data-tun.
+  for (const [was, zeichen] of [['ausschneiden', '✂'], ['kopieren', '⧉'],
+                                ['einfuegen', '📋'], ['alles', '⬚']]) {
+    const knopf = menue.querySelector(`button[data-tun="${was}"]`);
+    if (!knopf || knopf.querySelector('.rm-zeichen')) continue;
+    knopf.classList.add('rm-punkt');
+    knopf.insertBefore(el('span', { className: 'rm-zeichen', textContent: zeichen }),
+                       knopf.firstChild);
+  }
+
+  // Der Link gehoert zum Text, nicht zur Zwischenablage - deshalb unten,
+  // hinter einem Strich. Mehr als http, https und mailto nimmt die Ablage
+  // ohnehin nicht an; alles andere faellt beim Speichern wieder heraus.
+  const link = el('button', { type: 'button', id: 'rm-link',
+                              className: 'rm-punkt' }, [
+    el('span', { className: 'rm-zeichen', textContent: '🔗' }),
+    el('span', { textContent: 'Link …  (Strg+K)' }),
+  ]);
+  link.addEventListener('click', function (ev) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    rechtsmenueZu();
+    linkSetzen();
+  });
+  menue.append(el('div', { className: 'rm-strich' }), link);
+
+  // Wer wann - so weit wir es wirklich wissen. Die Seite merkt sich, wann
+  // sie zuletzt geaendert wurde, aber nicht von wem; in einem Projekt waere
+  // ein Name hier also geraten.
+  menue.append(el('p', { id: 'rm-wer', className: 'rm-fuss' }));
+
+  // Unten die Leiste - dieselbe wie die schwebende beim Markieren.
+  const block = el('div', { id: 'rm-format' }, [formatleisteBauen()]);
+  menue.append(block);
+
+  // Ein Klick ins Menue darf die Markierung nicht kosten - sonst tut der
+  // Knopf nichts. Bei Auswahlfeldern nicht: die brauchen den Fokus.
+  menue.addEventListener('mousedown', function (ev) {
+    if (ev.target.tagName !== 'SELECT') ev.preventDefault();
+  });
+
+  document.addEventListener('contextmenu', function (ev) {
+    if (ev.target.closest && ev.target.closest('#einstellungen')) return;
+    rmImText = !!(ev.target.closest && ev.target.closest('[contenteditable]'));
+    minileisteWeg();
+    // Nach dem Aufbau drueben: dort wird das Menue sichtbar gemacht und
+    // gestellt. Was hier dazukommt, aendert die Hoehe - also noch einmal
+    // nachruecken.
+    setTimeout(function () { rechtsmenueFrischen(ev.clientX, ev.clientY); }, 0);
+  });
+
+  document.addEventListener('keydown', function (ev) {
+    if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'k'
+        && document.activeElement && document.activeElement.closest
+        && document.activeElement.closest('[contenteditable]')) {
+      ev.preventDefault();
+      linkSetzen();
+    }
+  });
+
+  minileisteHueten();
+
+}
+
+function linkSetzen() {
+  const sel = window.getSelection();
+  if (!sel || sel.isCollapsed) {
+    malsagen('Erst den Text markieren, der zum Link werden soll.');
+    return;
+  }
+  const merk = sel.getRangeAt(0).cloneRange();
+  const adresse = prompt('Adresse des Links:', 'https://');
+  if (!adresse) return;
+  if (!/^(https?:\/\/|mailto:)/i.test(adresse)) {
+    malsagen('Nur http://, https:// und mailto: - anderes wird beim Speichern verworfen.');
+    return;
+  }
+  // Der Dialog kostet die Markierung, also zurueckholen.
+  sel.removeAllRanges();
+  sel.addRange(merk);
+  flBefehl('createLink', adresse);
+}
+
+function rechtsmenueFrischen(x, y) {
+  const menue = document.getElementById('rechtsmenue');
+  const block = document.getElementById('rm-format');
+  if (!menue || !block || menue.hidden) return;
+  // Auf der leeren Flaeche ist kein Text da, den die Leiste aendern koennte.
+  // Trotzdem steht sie da: ein Menue, das mal lang und mal kurz ist, springt
+  // einem unter der Maus weg. Sie ist dann blass und nimmt keine Klicks an -
+  // so wie die vier Punkte drueben, die dort auch ausgegraut sind.
+  block.hidden = false;
+  block.classList.toggle('rm-aus', !rmImText);
+  const link = document.getElementById('rm-link');
+  if (link) {
+    link.hidden = false;
+    link.classList.toggle('rm-aus', !rmImText);
+  }
+  if (rmImText) formatleisteFrischen(block.querySelector('.formatleiste'));
+  const wer = document.getElementById('rm-wer');
+  if (wer) wer.textContent = rmFusszeile();
+  const b = menue.getBoundingClientRect();
+  menue.style.left = Math.max(4, Math.min(x, window.innerWidth - b.width - 8)) + 'px';
+  menue.style.top = Math.max(4, Math.min(y, window.innerHeight - b.height - 8)) + 'px';
+}
+
+
+function rmFusszeile() {
+  let zeit = null;
+  try { zeit = offen && offen.mtime ? new Date(offen.mtime * 1000) : null; }
+  catch (f) { zeit = null; }
+  if (!zeit) return '';
+  const wann = zeit.toLocaleString('de-DE', { day: '2-digit', month: '2-digit',
+                                              year: 'numeric', hour: '2-digit',
+                                              minute: '2-digit' });
+  // Der Name nur dort, wo er stimmt: in den eigenen Notizen war es man
+  // selbst. In einem Projekt schreiben mehrere, und wer zuletzt - das merkt
+  // sich die Seite nicht.
+  return (meinBereich ? 'Zuletzt geändert am ' : (meinName || 'Zuletzt geändert') + ' am ')
+         + wann;
+}
+
 (async () => {
   zoomSetzen(parseFloat(merker.holen('zoom', '1')));
   stifteHolen();
   stiftknoepfeBauen();
   $('#m-nurstift').checked = !!merker.holen('nurstift', '');
   reiterSetzen(merker.holen('reiter', 'start') === 'zeichnen' ? 'zeichnen' : 'start');
+  // Jeder Schritt fuer sich: faellt einer aus, laeuft der Rest trotzdem - und
+  // man sieht im Protokoll, welcher es war.
+  for (const [name, tun] of [['Formatleiste', formatleistenBauen],
+                             ['Rechtsklick', rechtsmenueBauen]]) {
+    try { tun(); } catch (f) { console.error('[notizmappe] ' + name + ':', f); }
+  }
   // Vor allem anderen: ist zugesperrt, wird hier gewartet, bis das Passwort
   // stimmt. Kein Baum, keine Seite, nichts.
   if (!await sperreAufmachen()) return;

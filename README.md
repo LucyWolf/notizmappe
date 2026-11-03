@@ -153,6 +153,7 @@ halb umgestellte Ordner (Abbruch mitten im Verschlüsseln).
 | `tests/test_bruecke.py` | Seiten, Anhänge, Konflikte, XSS, Pfadausbruch, Papierkorb |
 | `tests/test_konten.py` | Sperre, Anmeldung, Projekte, Gerätschlüssel, Passwortraten |
 | `tests/test_update.py` | Selbstupdate gegen eine nachgemachte GitHub-Antwort |
+| `tests/test_leiste.py` | dass hinter jedem Knopf der Formatleiste der richtige Befehl steckt — und dass beim Rechtsklick nicht zwei Leisten übereinander stehen |
 | `tests/test_kein_server.py` | dass nirgends ein Webserver, Port oder HTTP-Aufruf steckt |
 | `tests/test_installer.sh` | Installationsdatei in einem Wegwerf-Heim durchspielen |
 
@@ -327,6 +328,34 @@ Dialoge verschwinden im Druck.
 Nicht übernommen aus OneNote: **Freigeben** und **Senden** — dafür müsste das
 Programm Mail können oder einen Dienst kennen, und beides soll es nicht.
 „Kopie speichern" ist dasselbe wie Exportieren und steht deshalb nur einmal da.
+
+## Formatieren: die schwebende Leiste und das Rechtsklick-Menü
+
+Markierst du Text, geht eine kleine Leiste darüber auf — zwei Reihen, so wie in
+OneNote: Schriftart, Größe, Formatvorlage, Einzug, Aufgabe und Kategorie oben;
+F K U, Marker, Farbe, Listen, Format übertragen und Löschen unten.
+
+Dieselbe Leiste steht noch einmal **im Rechtsklick-Menü**, über den vier
+Punkten für die Zwischenablage. Drückst du die rechte Maustaste, verschwindet
+die schwebende Leiste — sonst stünden dieselben Knöpfe zweimal übereinander.
+Im Leeren geht dasselbe Menü auf, nur sind die Formatknöpfe dann blass: dann
+gibt es nichts zu formatieren, aber man sieht, dass es sie gibt.
+
+Zwei Knöpfe sind geteilt: der Pfeil daneben öffnet die
+**Nummerierungsbibliothek** (16 Arten: `1.`, `1)`, `a)`, `I.`, `(1)` …) und die
+**Aufzählungszeichenbibliothek** (35 Zeichen). Die Art steht als `data-art` an
+der Liste, und die Oberfläche macht daraus eine `@counter-style`-Regel — freies
+CSS nimmt die Ablage nicht an, und zwei feste Listen sind der Unterschied
+zwischen „Art auswählen" und „irgendetwas hineinschreiben".
+
+Drei Sachen gehen bewusst anders als bei OneNote, weil `reinigen.py` nur
+bestimmte Auszeichnungen annimmt: der Marker hat eine Farbe statt fünf, die
+Größen sind die sieben, die `<font size>` kennt, und ein Haken ist ein Zeichen
+im Text — kein Kontrollkästchen, das beim Speichern wieder herausfiele.
+
+Gerechnet wird in der Leiste nichts selbst: sie ruft dieselben Funktionen wie
+das Band. Zwei Stellen, die Fett setzen, wären eine zu viel — eine davon ist
+eines Tages anders.
 
 ## Zeichnen
 

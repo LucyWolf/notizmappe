@@ -638,3 +638,91 @@ body { display: flex; flex-direction: column; }
   background: var(--papier); color: var(--schrift); font: inherit; font-size: 12px; cursor: pointer;
 }
 .baumleer button:hover { border-color: var(--akzent); }
+
+/* --- Formatleiste und Rechtsklick-Menue ---------------------------------
+   Kam mit der Serverfassung; steht jetzt hier, damit beide Fassungen
+   dieselbe Oberflaeche haben. */
+.formatleiste { position: relative; padding: 4px 5px; }
+.formatleiste .fl-reihe {
+  display: flex; align-items: center; gap: 1px;
+}
+.formatleiste .fl-reihe + .fl-reihe { margin-top: 3px; }
+.formatleiste select {
+  height: 24px; border: 1px solid var(--linie); border-radius: 3px;
+  background: var(--papier); color: var(--schrift); font-size: 12px;
+}
+.formatleiste .fl-art { flex: 1; min-width: 86px; max-width: 150px; }
+.formatleiste .fl-groesse { width: 56px; margin-left: 2px; }
+.fl-taste {
+  min-width: 26px; height: 24px; padding: 0 4px; border: 1px solid transparent;
+  border-radius: 3px; background: none; color: var(--schrift);
+  font: inherit; font-size: 12px; line-height: 1; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 1px;
+}
+.fl-taste:hover { background: var(--flaeche); border-color: var(--linie); }
+.fl-taste.an { background: color-mix(in srgb, var(--akzent) 25%, transparent); }
+.fl-pfeil { font-size: 9px; opacity: .7; }
+.fl-sinn { font-size: 13px; }
+.fl-bild { display: block; }
+.fl-haken { color: var(--akzent); font-size: 13px; }
+.fl-weg { opacity: .6; }
+.fl-marker { background: #ffe680; color: #1f1d1a; padding: 0 3px; border-radius: 2px; }
+.fl-buchstabe { border-bottom: 3px solid var(--warnung); line-height: 1.1; }
+.formatleiste .fl-trenner {
+  width: 1px; height: 16px; background: var(--linie); margin: 0 3px;
+}
+.fl-liste {
+  position: absolute; z-index: 60; min-width: 150px; padding: 4px;
+  background: var(--leiste); border: 1px solid var(--linie);
+  border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,.35);
+}
+.fl-eintrag {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 5px 8px; border: 0; border-radius: 4px; background: none;
+  color: var(--schrift); font: inherit; font-size: 13px; cursor: pointer;
+  text-align: left;
+}
+.fl-eintrag:hover { background: var(--flaeche); }
+.fl-probe { width: 16px; text-align: center; }
+.fl-tupfer { height: 12px; border-radius: 50%; border: 1px solid var(--linie); }
+.fl-galerie { padding: 8px; }
+.fl-galkopf { margin: 0 0 6px; font-size: 12px; color: var(--matt); }
+.fl-gitter {
+  display: grid; grid-template-columns: repeat(5, 68px); gap: 6px;
+}
+.fl-kachel {
+  display: flex; flex-direction: column; justify-content: center; gap: 3px;
+  height: 62px; padding: 6px; border: 1px solid var(--linie);
+  border-radius: 3px; background: var(--papier); color: var(--schrift);
+  font: inherit; font-size: 11px; cursor: pointer;
+}
+.fl-kachel:hover { border-color: var(--betont, #7a5cff); }
+.fl-kzeile { display: flex; align-items: center; gap: 4px; }
+.fl-knr { min-width: 18px; text-align: right; }
+.fl-kstrich { flex: 1; height: 1px; background: var(--schrift); opacity: .5; }
+.fl-keine { font-size: 12px; text-align: center; }
+.fl-geteilt { display: inline-flex; align-items: center; }
+.fl-geteilt .fl-taste { border-radius: 3px 0 0 3px; }
+.fl-geteilt .fl-nurpfeil {
+  min-width: 13px; padding: 0; border-radius: 0 3px 3px 0;
+}
+.fl-nurpfeil .fl-pfeil { font-size: 9px; opacity: .8; }
+.fl-kzeichen {
+  display: block; width: 100%; font-size: 22px; line-height: 1;
+  text-align: center;
+}
+
+#rechtsmenue { padding: 0; min-width: 236px; }
+#rechtsmenue > button { display: flex; align-items: center; gap: 10px; width: 100%; }
+.rm-zeichen { width: 16px; text-align: center; opacity: .75; font-size: 13px; }
+.rm-strich { height: 1px; background: var(--linie); margin: 4px 0; }
+.rm-fuss {
+  margin: 0; padding: 6px 10px 8px; color: var(--matt); font-size: 11px;
+  border-top: 1px solid var(--linie);
+}
+.rm-fuss:empty { display: none; }
+#rm-format {
+  border-top: 1px solid var(--linie); background: var(--leiste);
+  border-radius: 0 0 8px 8px;
+}
+.rm-aus { opacity: .45; pointer-events: none; }
