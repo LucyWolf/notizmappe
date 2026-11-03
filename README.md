@@ -180,7 +180,7 @@ gewinnt das und die Wahl ist gesperrt — Tests und Docker verlassen sich darauf
 
 ## Mit einem Server verbinden
 
-**Datei → Server**: Adresse, Benutzername, Passwort, **Anmelden**. Eine eigene
+**Datei → Verbinden**: Adresse, Benutzername, Passwort, **Anmelden**. Eine eigene
 Seite, weil es eine eigene Sache ist. Vorher lag das Formular unten in den
 Optionen, und eine Seite namens „Konto" zeigte nur seinen Zustand mit einem
 Knopf, der dorthin sprang: zwei Orte für eine Sache, auf dem einen konnte man
@@ -307,7 +307,7 @@ OneNote:
 
 **Datei** ist kein Reiter mit Werkzeugen, sondern eine Ebene darüber: eine
 ganzseitige Übersicht mit **Informationen**, **Neu**, **Öffnen** (anderer
-Ordner, Server, OneNote), **Drucken**, **Exportieren**, **Server** und
+Ordner, Server, OneNote), **Drucken**, **Exportieren**, **Verbinden** und
 **Optionen**. Zurück mit dem Pfeil oder `Esc`.
 
 Dort wohnen auch die Einstellungen — ein eigenes Einstellungsfenster gibt es
@@ -316,9 +316,10 @@ nicht mehr:
 * **Informationen**: wo die Notizen liegen, Seitenzahl, Papierkorb, Platz,
   Sperre, Fassung — und darunter die **Updates** (prüfen, installieren, beim
   Start nachsehen, automatisch einspielen).
-* **Server**: die Verbindung zu einem Server — anmelden, umschalten, abmelden.
-  Hieß vorher „Konto"; man hat hier aber keins, man verbindet sich mit einem
-  Server.
+* **Verbinden**: die Verbindung zu einem Server — anmelden, umschalten,
+  abmelden. Hieß vorher „Konto"; man hat hier aber keins, man verbindet sich
+  mit einem Server. In der Leiste steht die Tätigkeit wie bei Öffnen, Drucken
+  und Exportieren, auf der Seite die Überschrift *Mit einem Server verbinden*.
 * **Optionen**: Datenordner, OneNote übernehmen, Sperre, Schriften,
   Darstellung.
 
