@@ -196,7 +196,10 @@ def fenster_zeigen() -> bool:
         TITEL, html=oberflaeche_bauen(), js_api=verbindung,
         width=1280, height=840, min_size=(640, 480),
     )
-    verbindung.fenster = fenster       # fuer die Ordner- und Speichern-Dialoge
+    # Mit Unterstrich: pywebview laeuft sonst beim Bauen der Methodenliste
+    # in das Fenster hinein und von dort in die COM-Objekte von WebView2.
+    # Siehe Bruecke.__doc__ - daran hing "reagiert nicht".
+    verbindung._fenster = fenster      # fuer die Ordner- und Speichern-Dialoge
 
     speicher = _datenort() / "webansicht"
     speicher.mkdir(parents=True, exist_ok=True)

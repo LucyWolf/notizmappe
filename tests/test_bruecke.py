@@ -5,6 +5,7 @@
 Läuft gegen eine Wegwerf-Ablage unter /tmp, fasst echte Notizen nicht an. Es gibt
 keinen Server mehr - die Oberfläche ruft genau diese Methoden auf.
 """
+import inspect
 import base64
 import os
 import shutil
@@ -52,7 +53,91 @@ pruefe("Oberflaeche ruft die Bruecke", "pywebview.api" in js)
 # Die Seite wird als Inhalt uebergeben, nicht als Datei: pywebview reicht seine
 # Schnittstelle nachtraeglich hinein, und bei einer Datei-Adresse geht das je
 # nach Webansicht daneben - dann antwortet das Programm dem Fenster nie.
+# --- Was pywebview an der Bruecke entlanggeht --------------------------------
+#
+# pywebview baut die Liste der aufrufbaren Methoden mit dir() und steigt dabei
+# in jedes oeffentliche Feld hinab, das keine Funktion ist - Namen mit "_" am
+# Anfang werden uebersprungen (webview/util.py, get_functions). Hiess das Feld
+# fuer das Fenster "fenster", lief der Gang weiter in Window.native und damit
+# unter Windows in die lebenden WinForms/WebView2-Objekte. Jeder Zugriff
+# darauf geht ueber die Thread-Grenze, mit der GIL in der Hand, die der Thread
+# braucht, der die Fensternachrichten abarbeitet. Dann steht "Notizmappe
+# reagiert nicht" da, und Windows macht das Fenster zu - nicht sofort,
+# sondern nach ein paar Minuten.
+print("\nWas pywebview an der Bruecke abgeht")
 sys.path.insert(0, str(WURZEL / "app"))
+import bruecke as bruecke_modul                              # noqa: E402
+
+
+class Attrappe:
+    """Steht fuer das Fenster: zeigt Felder wie ein COM-Objekt und merkt sich,
+    wer hineingesehen hat. Ein echtes Window.native hat hunderte davon, und
+    jeder Zugriff geht ueber die Thread-Grenze."""
+
+    angefasst = None
+
+    def __init__(self, buch=None):
+        object.__setattr__(self, "_buch", buch if buch is not None else [])
+
+    @property
+    def gesehene(self):
+        return object.__getattribute__(self, "_buch")
+
+    def __dir__(self):
+        return ["native", "gui", "events", "FontFamily", "SyncRoot"]
+
+    def __getattr__(self, name):
+        buch = object.__getattribute__(self, "_buch")
+        buch.append(name)
+        return Attrappe(buch)
+
+
+def wandern(obj, gesehen=None, tiefe=0):
+    """Dieselbe Regel wie pywebview: oeffentliche Felder, rekursiv."""
+    gesehen = gesehen if gesehen is not None else []
+    if id(obj) in gesehen or tiefe > 4:
+        return gesehen
+    gesehen.append(id(obj))
+    for name in dir(obj):
+        if name.startswith("_"):
+            continue
+        try:
+            attr = getattr(obj, name)
+        except Exception:                                    # noqa: BLE001
+            continue
+        if not (inspect.ismethod(attr) or inspect.isfunction(attr)):
+            wandern(attr, gesehen, tiefe + 1)
+    return gesehen
+
+
+b = bruecke_modul.Bruecke()
+gesehen_privat = []
+b._fenster = Attrappe(gesehen_privat)
+wandern(b)
+pruefe("pywebview sieht nicht ins Fenster hinein",
+       not gesehen_privat, gesehen_privat[:5])
+
+# Gegenprobe: genau so sah es aus, als das Feld oeffentlich hiess.
+b2 = bruecke_modul.Bruecke()
+gesehen_offen = []
+b2.fenster = Attrappe(gesehen_offen)
+wandern(b2)
+pruefe("und genau das waere passiert, haette es keinen Unterstrich",
+       bool(gesehen_offen), gesehen_offen[:5])
+
+# Felder mit einfachen Werten sind harmlos - gefaehrlich sind Objekte mit
+# eigenem Innenleben: Fenster, Pfade, Module.
+schwer = [n for n in dir(b) if not n.startswith("_")
+          and not callable(getattr(b, n, None))
+          and not isinstance(getattr(b, n, None), (str, int, float, bool, type(None)))]
+pruefe("kein oeffentliches Feld mit eigenem Innenleben", not schwer, schwer)
+
+# Und die Stelle selbst: legt die Bruecke ueberhaupt ein oeffentliches Feld an?
+# Heute ist es nur das Fenster - aber das naechste waere wieder eines, in das
+# pywebview hineinlaeuft, und dann steht "reagiert nicht" da.
+eigene = [n for n in vars(bruecke_modul.Bruecke()) if not n.startswith("_")]
+pruefe("die Bruecke legt gar kein oeffentliches Feld an", not eigene, eigene)
+
 import fenster as fenster_modul
 seite_fertig = fenster_modul.oberflaeche_bauen()
 pruefe("Stil ist eingebettet", "<style>" in seite_fertig and "stil.css" not in seite_fertig)

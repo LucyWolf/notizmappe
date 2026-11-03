@@ -209,10 +209,22 @@ def _elemente(roh) -> list[dict]:
 
 
 class Bruecke:
-    """Was die Oberflaeche aufrufen darf. Das Fenster haengt daran."""
+    """Was die Oberflaeche aufrufen darf. Das Fenster haengt daran.
+
+    **Der Unterstrich vor `_fenster` ist nicht Geschmack, er ist Pflicht.**
+    pywebview baut die Liste der aufrufbaren Methoden, indem es `dir()` auf
+    dieses Objekt anwendet und in jedes oeffentliche Feld hinabsteigt, das
+    keine Funktion ist (`webview/util.py`, get_functions: Namen mit `_` am
+    Anfang werden uebersprungen). Hiess das Feld `fenster`, lief der Gang
+    also ueber das pywebview-Fenster weiter in `Window.native` - und das ist
+    unter Windows das lebende WinForms/WebView2-Objekt. Jeder Zugriff darauf
+    ist ein Aufruf ueber die Thread-Grenze, und zwar mit der GIL in der Hand,
+    die genau der Thread braucht, der die Fensternachrichten abarbeitet.
+    Ergebnis: "Notizmappe reagiert nicht", und Windows macht das Fenster zu.
+    """
 
     def __init__(self):
-        self.fenster = None            # setzt fenster.py, fuer die Datei-Dialoge
+        self._fenster = None           # setzt fenster.py, fuer die Datei-Dialoge
 
     # --- Notizbuecher, Abschnitte, Seiten ---------------------------------
 
@@ -872,16 +884,16 @@ class Bruecke:
 
     def _dialog_ordner(self) -> str | None:
         import webview
-        if not self.fenster:
+        if not self._fenster:
             return None
-        gewaehlt = self.fenster.create_file_dialog(webview.FOLDER_DIALOG)
+        gewaehlt = self._fenster.create_file_dialog(webview.FOLDER_DIALOG)
         return gewaehlt[0] if gewaehlt else None
 
     def _dialog_oeffnen(self, muster: tuple[str, ...] | None = None) -> str | None:
         import webview
-        if not self.fenster:
+        if not self._fenster:
             return None
-        gewaehlt = self.fenster.create_file_dialog(
+        gewaehlt = self._fenster.create_file_dialog(
             webview.OPEN_DIALOG, allow_multiple=False,
             file_types=muster or ("Alle Dateien (*.*)",))
         if not gewaehlt:
@@ -890,9 +902,9 @@ class Bruecke:
 
     def _dialog_speichern(self, vorschlag: str) -> str | None:
         import webview
-        if not self.fenster:
+        if not self._fenster:
             return None
-        gewaehlt = self.fenster.create_file_dialog(
+        gewaehlt = self._fenster.create_file_dialog(
             webview.SAVE_DIALOG, save_filename=vorschlag)
         if not gewaehlt:
             return None

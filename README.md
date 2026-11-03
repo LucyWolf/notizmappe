@@ -476,6 +476,31 @@ Dateinamen und bleiben lesbar — nur die Inhalte sind verschlüsselt. Wer Anhä
 mit „Öffnen“ an ein anderes Programm gibt, bekommt eine lesbare Kopie in einem
 temporären Ordner; die wird beim Zusperren gelöscht.
 
+## „Notizmappe reagiert nicht" (Windows)
+
+Das Fenster hing nach ein paar Minuten und wurde von Windows geschlossen — im
+Ereignisprotokoll als *Application Hang*, in `fenster.log` ohne jede Spur, weil
+die Zeile „Fenster war Xs offen" beim Abwürgen nie geschrieben wird.
+
+Der Grund steckt in pywebview: es baut die Liste der aufrufbaren Methoden mit
+`dir()` über das Brücken-Objekt und **steigt dabei in jedes öffentliche Feld
+hinab**, das keine Funktion ist (`webview/util.py`, `get_functions` — Namen mit
+`_` am Anfang werden übersprungen). Das Fenster hing als `self.fenster` daran,
+also lief der Gang weiter in `Window.native` und damit unter Windows in die
+lebenden WinForms- und WebView2-Objekte. Jeder Zugriff dort ist ein Aufruf über
+die Thread-Grenze — mit der GIL in der Hand, die genau der Thread braucht, der
+die Fensternachrichten abarbeitet.
+
+Deshalb heißt das Feld `self._fenster`. Der Unterstrich ist kein Geschmack,
+sondern die ganze Reparatur. `tests/test_bruecke.py` geht die Brücke nach
+derselben Regel ab wie pywebview und besteht darauf, dass dort **kein einziges
+öffentliches Feld** mit eigenem Innenleben hängt — das nächste wäre wieder
+eines, in das der Gang hineinläuft.
+
+Warum es vorher jahrelang gutging: wie tief der Gang kommt, hängt davon ab, was
+die WebView2-Laufzeit an Feldern anbietet, und die aktualisiert sich von selbst
+(bei Lucy 155 → 156 am Tag der ersten Abstürze).
+
 ## Wenn die Oberfläche nicht reagiert
 
 Ganz oben in der Seite sitzt ein Fehlerfänger: was beim Laden schiefgeht, landet in
