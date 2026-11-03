@@ -171,6 +171,22 @@ andere = [p.relative_to(WURZEL) for p in quellen("app/*.py")
           and re.search(r"urllib|requests\.|httpx", p.read_text(encoding="utf-8"))]
 pruefe("nur aktualisieren.py und ferne.py gehen ins Netz", not andere, andere)
 
+# --- Und kein location.reload() ----------------------------------------------
+#
+# Das Fenster bekommt seine Seite als Inhalt hineingereicht (pywebview,
+# html=...) - sie hat keine Adresse. Ein Neuladen landet deshalb auf einer
+# leeren Seite: das Fenster wird schwarz, und von dort kommt niemand zurueck.
+# Es ist der verlockendste Griff ueberhaupt ("danach ist alles frisch"), und
+# er stand an sechs Stellen: beim Umschalten zum Server, beim Zusperren, beim
+# Aufschliessen, nach einem Update, nach einem Ordnerwechsel, beim Abmelden.
+# Stattdessen: wiederAufbauen() bzw. nichtsMehrZeigen().
+_js = (WURZEL / "app/oberflaeche/mappe.js").read_text(encoding="utf-8")
+_lader = [z.strip() for z in _js.splitlines()
+          if "location.reload()" in z and not z.lstrip().startswith(("//", "*", "/*"))]
+pruefe("kein location.reload() in der Oberflaeche", not _lader, _lader[:3])
+pruefe("dafuer gibt es die beiden Wege",
+       "function wiederAufbauen" in _js and "function nichtsMehrZeigen" in _js)
+
 print()
 print("kein Server drin" if not fehler else f"{len(fehler)} FEHLER:\n - " + "\n - ".join(fehler))
 sys.exit(1 if fehler else 0)

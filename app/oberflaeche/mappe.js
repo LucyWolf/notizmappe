@@ -173,10 +173,12 @@ async function api(weg, art = 'GET', rumpf = null) {
   // erreichbar"), kein Abbruch - der Rest der Antwort gilt trotzdem. Würde hier
   // geworfen, bliebe in den Einstellungen für immer "wird geprüft …" stehen.
   // Zugesperrt waehrend der Arbeit (Zeitsperre): nicht einen roten Balken ueber
-  // halb geladene Notizen legen, sondern neu laden - dann kommt der Sperrschirm.
+  // halb geladene Notizen legen, sondern alles wegraeumen und den Sperrschirm
+  // zeigen. (Frueher stand hier location.reload() - siehe nichtsMehrZeigen:
+  // die Seite hat keine Adresse, davon wird das Fenster schwarz.)
   if (daten && daten.art === 'zu' && !laeuftZu) {
     laeuftZu = true;
-    location.reload();
+    zusperrenZeigen();
   }
   if (daten && daten.fehler && schluessel !== 'GET /api/version') {
     const f = new Error(daten.fehler);
@@ -406,20 +408,42 @@ async function baumLaden() {
   baumZeichnen();
 }
 
-/* Eine Seite von der anderen Seite aufmachen. Umgestellt wird dafuer das
- * ganze Fenster - und danach soll genau diese Seite dastehen, nicht
- * irgendeine. Deshalb wird sie vorher gemerkt: beim Start wird sie geoeffnet.
- * Ungespeichertes geht vorher noch weg, sonst kostet ein Klick auf die andere
- * Seite den letzten Satz. */
-async function seiteDrueben(buch, abschnitt, name, quelle) {
+/* Die Seite wechseln - ohne Neuladen.
+ *
+ * location.reload() geht hier NICHT: das Fenster bekommt seine Seite als
+ * Inhalt hineingereicht (pywebview, html=...), sie hat gar keine Adresse. Ein
+ * Neuladen landet deshalb auf einer leeren Seite, und das Fenster wird
+ * schwarz. Also wird von Hand erneuert, was der Wechsel betrifft: die offene
+ * Seite, der Baum, die Kopfzeile.
+ *
+ * Ungespeichertes geht vorher noch weg - sonst kostet ein Klick auf die
+ * andere Seite den letzten Satz. */
+async function seitenwechsel(an, ziel) {
   try {
     if (schmutzig) await speichernJetzt();
-  } catch (f) { /* lieber umschalten als haengenbleiben */ }
-  merker.legen('zuletzt', JSON.stringify({ buch, abschnitt, name }));
+  } catch (f) { /* lieber wechseln als haengenbleiben */ }
+  await api('/api/ferne/umschalten', 'POST', { an });
+  schmutzig = false;
+  offen = null;
+  flaecheLeeren();
+  merker.legen('zuletzt', ziel ? JSON.stringify(ziel) : 'null');
+  await baumLaden();
+  try { ordnerZeigen(await api('/api/einstellungen')); } catch (f) { /* dann ohne */ }
+  // Zugesperrt faengt der Sperrschirm das ab, nicht ein roter Balken.
+  if (!await sperreAufmachen()) return;
+  const wohin = ziel || (() => {
+    const erste = erstesSeitchen();
+    return erste ? { buch: erste[0], abschnitt: erste[1], name: erste[2] } : null;
+  })();
+  if (wohin) await seiteOeffnen(wohin.buch, wohin.abschnitt, wohin.name);
+  sagen(an ? `Jetzt in ${baumMappe}` : 'Jetzt im eigenen Ordner');
+}
+
+/* Eine Seite von drueben aufmachen: umschalten und genau sie oeffnen. */
+async function seiteDrueben(buch, abschnitt, name, quelle) {
   sagen(quelle === 'server' ? `Wechsle zu ${baumMappe} …` : 'Wechsle zum eigenen Ordner …', 0);
   try {
-    await api('/api/ferne/umschalten', 'POST', { an: quelle === 'server' });
-    setTimeout(() => location.reload(), 200);
+    await seitenwechsel(quelle === 'server', { buch, abschnitt, name });
   } catch (f) {
     melden('Umschalten ging nicht: ' + f.message);
   }
@@ -1579,7 +1603,10 @@ function updateVerfolgen(ziel) {
         clearInterval(uhr);
         updateFensterZeigen('Fertig', `Version ${ziel} ist installiert.`);
         updatefenster.querySelector('.balken').classList.add('fertig');
-        setTimeout(() => location.reload(), 1200);
+        // Das Programm startet sich selbst neu; kommt es doch nicht dazu,
+        // wird hier wenigstens frisch geholt - neu laden geht nicht, siehe
+        // nichtsMehrZeigen().
+        setTimeout(wiederAufbauen, 1200);
         return;
       }
       const p = await api('/api/update/stand');
@@ -1645,9 +1672,10 @@ async function ordnerSetzen(rumpf) {
   try {
     const r = await api('/api/ordner', 'POST', rumpf);
     sagen(r.kopiert ? `Ordner umgestellt, ${r.kopiert} Einträge kopiert` : 'Ordner umgestellt', 0);
-    // Neu laden, damit keine offene Seite mehr auf den alten Ordner zeigt.
+    // Frisch aufbauen, damit keine offene Seite mehr auf den alten Ordner
+    // zeigt. (Neu laden geht nicht, siehe nichtsMehrZeigen.)
     merker.legen('zuletzt', 'null');
-    setTimeout(() => location.reload(), 600);
+    setTimeout(wiederAufbauen, 600);
   } catch (f) {
     $('#e-ordner-hinweis').textContent = f.message;
   }
@@ -2484,6 +2512,46 @@ async function sperreAufmachen() {
   return new Promise((fertig) => { aufgeschlossen = fertig; });
 }
 
+/* Zugesperrt: nichts Lesbares darf stehen bleiben.
+ *
+ * Hier stand frueher location.reload() mit der Begruendung "so bleibt
+ * garantiert nichts stehen". Das Fenster bekommt seine Seite aber als Inhalt
+ * hineingereicht (pywebview, html=...) - sie hat gar keine Adresse, und ein
+ * Neuladen endet auf einer leeren Seite. Schwarz ist zwar auch "nichts
+ * Lesbares", aber niemand kommt von dort wieder zurueck. Also von Hand
+ * wegraeumen und den Sperrschirm zeigen. */
+function nichtsMehrZeigen() {
+  offen = null;
+  schmutzig = false;
+  flaecheLeeren();
+  baumDaten = [];
+  baumZeichnen();
+  dateiZeigen(false);
+  meldungWeg();
+}
+
+function zusperrenZeigen() {
+  nichtsMehrZeigen();
+  sperreAufmachen().then(function (auf) {
+    if (auf) { laeuftZu = false; wiederAufbauen(); }
+  });
+}
+
+/* Nach dem Aufschliessen wieder hochfahren - ohne Neuladen. */
+async function wiederAufbauen() {
+  try {
+    await baumLaden();
+    ordnerZeigen(await api('/api/einstellungen'));
+  } catch (f) { melden(f.message); return; }
+  let z = null;
+  try { z = JSON.parse(merker.holen('zuletzt', 'null')); } catch (f) { /* dann die erste */ }
+  const erste = erstesSeitchen();
+  const wohin = z || (erste ? { buch: erste[0], abschnitt: erste[1], name: erste[2] } : null);
+  if (wohin) {
+    try { await seiteOeffnen(wohin.buch, wohin.abschnitt, wohin.name); } catch (f) { /* dann leer */ }
+  }
+}
+
 function sperreOffenMelden() {
   $('#sperrschirm').hidden = true;
   $('#s-pw').value = '';
@@ -2494,7 +2562,9 @@ function sperreOffenMelden() {
     aufgeschlossen = null;
     weiter(true);                /* der Anlauf läuft dort weiter, wo er wartet */
   } else {
-    location.reload();           /* mitten im Betrieb aufgeschlossen */
+    /* Mitten im Betrieb aufgeschlossen: wieder aufbauen, nicht neu laden. */
+    laeuftZu = false;
+    wiederAufbauen();
   }
 }
 
@@ -2539,8 +2609,7 @@ async function zusperrenJetzt() {
   laeuftZu = true;
   try { if (schmutzig) await speichernJetzt(); } catch (f) { /* trotzdem zu */ }
   try { await api('/api/sperre/zu', 'POST'); } catch (f) { /* auch dann zu */ }
-  // Neu laden statt Felder leeren: so bleibt garantiert nichts Lesbares stehen.
-  location.reload();
+  zusperrenZeigen();
 }
 
 $('#sperren').addEventListener('click', zusperrenJetzt);
@@ -2812,10 +2881,11 @@ function ferneZeigen(e) {
 
 async function ferneUmschalten(an) {
   try {
-    await api('/api/ferne/umschalten', 'POST', { an });
-    merker.legen('zuletzt', 'null');     // die offene Seite gibt es dort nicht
     sagen(an ? 'Auf dem Server …' : 'Zurück zu den eigenen Notizen …', 0);
-    setTimeout(() => location.reload(), 400);
+    // Dieselbe Stelle wie beim Klick auf die andere Seite in der Leiste -
+    // und vor allem ohne Neuladen, siehe seitenwechsel().
+    await seitenwechsel(an, null);
+    dateiZeigen(false);
   } catch (f) { $('#e-ferne-hinweis').textContent = f.message; }
 }
 
@@ -2855,7 +2925,9 @@ $('#e-ferne-abmelden').addEventListener('click', async () => {
   try {
     await api('/api/ferne/abmelden', 'POST', {});
     $('#e-ferne-hinweis').textContent = 'Abgemeldet.';
-    setTimeout(() => location.reload(), 300);
+    // Der Serverteil der Leiste faellt damit weg.
+    merker.legen('zuletzt', 'null');
+    setTimeout(wiederAufbauen, 300);
   } catch (f) { $('#e-ferne-hinweis').textContent = f.message; }
 });
 
@@ -3749,7 +3821,8 @@ function rmFusszeile() {
       const wechseln = async () => {
         try {
           await api('/api/ordner', 'POST', { ordner: ziel });
-          location.reload();
+          merker.legen('zuletzt', 'null');
+          await wiederAufbauen();
         } catch (f) { melden('Umstellen ging nicht: ' + f.message); }
       };
       melden(`Hier liegen keine Notizen (${e.ordner}). Gefunden in: ${ziel}`, [

@@ -510,6 +510,24 @@ Dateinamen und bleiben lesbar — nur die Inhalte sind verschlüsselt. Wer Anhä
 mit „Öffnen“ an ein anderes Programm gibt, bekommt eine lesbare Kopie in einem
 temporären Ordner; die wird beim Zusperren gelöscht.
 
+## Warum es hier kein `location.reload()` gibt
+
+Das Fenster bekommt seine Seite **als Inhalt** hineingereicht (pywebview,
+`html=…`) — sie hat gar keine Adresse. Ein `location.reload()` landet deshalb
+auf einer leeren Seite: das Fenster wird **schwarz**, und von dort kommt
+niemand zurück.
+
+Es ist der verlockendste Griff überhaupt („danach ist alles frisch"), und er
+stand an sechs Stellen: Umschalten zum Server, Zusperren, Aufschließen, nach
+einem Update, nach einem Ordnerwechsel, beim Abmelden. Stattdessen gibt es
+zwei Wege:
+
+* `wiederAufbauen()` — Baum, Kopfzeile und die offene Seite frisch holen.
+* `nichtsMehrZeigen()` — alles wegräumen, wenn zugesperrt wird. Schwarz wäre
+  zwar auch „nichts Lesbares", aber eben ohne Weg zurück.
+
+`tests/test_kein_server.py` besteht darauf, dass keines wiederkommt.
+
 ## „Notizmappe reagiert nicht" (Windows)
 
 Das Fenster hing nach ein paar Minuten und wurde von Windows geschlossen — im
