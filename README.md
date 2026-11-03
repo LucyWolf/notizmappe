@@ -202,7 +202,24 @@ Adresse — ein Name ist eine Bequemlichkeit und nichts, woran eine Anmeldung
 scheitern darf. Beim Abmelden wird er wieder vergessen, sonst stünde er beim
 nächsten Server noch da.
 
-Arbeitest du örtlich, steht dort **Eigener Ordner**. Der Pfad hängt als Hinweis
+### Beide Seiten in einer Leiste
+
+Sobald du angemeldet bist, stehen in der Leiste **beide** Bäume untereinander,
+jeder mit einer Überschrift: die Notizbücher am Server und die eigenen hier.
+Oben steht die Seite, an der du gerade arbeitest — ihre Überschrift ist in der
+Akzentfarbe, die andere blass.
+
+Ein Klick auf eine Seite drüben **schaltet still um**: Ungespeichertes wird
+noch weggeschrieben, das Fenster stellt um, lädt kurz neu und öffnet genau
+diese Seite. Angelegt, umbenannt und gelöscht wird nur auf der Seite, auf der
+du stehst — darum haben die Zeilen drüben keine Knöpfe. Ein „+ Seite" dort
+würde sonst dort landen, wo du gerade stehst, und nicht, wo du geklickt hast.
+
+Ist der Server gerade nicht erreichbar, während du örtlich arbeitest, bleibt
+sein Teil einfach weg. Das ist dann keine Störung: du arbeitest ja hier.
+Andersherum schon — verbunden gehört der Fehler auf den Tisch.
+
+Arbeitest du örtlich, steht oben **Eigener Ordner**. Der Pfad hängt als Hinweis
 daran und steht unter *Datei → Informationen* — in der Leiste zählt die Frage
 „hier oder dort?", nicht der Pfad.
 

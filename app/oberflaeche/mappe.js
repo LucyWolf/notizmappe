@@ -257,23 +257,42 @@ function baumZeichnen() {
     }).catch(() => { /* dann eben ohne Pfad */ });
     return;
   }
+  let letzteQuelle = null;
   for (const buch of baumDaten) {
+    // Ueberschrift, sobald die Seite wechselt - sonst stuenden die
+    // Notizbuecher von hier und von dort ununterscheidbar untereinander.
+    if (buch.quelle && buch.quelle !== letzteQuelle) {
+      letzteQuelle = buch.quelle;
+      const kopf = document.createElement('div');
+      kopf.className = 'quelle' + (buch.quelle === baumSeite ? ' hier' : '');
+      kopf.textContent = buch.quelle === 'server' ? baumMappe : 'Eigener Ordner';
+      kopf.title = buch.quelle === baumSeite
+        ? 'Hier schreibst du gerade'
+        : 'Ein Klick auf eine Seite wechselt hierher';
+      baum.append(kopf);
+    }
     const bd = document.createElement('div');
-    bd.className = 'buch' + (zugeklappt.has(buch.name) ? ' eingeklappt' : '');
-    bd.append(zeile(buch.name, [
+    const klappschluessel = (buch.quelle ? buch.quelle + '/' : '') + buch.name;
+    bd.className = 'buch' + (zugeklappt.has(klappschluessel) ? ' eingeklappt' : '');
+    // Die andere Seite steht zum Hinsehen und Aufmachen da - angelegt und
+    // geloescht wird dort nicht. Ein "+ Seite" wuerde sonst auf der Seite
+    // landen, auf der man gerade steht, und nicht dort, wo man geklickt hat.
+    const fremd = !!buch.quelle && buch.quelle !== baumSeite;
+    if (fremd) bd.classList.add('drueben');
+    bd.append(zeile(buch.name, fremd ? [] : [
       ['+ Abschnitt', '＋', async () => {
         const n = prompt('Name des Abschnitts:'); if (!n) return;
         await api('/api/abschnitt', 'POST', { notizbuch: buch.name, name: n });
-        zugeklappt.delete(buch.name); await baumLaden();
+        zugeklappt.delete(klappschluessel); await baumLaden();
       }],
       ['Notizbuch loeschen', '🗑', () => loeschen('notizbuch', [buch.name], buch.name)],
-    ], () => klappen(bd, buch.name), zugeklappt.has(buch.name)));
+    ], () => klappen(bd, klappschluessel), zugeklappt.has(klappschluessel)));
 
     for (const ab of buch.abschnitte) {
-      const schluessel = buch.name + '/' + ab.name;
+      const schluessel = klappschluessel + '/' + ab.name;
       const ad = document.createElement('div');
       ad.className = 'abschnitt' + (zugeklappt.has(schluessel) ? ' eingeklappt' : '');
-      ad.append(zeile(ab.name, [
+      ad.append(zeile(ab.name, fremd ? [] : [
         ['+ Seite', '＋', async () => {
           const r = await api('/api/seite', 'POST', { notizbuch: buch.name, abschnitt: ab.name, titel: 'Neue Seite' });
           zugeklappt.delete(schluessel); await baumLaden();
@@ -284,7 +303,7 @@ function baumZeichnen() {
       ], () => klappen(ad, schluessel), zugeklappt.has(schluessel)));
 
       for (const s of ab.seiten) {
-        const sd = zeile(s.titel, [
+        const sd = zeile(s.titel, fremd ? [] : [
           ['Seite loeschen', '🗑', () => loeschen('seite', [buch.name, ab.name, s.name], s.titel)],
         ]);
         sd.classList.add('seite');
@@ -298,8 +317,11 @@ function baumZeichnen() {
           sd.title = 'Diese Datei lässt sich nicht lesen - vermutlich halb übertragen. '
             + 'Unter Verlauf → Seitenversionen liegt meist eine frühere Fassung.';
         }
-        if (offen && offen.notizbuch === buch.name && offen.abschnitt === ab.name && offen.name === s.name) sd.classList.add('aktiv');
-        sd.querySelector('.name').addEventListener('click', () => seiteOeffnen(buch.name, ab.name, s.name));
+        if (!fremd && offen && offen.notizbuch === buch.name && offen.abschnitt === ab.name
+            && offen.name === s.name) sd.classList.add('aktiv');
+        sd.querySelector('.name').addEventListener('click', () => (fremd
+          ? seiteDrueben(buch.name, ab.name, s.name, buch.quelle)
+          : seiteOeffnen(buch.name, ab.name, s.name)));
         ad.append(sd);
       }
       bd.append(ad);
@@ -371,10 +393,36 @@ function erstesSeitchen() {
   return null;
 }
 
+/* Verbunden stehen beide Seiten in der Leiste: die Notizbuecher am Server und
+ * die eigenen. Welche davon gerade die aktive ist, sagt der Baum mit. */
+let baumSeite = '';            // 'server', 'eigen' oder leer (gar nicht verbunden)
+let baumMappe = 'Servermappe';
+
 async function baumLaden() {
   const r = await api('/api/baum');
   baumDaten = r.notizbuecher;
+  baumSeite = r.jetzt || '';
+  baumMappe = r.mappe || 'Servermappe';
   baumZeichnen();
+}
+
+/* Eine Seite von der anderen Seite aufmachen. Umgestellt wird dafuer das
+ * ganze Fenster - und danach soll genau diese Seite dastehen, nicht
+ * irgendeine. Deshalb wird sie vorher gemerkt: beim Start wird sie geoeffnet.
+ * Ungespeichertes geht vorher noch weg, sonst kostet ein Klick auf die andere
+ * Seite den letzten Satz. */
+async function seiteDrueben(buch, abschnitt, name, quelle) {
+  try {
+    if (schmutzig) await speichernJetzt();
+  } catch (f) { /* lieber umschalten als haengenbleiben */ }
+  merker.legen('zuletzt', JSON.stringify({ buch, abschnitt, name }));
+  sagen(quelle === 'server' ? `Wechsle zu ${baumMappe} …` : 'Wechsle zum eigenen Ordner …', 0);
+  try {
+    await api('/api/ferne/umschalten', 'POST', { an: quelle === 'server' });
+    setTimeout(() => location.reload(), 200);
+  } catch (f) {
+    melden('Umschalten ging nicht: ' + f.message);
+  }
 }
 
 /* ------------------------------------------------------------------ Seiten */

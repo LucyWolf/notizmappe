@@ -731,3 +731,20 @@ body { display: flex; flex-direction: column; }
    vom eigenen Ordner unterscheiden: man darf nie im Zweifel sein, wo man
    gerade schreibt. */
 #ordner.amserver { color: var(--akzent); font-weight: 600; }
+
+/* --- Zwei Quellen in einer Leiste ---------------------------------------
+   Verbunden stehen die Notizbuecher am Server und die eigenen untereinander.
+   Ohne Ueberschrift waeren sie nicht auseinanderzuhalten - und man muss
+   jederzeit wissen, wo man schreibt. */
+#baum .quelle {
+  margin: 10px 6px 2px; padding: 0 0 3px;
+  border-bottom: 1px solid var(--linie);
+  font-size: 11px; font-weight: 600; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--matt);
+}
+#baum .quelle:first-child { margin-top: 2px; }
+#baum .quelle.hier { color: var(--akzent); border-color: var(--akzent); }
+/* Die andere Seite ist zum Hinsehen und Aufmachen da, nicht zum Umbauen. */
+#baum .buch.drueben { opacity: .72; }
+#baum .buch.drueben:hover { opacity: 1; }
+#baum .buch.drueben .seite .name { cursor: pointer; }

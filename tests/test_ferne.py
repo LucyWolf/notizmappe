@@ -195,8 +195,47 @@ pruefe("Und die Einstellungen kennen den Zustand", e["ferne"]["aktiv"] is True)
 # Was oertlich bleiben muss, bleibt oertlich
 pruefe("Die Schriften bleiben die eigenen", "schriften" in b.schriften())
 pruefe("Die Sperre gilt weiter den eigenen Notizen", "eingerichtet" in b.sperre_stand())
+# Was hinausgeht, steht an einer Stelle: FERN wird vom Umleiter benutzt,
+# FERN_SELBST sind die, die den Server in ihrem eigenen Rumpf rufen (baum
+# holt beide Seiten). Alles andere darf den Ordner hier nie verlassen.
+_darf_hinaus = bruecke_modul.FERN | bruecke_modul.FERN_SELBST
 pruefe("Nur bekannte Methoden gehen hinaus",
-       all(m in bruecke_modul.FERN for m, _ in gerufen), {m for m, _ in gerufen})
+       all(m in _darf_hinaus for m, _ in gerufen), {m for m, _ in gerufen})
+
+# --- Beide Seiten in einer Leiste --------------------------------------------
+#
+# Verbunden sah man nur noch die Notizbuecher am Server - die eigenen wirkten
+# wie weg. Jetzt stehen beide da, jedes mit seiner Herkunft, und oben die
+# Seite, an der gerade gearbeitet wird.
+print("\nBeide Seiten in der Leiste")
+(DATEN / "Hier daheim" / "Teil").mkdir(parents=True, exist_ok=True)
+baum = b.baum()
+_namen = [(x.get("name"), x.get("quelle")) for x in baum.get("notizbuecher") or []]
+pruefe("Der Server steht oben, wenn man dort arbeitet",
+       _namen[:1] == [("Vom Server", "server")], _namen)
+pruefe("Und die eigenen stehen auch da",
+       ("Hier daheim", "eigen") in _namen, _namen)
+pruefe("Die Leiste weiss, welche Seite gerade gilt", baum.get("jetzt") == "server", baum.get("jetzt"))
+
+b.ferne_umschalten({"an": False})
+baum = b.baum()
+_namen = [(x.get("name"), x.get("quelle")) for x in baum.get("notizbuecher") or []]
+pruefe("Oertlich stehen die eigenen oben",
+       _namen[:1] == [("Hier daheim", "eigen")], _namen)
+pruefe("Der Server bleibt trotzdem sichtbar", ("Vom Server", "server") in _namen, _namen)
+pruefe("Und die Seite stimmt", baum.get("jetzt") == "eigen", baum.get("jetzt"))
+
+# Ist der Server nicht erreichbar, waehrend man oertlich arbeitet, ist das
+# eine Nebensache - die eigenen Notizen stehen da. Ein roter Balken waere
+# hier falsch: man arbeitet ja gar nicht dort. (Die Anmeldung bleibt dabei
+# unangetastet, deshalb eine tote Adresse statt eines abgelaufenen Kekses.)
+konfig.aendern(ferne_adresse="http://127.0.0.1:1")
+baum = b.baum()
+_namen = [(x.get("name"), x.get("quelle")) for x in baum.get("notizbuecher") or []]
+pruefe("Ist der Server weg, bleiben die eigenen stehen",
+       _namen == [("Hier daheim", "eigen")] and not baum.get("fehler"), (baum, _namen))
+konfig.aendern(ferne_adresse=ADRESSE)
+b.ferne_umschalten({"an": True})
 
 # --- Umschalten --------------------------------------------------------------
 print("\nUmschalten")

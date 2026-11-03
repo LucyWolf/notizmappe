@@ -121,8 +121,13 @@ def _ins_protokoll(wo: str, x: Exception) -> None:
 # Was bei bestehender Verbindung auf dem Server passiert statt hier. Dieselbe
 # Liste, die der Server freigibt - alles andere bleibt oertlich: die eigenen
 # Schriften, die eigene Sperre, die eigenen Updates.
+# "baum" steht hier absichtlich NICHT drin: verbunden soll die Leiste beide
+# Seiten zeigen - die am Server und die eigenen. Die Methode holt sich den
+# fernen Teil deshalb selbst und haengt den eigenen daran. Damit "was geht
+# ueberhaupt hinaus" weiterhin an einer Stelle steht, ist sie hier genannt.
+FERN_SELBST = {"baum"}
 FERN = {
-    "baum", "notizbuch_anlegen", "abschnitt_anlegen", "seite_anlegen",
+    "notizbuch_anlegen", "abschnitt_anlegen", "seite_anlegen",
     "seite_lesen", "seite_speichern", "seite_umbenennen", "stand", "loeschen",
     "anhang_ablegen", "anhang_bild", "favorit_setzen",
     "versionen", "version_lesen", "version_zurueck",
@@ -145,6 +150,12 @@ def _gefasst(f):
                 return {"fehler": str(x), "art": "ferne"}
         try:
             return f(*args, **kwargs)
+        except ferne.FerneFehler as x:
+            # Methoden aus FERN_SELBST rufen den Server in ihrem eigenen
+            # Rumpf. Ohne diese Zeile faellt ein abgelaufenes Kennzeichen
+            # unten als "irgendein Fehler" heraus - und die Oberflaeche
+            # zeigte einen roten Balken statt der Anmeldung.
+            return {"fehler": str(x), "art": "ferne"}
         except tresor.TresorFehler as x:
             # "art" sagt der Oberflaeche, dass sie den Sperrschirm zeigen soll -
             # und nicht etwa einen roten Fehlerbalken ueber leeren Notizen.
@@ -230,7 +241,43 @@ class Bruecke:
 
     @_gefasst
     def baum(self) -> dict:
-        return {"notizbuecher": speicher.baum(), "ordner": str(speicher.wurzel())}
+        """Beide Seiten in einer Leiste: was am Server liegt und was hier liegt.
+
+        Verbunden zeigte die Leiste bisher nur die Notizbuecher dort - die
+        eigenen sahen aus, als waeren sie weg. Jedes Notizbuch traegt deshalb,
+        woher es kommt; die Oberflaeche stellt beim Anklicken um.
+
+        Der eigene Teil darf dabei nicht mitreissen: ist der Ordner weg oder
+        die Mappe zugesperrt, bleibt eben der Serverteil stehen. Umgekehrt
+        waere es schlimmer - man sieht gar nichts mehr, obwohl der Server
+        antwortet.
+        """
+        stand = ferne.stand()
+        if not stand["angemeldet"]:
+            return {"notizbuecher": speicher.baum(), "ordner": str(speicher.wurzel())}
+
+        eigen, fern = [], []
+        try:
+            eigen = [{**b, "quelle": "eigen"} for b in speicher.baum()]
+        except Exception:                               # noqa: BLE001
+            pass                                        # zugesperrt, Ordner weg
+        try:
+            dort = ferne.ruf("baum", [])
+            if isinstance(dort, dict) and not dort.get("fehler"):
+                fern = [{**b, "quelle": "server"} for b in (dort.get("notizbuecher") or [])]
+        except ferne.FerneFehler:
+            # Verbunden gehoert der Fehler gezeigt - sonst sieht es aus, als
+            # waere dort nichts. Oertlich ist es eine Nebensache: dann fehlt
+            # eben die Liste von drueben, die eigenen Notizen stehen da.
+            if stand["aktiv"]:
+                raise
+        return {
+            # Oben steht, woran gerade gearbeitet wird.
+            "notizbuecher": (fern + eigen) if stand["aktiv"] else (eigen + fern),
+            "ordner": str(speicher.wurzel()) if not stand["aktiv"] else "",
+            "jetzt": "server" if stand["aktiv"] else "eigen",
+            "mappe": stand.get("mappe") or "Servermappe",
+        }
 
     @_gefasst
     def notizbuch_anlegen(self, name: str) -> dict:
