@@ -125,9 +125,14 @@ def _ins_protokoll(wo: str, x: Exception) -> None:
 # Seiten zeigen - die am Server und die eigenen. Die Methode holt sich den
 # fernen Teil deshalb selbst und haengt den eigenen daran. Damit "was geht
 # ueberhaupt hinaus" weiterhin an einer Stelle steht, ist sie hier genannt.
+# Was die Vorschau liest. Die Endungen stehen fest: eine Methode, die jede
+# Datei als Daten herausgibt, waere am Server ein Werkzeug zum Stoebern.
+ROH_ENDUNGEN = (".stl", ".obj", ".fbx", ".zip")
+MAX_ROH = 40 * 1024 * 1024
+
 FERN_SELBST = {"baum"}
 FERN = {
-    "notizbuch_anlegen", "abschnitt_anlegen", "seite_anlegen",
+    "notizbuch_anlegen", "anhang_roh", "abschnitt_anlegen", "seite_anlegen",
     "seite_lesen", "seite_speichern", "seite_umbenennen", "stand", "loeschen",
     "anhang_ablegen", "anhang_bild", "favorit_setzen",
     "versionen", "version_lesen", "version_zurueck",
@@ -397,6 +402,22 @@ class Bruecke:
             # SVG- oder HTML-Datei im Fenster eigenen Code aus.
             raise Abbruch("Das ist kein Bild")
         return {"medientyp": typ, "daten": base64.b64encode(daten).decode("ascii")}
+
+    # Was die Vorschau selbst liest: 3D-Modelle und Gerber-Pakete. Anders als
+    # anhang_bild kommen die Bytes roh heraus - gezeichnet wird daraus im
+    # Fenster, angezeigt wird nie etwas davon als HTML. Die Endungen stehen
+    # trotzdem fest: eine Methode, die jede Datei als Daten herausgibt, waere
+    # am Server (wo dieselbe Bruecke steht) ein Werkzeug zum Stoebern.
+    @_gefasst
+    def anhang_roh(self, notizbuch: str, abschnitt: str, name: str, datei: str) -> dict:
+        """Ein Anhang als Base64 - fuer die Vorschau von Modellen und Platinen."""
+        datei = reinigen.text(datei, 200)
+        if not datei.lower().endswith(ROH_ENDUNGEN):
+            raise Abbruch("Diese Art von Anhang wird hier nicht gelesen")
+        daten = speicher.anhang_inhalt(notizbuch, abschnitt, name, datei)
+        if len(daten) > MAX_ROH:
+            raise Abbruch(f"Die Datei ist groesser als {MAX_ROH // 1024 // 1024} MB")
+        return {"daten": base64.b64encode(daten).decode("ascii"), "groesse": len(daten)}
 
     @_gefasst
     def anhang_oeffnen(self, notizbuch: str, abschnitt: str, name: str, datei: str) -> dict:

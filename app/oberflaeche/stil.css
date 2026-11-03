@@ -748,3 +748,48 @@ body { display: flex; flex-direction: column; }
 #baum .buch.drueben { opacity: .72; }
 #baum .buch.drueben:hover { opacity: 1; }
 #baum .buch.drueben .seite .name { cursor: pointer; }
+
+/* --- Anhaenge zum Ansehen: 3D-Modelle und Platinen ----------------------
+   Kam mit der Serverfassung; steht jetzt hier, damit beide Fassungen
+   dieselbe Oberflaeche haben. */
+/* Die Platine sitzt im selben Rahmen wie ein 3D-Modell: gleicher Rand,
+   gleiche Rundung, gleicher Grund. Nur die Hoehe setzt pcbFenster. */
+.kasten-3d .modell, .kasten-pcb .modell {
+  position: relative; width: 100%; aspect-ratio: 4 / 3;
+  background: var(--flaeche); border: 1px solid var(--kasten-rand);
+  border-radius: 6px; overflow: hidden;
+}
+.kasten-3d .modell canvas, .kasten-3d .modell .standbild {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  display: block; touch-action: none; cursor: grab;
+}
+.kasten-3d .modell.dreht canvas { cursor: grabbing; }
+.kasten-3d .modell.schiebt canvas { cursor: move; }
+.kasten-3d .modell .leerbild {
+  display: flex; align-items: center; justify-content: center;
+  text-align: center; color: var(--matt); font-size: 12px; padding: 8px;
+}
+.kasten-3d .modell .lade, .kasten-pcb .modell .lade {
+  position: absolute; inset: 0; margin: 0; display: flex;
+  align-items: center; justify-content: center;
+  color: var(--matt); font-size: 12px; pointer-events: none;
+}
+.kasten-3d .datei { margin-top: 6px; }
+.kasten-3d .datei .zeichen { display: none; }
+.kasten-3d .dzahl { color: var(--matt); font-size: 11px; white-space: nowrap; }
+.kasten-pcb .modell canvas {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  display: block; touch-action: none; cursor: grab;
+}
+.kasten-pcb .pcbseite {
+  position: absolute; right: 6px; top: 6px; z-index: 2;
+  padding: 3px 8px; border: 1px solid var(--linie); border-radius: 4px;
+  background: color-mix(in srgb, var(--flaeche) 80%, transparent);
+  color: var(--schrift); font: inherit; font-size: 11px; cursor: pointer;
+}
+.kasten-pcb .datei { margin-top: 6px; }
+.kasten-pcb .datei .zeichen { display: none; }
+.kasten-pcb .dzahl { color: var(--matt); font-size: 11px; white-space: nowrap; }
+.kasten .modellfehler {
+  margin: 4px 0 0; color: var(--warnung); font-size: 11px; line-height: 1.4;
+}

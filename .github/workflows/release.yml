@@ -58,6 +58,8 @@ jobs:
           python tests/test_bruecke.py
           python tests/test_update.py
           python tests/test_leiste.py
+          python tests/test_modell.py
+          python tests/test_platine.py
 
       - name: Paket bauen
         run: PY=python ./tools/paket_bauen.sh

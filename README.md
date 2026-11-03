@@ -153,6 +153,8 @@ halb umgestellte Ordner (Abbruch mitten im Verschlüsseln).
 | `tests/test_bruecke.py` | Seiten, Anhänge, Konflikte, XSS, Pfadausbruch, Papierkorb |
 | `tests/test_konten.py` | Sperre, Anmeldung, Projekte, Gerätschlüssel, Passwortraten |
 | `tests/test_update.py` | Selbstupdate gegen eine nachgemachte GitHub-Antwort |
+| `tests/test_modell.py` | STL, OBJ und FBX einlesen — und ob das Teil wirklich im Bild liegt |
+| `tests/test_platine.py` | Gerber: ZIP auspacken, Koordinatenformat, Zoll, Bohrdatei — und ob die Platine im Bild liegt und von unten gespiegelt ist |
 | `tests/test_leiste.py` | dass hinter jedem Knopf der Formatleiste der richtige Befehl steckt — und dass beim Rechtsklick nicht zwei Leisten übereinander stehen |
 | `tests/test_kein_server.py` | dass nirgends ein Webserver, Port oder HTTP-Aufruf steckt |
 | `tests/test_installer.sh` | Installationsdatei in einem Wegwerf-Heim durchspielen |
@@ -366,6 +368,28 @@ Dialoge verschwinden im Druck.
 Nicht übernommen aus OneNote: **Freigeben** und **Senden** — dafür müsste das
 Programm Mail können oder einen Dienst kennen, und beides soll es nicht.
 „Kopie speichern" ist dasselbe wie Exportieren und steht deshalb nur einmal da.
+
+## Anhänge, die man ansehen kann
+
+Ein **3D-Modell** (STL, OBJ, FBX) steht in der Notiz nicht als 📎-Kachel,
+sondern als Bild: ziehen dreht, Rad zoomt, rechte Taste schiebt, Doppelklick
+stellt zurück. Gerechnet wird mit eigenem WebGL, ohne fremde Bibliothek.
+
+Ein **Gerber-Paket** (das ZIP für die Platinenfirma) wird zur Platine: Träger,
+Kupfer, Bohrungen, Bestückungsdruck, ein Knopf für die Unterseite. Gelesen
+werden die üblichen Endungen und die Namen, die KiCad und EasyEDA vergeben.
+Ein ZIP ohne Gerber bleibt eine ganz normale Kachel — ohne Meldung, es hat ja
+niemand eine Platine erwartet. Was im Umriss als geschlossener Zug **innerhalb**
+der Platine steht, ist ein Ausschnitt und bleibt leer; ein Frässchlitz quer
+durchs Brett sieht deshalb aus wie ein schwarzes Band, und das ist richtig so.
+
+Die Bytes holt die Vorschau über `anhang_roh` — nur für diese vier Endungen,
+höchstens 40 MB, und als Daten, nie als HTML. Eine Brückenmethode, die jede
+Datei herausgibt, wäre in der Serverfassung ein Werkzeug zum Stöbern.
+
+**Was hier nicht geht:** die Bauteile als Körper, so wie es JLCPCB zeigt. Die
+stecken in keiner dieser Dateien — JLCPCB holt sie über die Bauteilnummer aus
+seiner eigenen Bibliothek.
 
 ## Formatieren: die schwebende Leiste und das Rechtsklick-Menü
 

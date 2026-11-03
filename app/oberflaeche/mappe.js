@@ -3775,6 +3775,1602 @@ function rmFusszeile() {
          + wann;
 }
 
+
+/* ================================================ Anhaenge zum Ansehen
+ *
+ * Kam aus der Serverfassung (web/shim.js), wo es zur Laufzeit eingesetzt
+ * wurde - im Fenster gab es dort nur eine Kachel mit Bueroklammer. Beide
+ * Fassungen teilen sich diese Datei, also sehen Modelle und Platinen jetzt
+ * ueberall gleich aus.
+ */
+
+/* ------------------------------------------------- Platinen (Gerber-ZIP)
+
+   Ein Gerber-Paket ist kein Modell, sondern ein Stapel Zeichnungen: je eine
+   Datei fuer Kupfer oben, Kupfer unten, Bestueckungsdruck, Umriss, dazu die
+   Bohrdatei. Uebereinandergelegt ergibt das die Platine - von oben und von
+   unten.
+
+   Kein gekipptes 3D und kein Foto: die Koerper der Bauteile stehen in
+   keiner dieser Dateien. Die holt JLCPCB aus seiner eigenen Bibliothek
+   ueber die Bauteilnummer. Hier steht nur, was wirklich in der Datei steht.
+
+   Wieder ohne fremde Bibliothek: ein ZIP ist ein Verzeichnis am Ende der
+   Datei, auspacken kann der Browser selbst (DecompressionStream), und
+   Gerber ist eine Textsprache mit einer Handvoll Befehlen. */
+
+const PCB_MAX_EINTRAEGE = 300;
+const PCB_MAX_ENTPACKT = 40 * 1024 * 1024;   // je Datei
+const PCB_MAX_STUECKE = 400000;              // Striche und Flaechen gesamt
+const PCB_BOGEN = 24;                        // Ecken je Viertelkreis
+
+/* --- ZIP ---------------------------------------------------------------- */
+
+async function entpacken(roh) {
+  if (!window.DecompressionStream) {
+    throw new Error('dieser Browser kann kein ZIP auspacken');
+  }
+  const strom = new Blob([roh]).stream()
+    .pipeThrough(new DecompressionStream('deflate-raw'));
+  return new Uint8Array(await new Response(strom).arrayBuffer());
+}
+
+/* Gelesen wird ueber das Verzeichnis am Ende, nicht der Reihe nach durch
+   die Datei: nur dort steht sicher, wie lang ein Eintrag gepackt ist. Im
+   lokalen Kopf darf die Laenge fehlen (dann steht sie hinter den Daten). */
+async function zipLesen(puffer) {
+  const bytes = new Uint8Array(puffer);
+  const sicht = new DataView(puffer);
+  let e = -1;
+  for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 66000); i--) {
+    if (sicht.getUint32(i, true) === 0x06054b50) { e = i; break; }
+  }
+  if (e < 0) throw new Error('kein ZIP-Verzeichnis gefunden');
+  const anzahl = sicht.getUint16(e + 10, true);
+  let p = sicht.getUint32(e + 16, true);
+  const aus = [];
+  for (let i = 0; i < anzahl && i < PCB_MAX_EINTRAEGE; i++) {
+    if (p + 46 > bytes.length || sicht.getUint32(p, true) !== 0x02014b50) break;
+    const art = sicht.getUint16(p + 10, true);
+    const klein = sicht.getUint32(p + 20, true);
+    const gross = sicht.getUint32(p + 24, true);
+    const nl = sicht.getUint16(p + 28, true);
+    const xl = sicht.getUint16(p + 30, true);
+    const kl = sicht.getUint16(p + 32, true);
+    const wo = sicht.getUint32(p + 42, true);
+    const name = new TextDecoder().decode(bytes.slice(p + 46, p + 46 + nl));
+    p += 46 + nl + xl + kl;
+    if (gross > PCB_MAX_ENTPACKT) continue;        // Packbombe
+    if (name.endsWith('/') || wo + 30 > bytes.length) continue;
+    if (sicht.getUint32(wo, true) !== 0x04034b50) continue;
+    const anfang = wo + 30 + sicht.getUint16(wo + 26, true)
+                 + sicht.getUint16(wo + 28, true);
+    const roh = bytes.slice(anfang, anfang + klein);
+    let daten = null;
+    if (art === 0) daten = roh;
+    else if (art === 8) daten = await entpacken(roh);
+    else continue;                                  // andere Packart: selten
+    aus.push({ name: name, daten: daten });
+  }
+  return aus;
+}
+
+/* --- Welche Datei ist welche Lage? --------------------------------------
+
+   Die Endung sagt es meistens (GTL, GBL, GTO, GKO, DRL), aber nicht jedes
+   Programm haelt sich daran - KiCad schreibt "F_Cu.gbr", EasyEDA
+   "Gerber_TopLayer.GTL". Deshalb beides: erst die Endung, dann der Name. */
+const PCB_LAGEN = [
+  ['bohren', /\.(drl|xln|tap|nc)$/i, /drill|bohr|npth|\bpth\b/i],
+  ['umriss', /\.(gko|gm1|gm2|gml)$/i, /outline|edge[._-]?cuts|boardoutline|profile|contour/i],
+  ['kupfer-oben', /\.(gtl|cmp)$/i, /top[._-]?(layer|copper)|f[._-]cu|copper[._-]?top/i],
+  ['kupfer-unten', /\.(gbl|sol)$/i, /bottom[._-]?(layer|copper)|b[._-]cu|copper[._-]?bottom/i],
+  ['druck-oben', /\.(gto|plc)$/i, /top[._-]?(silk|overlay)|f[._-]silk/i],
+  ['druck-unten', /\.(gbo|pls)$/i, /bottom[._-]?(silk|overlay)|b[._-]silk/i],
+  ['lot-oben', /\.(gts|stc)$/i, /top[._-]?(solder)?mask|f[._-]mask/i],
+  ['lot-unten', /\.(gbs|sts)$/i, /bottom[._-]?(solder)?mask|b[._-]mask/i],
+];
+
+function lageVon(name) {
+  const kurz = String(name || '').replace(/^.*\//, '');
+  for (const [lage, endung] of PCB_LAGEN) if (endung.test(kurz)) return lage;
+  for (const [lage, , wort] of PCB_LAGEN) if (wort.test(kurz)) return lage;
+  // Eine .txt ohne sprechenden Namen kann die Bohrdatei sein - das sagt
+  // ihr Inhalt, nicht ihr Name. Entschieden wird das beim Lesen.
+  if (/\.(txt|gbr|ger|art|pho)$/i.test(kurz)) return 'unklar';
+  return null;
+}
+
+/* --- Gerber lesen -------------------------------------------------------
+
+   Gerber ist eine Folge von Befehlen, jeder mit * abgeschlossen; was
+   zwischen zwei % steht, sind Einstellungen (Format, Einheit, Blenden).
+   Gezeichnet wird mit einer "Blende" (aperture): D01 zieht damit einen
+   Strich, D03 drueckt sie einmal ab, D02 setzt nur den Stift um.
+
+   Herauskommt eine flache Liste aus Strichen, Abdruecken und Flaechen, alle
+   in Millimetern. Was davon spaeter welche Farbe bekommt, entscheidet die
+   Lage, nicht diese Funktion. */
+function gerberLesen(text) {
+  const blenden = {};
+  const stuecke = [];
+  let nullen = 'L';
+  let nach = 6;
+  let ganz = 3;
+  let maß = 1;                  // 1 = mm, 25.4 = Zoll
+  let blende = null;
+  let modus = 1;                // G01 gerade, G02/G03 Bogen
+  let mehrquadrant = true;      // G75
+  let loeschen = false;         // LPC: wegnehmen statt auftragen
+  let x = 0;
+  let y = 0;
+  let flaeche = null;           // laeuft gerade ein G36-Bereich?
+  let zug = null;
+
+  function koord(s) {
+    const minus = s.charAt(0) === '-';
+    let ziffern = s.replace(/^[+-]/, '');
+    // Fehlende Nullen stehen vorn (L) oder hinten (T). Steht es hinten,
+    // ist "1" nicht 0,000001 sondern 1,0 - der haeufigste Lesefehler.
+    if (nullen === 'T') ziffern = ziffern.padEnd(ganz + nach, '0');
+    const wert = parseInt(ziffern, 10) / Math.pow(10, nach);
+    return (minus ? -wert : wert) * maß;
+  }
+
+  function parameter(teil) {
+    let m = /^FS([LT])[AI]X(\d)(\d)Y\d\d/.exec(teil);
+    if (m) { nullen = m[1]; ganz = +m[2]; nach = +m[3]; return; }
+    if (/^MOIN/.test(teil)) { maß = 25.4; return; }
+    if (/^MOMM/.test(teil)) { maß = 1; return; }
+    if (/^LPC/.test(teil)) { loeschen = true; return; }
+    if (/^LPD/.test(teil)) { loeschen = false; return; }
+    m = /^ADD(\d+)([A-Za-z_$][\w$.-]*)(?:,(.*))?$/.exec(teil);
+    if (m) {
+      const werte = (m[3] || '').split('X').map(parseFloat)
+        .filter(function (w) { return w === w; });
+      blenden[+m[1]] = { form: m[2], werte: werte.map(function (w) { return w * maß; }) };
+    }
+    // AM (eigene Blendenformen) und der Rest bleiben aussen vor: fuer das
+    // Bild genuegt die Groesse, und die steht in der ersten Zahl.
+  }
+
+  function groesse(b) {
+    if (!b) return 0.15 * maß;
+    if (b.form === 'R' || b.form === 'O') {
+      return Math.min(b.werte[0] || 0, b.werte[1] || b.werte[0] || 0) || 0.15;
+    }
+    return b.werte[0] || 0.15;
+  }
+
+  function bogen(x0, y0, x1, y1, i, j, uhrzeiger) {
+    const mx = x0 + i;
+    const my = y0 + j;
+    const r = Math.hypot(x0 - mx, y0 - my);
+    let a0 = Math.atan2(y0 - my, x0 - mx);
+    let a1 = Math.atan2(y1 - my, x1 - mx);
+    let d = a1 - a0;
+    if (uhrzeiger) { while (d > 0) d -= 2 * Math.PI; } else { while (d < 0) d += 2 * Math.PI; }
+    // Voller Kreis: Anfang gleich Ende. Dann ist die Drehung nicht null,
+    // sondern einmal herum - sonst faellt der Kreis weg.
+    if (Math.abs(d) < 1e-9 && Math.hypot(x1 - x0, y1 - y0) < 1e-9) {
+      d = uhrzeiger ? -2 * Math.PI : 2 * Math.PI;
+    }
+    const n = Math.max(2, Math.ceil(Math.abs(d) / (Math.PI / 2) * PCB_BOGEN));
+    const punkte = [];
+    for (let k = 1; k <= n; k++) {
+      const a = a0 + d * (k / n);
+      punkte.push([mx + r * Math.cos(a), my + r * Math.sin(a)]);
+    }
+    return punkte;
+  }
+
+  function hin(zx, zy, i, j) {
+    if (modus === 1) return [[zx, zy]];
+    return bogen(x, y, zx, zy, i, j, modus === 2);
+  }
+
+  function kommando(b) {
+    if (/^G0*4/.test(b) || /^M0/.test(b)) return;     // Kommentar, Ende
+    if (/^G0*36/.test(b)) { flaeche = []; return; }
+    if (/^G0*37/.test(b)) {
+      if (flaeche && flaeche.length > 2) {
+        stuecke.push({ t: 'flaeche', punkte: flaeche, weg: loeschen });
+      }
+      flaeche = null;
+      return;
+    }
+    let m = /^G0*([0-9]+)/.exec(b);
+    if (m) {
+      const n = +m[1];
+      if (n === 1 || n === 2 || n === 3) modus = n;
+      else if (n === 74) mehrquadrant = false;
+      else if (n === 75) mehrquadrant = true;
+    }
+    m = /D0*(\d+)\s*$/.exec(b);
+    let tun = 0;
+    if (m) {
+      const d = +m[1];
+      if (d >= 10) { blende = d; if (!/[XY]/.test(b)) return; } else tun = d;
+    }
+    const nx = /X([+-]?\d+)/.exec(b);
+    const ny = /Y([+-]?\d+)/.exec(b);
+    const ni = /I([+-]?\d+)/.exec(b);
+    const nj = /J([+-]?\d+)/.exec(b);
+    if (!nx && !ny && !tun) return;
+    const zx = nx ? koord(nx[1]) : x;
+    const zy = ny ? koord(ny[1]) : y;
+    const i = ni ? koord(ni[1]) : 0;
+    const j = nj ? koord(nj[1]) : 0;
+    if (stuecke.length > PCB_MAX_STUECKE) return;
+    if (tun === 1) {
+      const weg = hin(zx, zy, i, j);
+      if (flaeche) {
+        if (!flaeche.length) flaeche.push([x, y]);
+        for (const p of weg) flaeche.push(p);
+      } else {
+        if (!zug || zug.weg !== loeschen || zug.breite !== groesse(blenden[blende])
+            || zug.punkte[zug.punkte.length - 1][0] !== x
+            || zug.punkte[zug.punkte.length - 1][1] !== y) {
+          zug = { t: 'zug', punkte: [[x, y]], breite: groesse(blenden[blende]),
+                  eckig: (blenden[blende] || {}).form === 'R', weg: loeschen };
+          stuecke.push(zug);
+        }
+        for (const p of weg) zug.punkte.push(p);
+      }
+    } else if (tun === 3) {
+      stuecke.push({ t: 'abdruck', x: zx, y: zy, blende: blenden[blende] || null,
+                     weg: loeschen });
+      zug = null;
+    } else {
+      zug = null;                       // D02: der Stift setzt neu an
+      if (flaeche && flaeche.length > 2) {
+        stuecke.push({ t: 'flaeche', punkte: flaeche, weg: loeschen });
+        flaeche = [];
+      }
+    }
+    x = zx;
+    y = zy;
+  }
+
+  let p = 0;
+  while (p < text.length) {
+    // Zeilenumbrueche zuerst weg: steht einer vor dem %, sucht die
+    // Befehlsseite sonst das naechste * - und das steht im Parameterblock.
+    if (/\s/.test(text.charAt(p))) { p++; continue; }
+    if (text.charAt(p) === '%') {
+      const ende = text.indexOf('%', p + 1);
+      if (ende < 0) break;
+      for (const teil of text.slice(p + 1, ende).split('*')) {
+        if (teil.trim()) parameter(teil.trim());
+      }
+      p = ende + 1;
+    } else {
+      const ende = text.indexOf('*', p);
+      if (ende < 0) break;
+      const b = text.slice(p, ende).trim();
+      if (b) kommando(b);
+      p = ende + 1;
+    }
+  }
+  return stuecke;
+}
+
+/* --- Bohrdatei (Excellon) ----------------------------------------------
+
+   Viel aelter und viel schlampiger als Gerber: die Einheit steht irgendwo
+   im Kopf, und ob die Koordinate "3175" nun 3,175 mm oder 31,75 mm heisst,
+   steht oft gar nicht da. Steht ein Punkt drin, ist alles klar - sonst
+   gilt die uebliche Annahme (metrisch drei Nachkommastellen). */
+function bohrLesen(text) {
+  const werkzeuge = {};
+  const loecher = [];
+  let maß = 1;
+  let nach = 3;
+  let jetzt = 0;
+
+  function zahl(s) {
+    if (s.indexOf('.') >= 0) return parseFloat(s) * maß;
+    const minus = s.charAt(0) === '-';
+    const ziffern = s.replace(/^[+-]/, '');
+    const wert = parseInt(ziffern, 10) / Math.pow(10, nach);
+    return (minus ? -wert : wert) * maß;
+  }
+
+  for (const zeile of String(text).split(/\r?\n/)) {
+    const z = zeile.trim();
+    if (!z || z.charAt(0) === ';') continue;
+    if (/^(METRIC|M71)/.test(z)) { maß = 1; nach = 3; continue; }
+    if (/^(INCH|M72)/.test(z)) { maß = 25.4; nach = 4; continue; }
+    let m = /^T(\d+)[^C]*C\s*([\d.]+)/.exec(z);
+    if (m) { werkzeuge[+m[1]] = parseFloat(m[2]) * maß; continue; }
+    m = /^T(\d+)\s*$/.exec(z);
+    if (m) { jetzt = +m[1]; continue; }
+    m = /X([+-]?[\d.]+)\s*Y([+-]?[\d.]+)/.exec(z);
+    if (m) {
+      loecher.push({ x: zahl(m[1]), y: zahl(m[2]), d: werkzeuge[jetzt] || 0.3 });
+    }
+  }
+  return loecher;
+}
+
+function istBohrdatei(text) {
+  return /^\s*(M48|;.*(drill|Excellon))/i.test(text) || /^T\d+C[\d.]/m.test(text);
+}
+
+/* --- Aus den Dateien eine Platine machen -------------------------------- */
+
+const PCB_SEITEN = {
+  oben: { kupfer: 'kupfer-oben', druck: 'druck-oben' },
+  unten: { kupfer: 'kupfer-unten', druck: 'druck-unten' },
+};
+
+function textVon(daten) {
+  return new TextDecoder('utf-8', { fatal: false }).decode(daten);
+}
+
+function platinePacken(dateien) {
+  const lagen = {};
+  const loecher = [];
+  const namen = [];
+  for (const d of dateien) {
+    const lage = lageVon(d.name);
+    if (!lage) continue;
+    const text = textVon(d.daten);
+    if (lage === 'bohren' || (lage === 'unklar' && istBohrdatei(text))) {
+      for (const l of bohrLesen(text)) loecher.push(l);
+      namen.push(d.name);
+      continue;
+    }
+    if (lage === 'unklar') continue;
+    const stuecke = gerberLesen(text);
+    if (!stuecke.length) continue;
+    lagen[lage] = (lagen[lage] || []).concat(stuecke);
+    namen.push(d.name);
+  }
+  return { lagen: lagen, loecher: loecher, namen: namen,
+           umriss: umrissNaehen(lagen['umriss'] || []) };
+}
+
+/* Der Umriss kommt als lose Striche, nicht als Flaeche: vier Linien, oder
+   bei abgerundeten Ecken ein Dutzend Stuecke. Zum Fuellen muessen sie erst
+   wieder zu einem Ring werden - also Ende an Anfang naehen. */
+function umrissNaehen(stuecke) {
+  const nah = function (a, b) {
+    return Math.abs(a[0] - b[0]) < 0.02 && Math.abs(a[1] - b[1]) < 0.02;
+  };
+  const offen = [];
+  for (const s of stuecke) {
+    if (s.t === 'flaeche') offen.push(s.punkte.slice());
+    else if (s.t === 'zug' && s.punkte.length > 1) offen.push(s.punkte.slice());
+  }
+  const ringe = [];
+  while (offen.length) {
+    let kette = offen.pop();
+    let weiter = true;
+    while (weiter) {
+      weiter = false;
+      for (let i = 0; i < offen.length; i++) {
+        const k = offen[i];
+        const vorn = kette[0];
+        const hinten = kette[kette.length - 1];
+        if (nah(hinten, k[0])) kette = kette.concat(k.slice(1));
+        else if (nah(hinten, k[k.length - 1])) kette = kette.concat(k.slice().reverse().slice(1));
+        else if (nah(vorn, k[k.length - 1])) kette = k.slice(0, -1).concat(kette);
+        else if (nah(vorn, k[0])) kette = k.slice().reverse().slice(0, -1).concat(kette);
+        else continue;
+        offen.splice(i, 1);
+        weiter = true;
+        break;
+      }
+    }
+    if (kette.length > 2) ringe.push(kette);
+  }
+  return ringe;
+}
+
+function pcbRahmen(platine) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const nimm = function (x, y) {
+    if (x < x0) x0 = x; if (x > x1) x1 = x;
+    if (y < y0) y0 = y; if (y > y1) y1 = y;
+  };
+  for (const ring of platine.umriss) for (const p of ring) nimm(p[0], p[1]);
+  if (!platine.umriss.length) {
+    for (const lage of Object.keys(platine.lagen)) {
+      for (const s of platine.lagen[lage]) {
+        if (s.t === 'abdruck') nimm(s.x, s.y);
+        else for (const p of s.punkte) nimm(p[0], p[1]);
+      }
+    }
+    for (const l of platine.loecher) nimm(l.x, l.y);
+  }
+  if (!(x1 > x0)) return null;
+  return { x0: x0, y0: y0, x1: x1, y1: y1, breit: x1 - x0, hoch: y1 - y0 };
+}
+
+/* --- Malen --------------------------------------------------------------
+
+   Alles in Millimetern: die Umrechnung macht die Matrix der Zeichenflaeche.
+   Dadurch stimmt auch die Strichbreite ohne Nachrechnen, und die Unterseite
+   ist nur ein gespiegeltes Vorzeichen. */
+
+function pcbPfad(ctx, punkte, zu) {
+  ctx.beginPath();
+  ctx.moveTo(punkte[0][0], punkte[0][1]);
+  for (let i = 1; i < punkte.length; i++) ctx.lineTo(punkte[i][0], punkte[i][1]);
+  if (zu) ctx.closePath();
+}
+
+function abdruckMalen(ctx, s) {
+  const b = s.blende || { form: 'C', werte: [0.2] };
+  const w = b.werte || [];
+  if (b.form === 'R' || b.form === 'O') {
+    const bx = w[0] || 0.2;
+    const by = w[1] || bx;
+    if (b.form === 'O' && ctx.roundRect) {
+      ctx.beginPath();
+      ctx.roundRect(s.x - bx / 2, s.y - by / 2, bx, by, Math.min(bx, by) / 2);
+      ctx.fill();
+    } else {
+      ctx.fillRect(s.x - bx / 2, s.y - by / 2, bx, by);
+    }
+    return;
+  }
+  if (b.form === 'P' && w.length >= 2) {
+    const r = (w[0] || 0.2) / 2;
+    const ecken = Math.max(3, Math.round(w[1] || 6));
+    const dreh = (w[2] || 0) * Math.PI / 180;
+    ctx.beginPath();
+    for (let i = 0; i < ecken; i++) {
+      const a = dreh + i * 2 * Math.PI / ecken;
+      const px = s.x + r * Math.cos(a);
+      const py = s.y + r * Math.sin(a);
+      if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+    return;
+  }
+  ctx.beginPath();
+  ctx.arc(s.x, s.y, (w[0] || 0.2) / 2, 0, 2 * Math.PI);
+  ctx.fill();
+}
+
+function lageMalen(ctx, stuecke, farbe) {
+  if (!stuecke || !stuecke.length) return;
+  ctx.save();
+  ctx.fillStyle = farbe;
+  ctx.strokeStyle = farbe;
+  ctx.lineJoin = 'round';
+  for (const s of stuecke) {
+    // LPC heisst: hier wird wieder weggenommen, was schon da war - so
+    // entstehen Freistellungen im Kupfer. Mit "destination-out" macht das
+    // die Zeichenflaeche selbst.
+    ctx.globalCompositeOperation = s.weg ? 'destination-out' : 'source-over';
+    if (s.t === 'zug') {
+      ctx.lineWidth = Math.max(s.breite, 0.02);
+      ctx.lineCap = s.eckig ? 'butt' : 'round';
+      pcbPfad(ctx, s.punkte, false);
+      ctx.stroke();
+    } else if (s.t === 'flaeche') {
+      pcbPfad(ctx, s.punkte, true);
+      ctx.fill();
+    } else {
+      abdruckMalen(ctx, s);
+    }
+  }
+  ctx.restore();
+}
+
+const PCB_FARBEN = {
+  traeger: '#0d5c38', traegerRand: '#0a3f27',
+  kupfer: '#d8a93c', druck: '#f2f4f5', loch: '#0b0c0d',
+};
+
+function platineZeichnen(z) {
+  const c = z.bild;
+  if (!c || !z.platine) return;
+  const kasten = z.wo.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const br = Math.max(1, Math.round(kasten.width * dpr));
+  const ho = Math.max(1, Math.round(kasten.height * dpr));
+  if (c.width !== br || c.height !== ho) { c.width = br; c.height = ho; }
+  const ctx = c.getContext('2d');
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, br, ho);
+  const r = z.rahmen;
+  if (!r) return;
+  const rand = 1.0;                                  // mm Luft ringsum
+  const k = Math.min(br / (r.breit + 2 * rand), ho / (r.hoch + 2 * rand)) * z.zoom;
+  const mx = (r.x0 + r.x1) / 2;
+  const my = (r.y0 + r.y1) / 2;
+  const spiegel = z.seite === 'unten' ? -1 : 1;
+  // y zeigt in Gerber nach oben, auf der Zeichenflaeche nach unten.
+  ctx.setTransform(k * spiegel, 0, 0, -k, br / 2 + z.ox, ho / 2 + z.oy);
+  ctx.translate(-mx, -my);
+
+  // Der Traeger: die Ringe des Umrisses als ein Pfad, mit Evenodd - dann
+  // bleiben Ausschnitte innen auch Ausschnitte.
+  ctx.save();
+  if (z.platine.umriss.length) {
+    ctx.beginPath();
+    for (const ring of z.platine.umriss) {
+      ctx.moveTo(ring[0][0], ring[0][1]);
+      for (let i = 1; i < ring.length; i++) ctx.lineTo(ring[i][0], ring[i][1]);
+      ctx.closePath();
+    }
+    ctx.fillStyle = PCB_FARBEN.traeger;
+    ctx.fill('evenodd');
+    ctx.lineWidth = 0.15;
+    ctx.strokeStyle = PCB_FARBEN.traegerRand;
+    ctx.stroke();
+    ctx.clip('evenodd');
+  } else {
+    ctx.fillStyle = PCB_FARBEN.traeger;
+    ctx.fillRect(r.x0, r.y0, r.breit, r.hoch);
+  }
+
+  const seite = PCB_SEITEN[z.seite] || PCB_SEITEN.oben;
+  lageMalen(ctx, z.platine.lagen[seite.kupfer], PCB_FARBEN.kupfer);
+  // Die Bohrungen sitzen durch die ganze Platine - also nach dem Kupfer
+  // und vor dem Aufdruck.
+  ctx.fillStyle = PCB_FARBEN.loch;
+  for (const l of z.platine.loecher) {
+    ctx.beginPath();
+    ctx.arc(l.x, l.y, Math.max(l.d, 0.05) / 2, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+  lageMalen(ctx, z.platine.lagen[seite.druck], PCB_FARBEN.druck);
+  ctx.restore();
+}
+
+/* --- Der Kasten ---------------------------------------------------------- */
+
+// Das Fenster ist so breit wie der Kasten - also so breit wie die Zeile
+// darunter. Nur die Hoehe richtet sich nach der Platine: ein langes schmales
+// Brett bekommt ein hohes Fenster, ein flaches ein flaches, und ein festes
+// 4:3 wuerde beiden nicht passen.
+function pcbFenster(r, platz) {
+  const form = r.breit / Math.max(r.hoch, 0.01);
+  const hoch = Math.max(90, Math.min(340, platz / Math.max(form, 0.01)));
+  return { breit: platz, hoch: Math.round(hoch) };
+}
+
+async function platineStarten(z) {
+  if (z.laeuft) return;
+  z.laeuft = true;
+  let puffer;
+  try {
+    puffer = await modellHolen(z.datei);
+  } catch (f) {
+    kachelBehalten(z, 'Platine ließ sich nicht holen: ' + f.message);
+    return;
+  }
+  let dateien;
+  try {
+    dateien = await zipLesen(puffer);
+  } catch (f) {
+    kachelBehalten(z, 'ZIP ließ sich nicht öffnen: ' + f.message
+                      + ' (' + puffer.byteLength + ' Byte)');
+    return;
+  }
+  let platine;
+  try {
+    platine = platinePacken(dateien);
+  } catch (f) {
+    kachelBehalten(z, 'Gerber ließ sich nicht lesen: ' + f.message);
+    return;
+  }
+  if (!platine.namen.length) {
+    // Die meisten ZIPs sind einfach ZIPs. Darunter eine rote Zeile zu
+    // setzen, waere Laerm: niemand hat hier eine Platine erwartet. Anders,
+    // wenn Gerber-Dateien drin sind und trotzdem nichts dabei herauskommt -
+    // dann will man wissen, warum.
+    const gerber = dateien.filter(function (d) {
+      const l = lageVon(d.name);
+      return l && l !== 'unklar';
+    });
+    if (!gerber.length) { kachelBehalten(z, ''); return; }
+    const liste = gerber.slice(0, 4).map(function (d) { return d.name; }).join(', ');
+    kachelBehalten(z, 'Gerber gefunden, aber keine Linie darin (' + liste + ')');
+    return;
+  }
+  z.platine = platine;
+  z.rahmen = pcbRahmen(platine);
+  if (!z.rahmen) {
+    kachelBehalten(z, 'Die Gerber-Dateien sind leer - keine einzige Linie darin.');
+    return;
+  }
+  const platz = (z.wo.parentElement && z.wo.parentElement.clientWidth)
+                || z.wo.clientWidth || 320;
+  const f = pcbFenster(z.rahmen, platz);
+  z.wo.style.width = f.breit + 'px';
+  z.wo.style.height = f.hoch + 'px';
+
+  const zaehler = z.kasten.querySelector('.dzahl');
+  if (zaehler) {
+    zaehler.textContent = z.rahmen.breit.toFixed(1).replace('.', ',') + ' × '
+      + z.rahmen.hoch.toFixed(1).replace('.', ',') + ' mm · '
+      + platine.loecher.length + ' Bohrungen';
+  }
+  if (!platine.lagen['kupfer-unten'] && !platine.lagen['druck-unten']) {
+    const knopf = z.wo.querySelector('.pcbseite');
+    if (knopf) knopf.hidden = true;        // einseitig: nichts zum Wenden
+  }
+  platineZeichnen(z);
+}
+
+function platineGriffe(z) {
+  const c = z.bild;
+  let zieht = false;
+  let zx = 0;
+  let zy = 0;
+  c.addEventListener('pointerdown', function (ev) {
+    zieht = true;
+    zx = ev.clientX;
+    zy = ev.clientY;
+    c.setPointerCapture(ev.pointerId);
+    ev.stopPropagation();           // nicht den Kasten mitziehen
+    ev.preventDefault();
+  });
+  c.addEventListener('pointermove', function (ev) {
+    if (!zieht) return;
+    const dpr = window.devicePixelRatio || 1;
+    z.ox += (ev.clientX - zx) * dpr;
+    z.oy += (ev.clientY - zy) * dpr;
+    zx = ev.clientX;
+    zy = ev.clientY;
+    platineZeichnen(z);
+  });
+  const los = function (ev) {
+    zieht = false;
+    try { c.releasePointerCapture(ev.pointerId); } catch (f) { /* egal */ }
+  };
+  c.addEventListener('pointerup', los);
+  c.addEventListener('pointercancel', los);
+  c.addEventListener('wheel', function (ev) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    z.zoom = Math.max(0.3, Math.min(40, z.zoom * (ev.deltaY > 0 ? 0.88 : 1.14)));
+    platineZeichnen(z);
+  }, { passive: false });
+  c.addEventListener('dblclick', function (ev) {
+    ev.stopPropagation();
+    z.zoom = 1;
+    z.ox = 0;
+    z.oy = 0;
+    platineZeichnen(z);
+  });
+}
+
+function platineKasten(kasten, datei) {
+  kasten.dataset.modell = 'ja';
+  kasten.classList.add('kasten-pcb');
+  const bild = el('canvas', {});
+  const lade = el('p', { className: 'lade', textContent: 'Platine wird gelesen …' });
+  const seite = el('button', { type: 'button', className: 'pcbseite',
+                               title: 'Auf die andere Seite sehen',
+                               textContent: 'Unterseite' });
+  const wo = el('div', { className: 'modell pcb' }, [bild, lade, seite]);
+  const kachel = kasten.querySelector('.datei');
+  if (kachel) {
+    kachel.before(wo);
+    kachel.append(el('span', { className: 'dzahl', textContent: '…' }));
+  } else {
+    kasten.append(wo);
+  }
+
+  const z = { kasten: kasten, wo: wo, bild: bild, datei: datei, platine: null,
+              rahmen: null, seite: 'oben', zoom: 1, ox: 0, oy: 0, laeuft: false };
+  seite.addEventListener('click', function (ev) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    z.seite = z.seite === 'oben' ? 'unten' : 'oben';
+    seite.textContent = z.seite === 'oben' ? 'Unterseite' : 'Oberseite';
+    platineZeichnen(z);
+  });
+  platineGriffe(z);
+
+  const sehen = new IntersectionObserver(function (treffer) {
+    for (const t of treffer) {
+      if (!t.isIntersecting) continue;
+      sehen.disconnect();
+      platineStarten(z).then(function () { lade.remove(); },
+                             function (f) {
+                               lade.remove();
+                               kachelBehalten(z, 'Platine: ' + f.message);
+                             });
+    }
+  }, { rootMargin: '200px' });
+  sehen.observe(wo);
+  if (window.ResizeObserver) {
+    new ResizeObserver(function () { platineZeichnen(z); }).observe(wo);
+  }
+}
+
+/* ----------------------------------------------------------- 3D-Anhaenge
+
+   Eine .stl kam bisher als 📎-Kachel in die Notiz: man sah den Namen und
+   musste sie herunterladen, um zu wissen, was drin ist. Jetzt steht das
+   Modell da und laesst sich drehen.
+
+   Bewusst kein neuer Elementtyp: der Kasten bleibt ein Datei-Kasten, nur
+   sein Inhalt wird ausgetauscht. Am Format der Notizen aendert sich damit
+   nichts - dieselbe Seite zeigt im Fenster-Programm weiter die Kachel, und
+   eine alte Fassung stolpert nicht ueber etwas Unbekanntes.
+
+   Und bewusst ohne fremde Bibliothek: STL ist Kopf, Anzahl, 50 Byte je
+   Dreieck, OBJ sind Zeilen mit v und f. Fuer "graues Modell drehen" braucht
+   es Matrizen, ein Licht von oben und sonst nichts. */
+
+const MODELL_ARTEN = ['stl', 'obj', 'fbx'];
+// Mehr als eine Handvoll 3D-Flaechen gibt der Browser pro Seite nicht her.
+// Also leben nur die zuletzt benutzten; die anderen stehen als Standbild da
+// und wachen beim Klick wieder auf.
+const MODELL_LEBENDIG = [];
+const MODELL_MAX_LEBENDIG = 4;
+// Darueber bleibt die Kachel stehen, statt den Browser minutenlang
+// einzulesen.
+const MODELL_MAX_DREIECKE = 3000000;
+// So weit weg, dass die Kugel um das Teil (Radius 1 nach dem Skalieren) in
+// jeder Drehung ins Bild passt: 1 / sin(halber Oeffnungswinkel), plus Luft.
+const MODELL_WEG = 3.6;
+const MODELL_WINKEL = 0.6;        // Oeffnungswinkel der Kamera, im Bogenmass
+const MODELL_SCHIEB_MAX = 4;      // so weit darf der Drehpunkt hoechstens weg
+
+function modellArt(name) {
+  const m = /\.([a-z0-9]+)$/i.exec(name || '');
+  const art = m ? m[1].toLowerCase() : '';
+  return MODELL_ARTEN.indexOf(art) >= 0 ? art : null;
+}
+
+/* Die Bytes kommen ueber dieselbe Stelle wie der Download: /anhang prueft
+   die Anmeldung und liefert rohe Bytes. */
+/* Die Bytes eines Anhangs. Im Fenster gibt es keine Adresse, unter der die
+   Datei laege - sie kommt ueber die Bruecke, und gezeichnet wird daraus
+   hier. Als HTML wird davon nie etwas eingesetzt. */
+async function modellHolen(datei) {
+  const b = await bruecke();
+  const r = await b.anhang_roh(offen.notizbuch, offen.abschnitt, offen.name, datei);
+  if (!r || r.fehler) throw new Error((r && r.fehler) || 'Anhang nicht lesbar');
+  const roh = atob(r.daten);
+  const feld = new Uint8Array(roh.length);
+  for (let i = 0; i < roh.length; i++) feld[i] = roh.charCodeAt(i);
+  return feld.buffer;
+}
+
+/* --- Einlesen ----------------------------------------------------------- */
+
+function stlLesen(puffer) {
+  /* Binaer oder Text? Nicht nach dem Wort "solid" am Anfang - binaere
+     Dateien aus manchen Programmen fangen auch damit an. Zuerst die Laenge:
+     passt sie aufs Byte, ist die Sache klar. Tut sie das nicht, hat eine
+     binaere Datei hinten etwas angehaengt oder ihr Kopf zaehlt falsch;
+     dann entscheidet, ob im Anfang ueberhaupt STL-Text steht. */
+  if (puffer.byteLength >= 84) {
+    const sicht = new DataView(puffer);
+    const zahl = sicht.getUint32(80, true);
+    if (84 + zahl * 50 === puffer.byteLength) return stlBinaer(sicht, zahl);
+    const probe = new TextDecoder('utf-8', { fatal: false }).decode(puffer.slice(0, 1024));
+    if (!/facet\s+normal|outer\s+loop|vertex\s/.test(probe) && zahl > 0) {
+      // Was wirklich da ist, zaehlt - nicht, was im Kopf steht.
+      const passen = Math.floor((puffer.byteLength - 84) / 50);
+      return stlBinaer(sicht, Math.min(zahl, passen));
+    }
+  }
+  return stlText(new TextDecoder().decode(puffer));
+}
+
+/* Fuer die Fehlerzeile. Ohne diese drei Angaben heisst es "geht nicht", und
+   dann wird geraten statt nachgesehen. */
+function kopfschau(puffer) {
+  const anfang = new TextDecoder('utf-8', { fatal: false })
+    .decode(puffer.slice(0, 12)).replace(/[^ -~]/g, '.');
+  const zahl = puffer.byteLength >= 84
+    ? new DataView(puffer).getUint32(80, true) : '?';
+  return puffer.byteLength + ' Byte, Anfang „' + anfang + '", Kopfzahl ' + zahl;
+}
+
+function stlBinaer(sicht, zahl) {
+  const punkte = new Float32Array(zahl * 9);
+  let z = 0;
+  for (let d = 0; d < zahl; d++) {
+    // 12 Byte Normale ueberspringen: sie steht oft auf 0 oder zeigt falsch.
+    // Gerechnet wird sie gleich sowieso aus den Ecken.
+    let p = 84 + d * 50 + 12;
+    for (let i = 0; i < 9; i++, p += 4) punkte[z++] = sicht.getFloat32(p, true);
+  }
+  return punkte;
+}
+
+function stlText(text) {
+  const zahlen = [];
+  const muster = /vertex\s+(-?[\d.eE+]+)\s+(-?[\d.eE+]+)\s+(-?[\d.eE+]+)/g;
+  let t;
+  while ((t = muster.exec(text))) {
+    zahlen.push(Number(t[1]), Number(t[2]), Number(t[3]));
+    if (zahlen.length > MODELL_MAX_DREIECKE * 9) break;
+  }
+  return new Float32Array(zahlen.slice(0, Math.floor(zahlen.length / 9) * 9));
+}
+
+function objLesen(puffer) {
+  const ecken = [];
+  const punkte = [];
+  for (const zeile of new TextDecoder().decode(puffer).split('\n')) {
+    const z = zeile.trim();
+    if (z.charCodeAt(0) === 118 && z.charCodeAt(1) === 32) {          // "v "
+      const t = z.split(/\s+/);
+      ecken.push(Number(t[1]), Number(t[2]), Number(t[3]));
+    } else if (z.charCodeAt(0) === 102 && z.charCodeAt(1) === 32) {   // "f "
+      const t = z.split(/\s+/).slice(1).map(function (s) {
+        // "7", "7/3", "7//2" - gebraucht wird nur die erste Zahl. Negative
+        // Nummern zaehlen vom Ende her.
+        const n = parseInt(s.split('/')[0], 10);
+        return n < 0 ? ecken.length / 3 + n : n - 1;
+      });
+      // Vielecke als Faecher: ein n-Eck wird zu n-2 Dreiecken.
+      for (let i = 1; i + 1 < t.length; i++) {
+        for (const k of [t[0], t[i], t[i + 1]]) {
+          punkte.push(ecken[k * 3], ecken[k * 3 + 1], ecken[k * 3 + 2]);
+        }
+      }
+    }
+  }
+  return new Float32Array(punkte);
+}
+
+/* --- FBX ---------------------------------------------------------------
+
+   FBX ist keine Datei mit einem Teil, sondern eine Szene: mehrere Objekte,
+   jedes mit eigener Lage, Drehung und Groesse, dazu ein Elternbaum. Wer das
+   weglaesst, legt bei einem Avatar alle Teile uebereinander in den
+   Nullpunkt.
+
+   Zwei Fassungen, ein Baum: binaer sind es geschachtelte Datensaetze mit
+   zlib-gepackten Zahlenfeldern (das entpackt der Browser selbst), Text ist
+   derselbe Baum in geschweiften Klammern. Danach arbeitet alles weitere auf
+   derselben Form {name, werte, kinder}.
+
+   Herausgeholt werden nur Vertices und PolygonVertexIndex. Nicht gelesen:
+   Materialien, Texturen, Knochen, Animation, und von den Lagen die
+   Exoten - andere Drehreihenfolgen als XYZ, Dreh- und Skalierpunkte,
+   Vererbungsarten. Bei einem normalen Export aus Blender oder Fusion steht
+   das Teil damit richtig; bei einer Szene aus Maya kann etwas schief
+   stehen. */
+
+const FBX_MAGIE = 'Kaydara FBX Binary';
+
+async function fbxLesen(puffer) {
+  const kopf = new TextDecoder('utf-8', { fatal: false }).decode(puffer.slice(0, 20));
+  const baum = kopf.indexOf(FBX_MAGIE) === 0
+    ? await fbxBinaer(puffer)
+    : fbxText(new TextDecoder('utf-8', { fatal: false }).decode(puffer));
+  return fbxNetz(baum);
+}
+
+async function auspacken(roh) {
+  if (typeof DecompressionStream !== 'function') {
+    throw new Error('dieser Browser kann FBX nicht entpacken (DecompressionStream fehlt)');
+  }
+  const strom = new Blob([roh]).stream().pipeThrough(new DecompressionStream('deflate'));
+  return new Uint8Array(await new Response(strom).arrayBuffer());
+}
+
+async function fbxBinaer(puffer) {
+  const sicht = new DataView(puffer);
+  // Ab Fassung 7500 sind die Zeiger 64 Bit breit.
+  const breit = sicht.getUint32(23, true) >= 7500;
+  const wurzel = { name: '', werte: [], kinder: [] };
+  let stelle = 27;
+  while (stelle + (breit ? 25 : 13) <= puffer.byteLength) {
+    const k = await fbxKnoten(sicht, puffer, stelle, breit);
+    if (!k) break;
+    wurzel.kinder.push(k.knoten);
+    stelle = k.ende;
+  }
+  return wurzel;
+}
+
+async function fbxKnoten(sicht, puffer, stelle, breit) {
+  const lang = (p) => (breit ? Number(sicht.getBigUint64(p, true)) : sicht.getUint32(p, true));
+  const kopf = breit ? 25 : 13;
+  const ende = lang(stelle);
+  if (!ende) return null;                       // Schlussmarke
+  const zahl = lang(stelle + (breit ? 8 : 4));
+  const wertebytes = lang(stelle + (breit ? 16 : 8));
+  const namelaenge = sicht.getUint8(stelle + (breit ? 24 : 12));
+  let p = stelle + kopf;
+  const name = new TextDecoder().decode(new Uint8Array(puffer, p, namelaenge));
+  p += namelaenge;
+  const werte = [];
+  for (let i = 0; i < zahl; i++) {
+    const w = await fbxWert(sicht, puffer, p);
+    werte.push(w.wert);
+    p = w.ende;
+  }
+  // Nicht mitzaehlen, sondern ausrechnen: so bringt ein Wert, den wir nicht
+  // kennen, nicht den ganzen Baum durcheinander.
+  p = stelle + kopf + namelaenge + wertebytes;
+  const kinder = [];
+  while (p + kopf <= ende) {
+    const k = await fbxKnoten(sicht, puffer, p, breit);
+    if (!k) break;
+    kinder.push(k.knoten);
+    p = k.ende;
+  }
+  return { knoten: { name, werte, kinder }, ende };
+}
+
+async function fbxWert(sicht, puffer, p) {
+  const art = String.fromCharCode(sicht.getUint8(p));
+  p += 1;
+  if (art === 'Y') return { wert: sicht.getInt16(p, true), ende: p + 2 };
+  if (art === 'C') return { wert: !!sicht.getUint8(p), ende: p + 1 };
+  if (art === 'I') return { wert: sicht.getInt32(p, true), ende: p + 4 };
+  if (art === 'F') return { wert: sicht.getFloat32(p, true), ende: p + 4 };
+  if (art === 'D') return { wert: sicht.getFloat64(p, true), ende: p + 8 };
+  if (art === 'L') return { wert: Number(sicht.getBigInt64(p, true)), ende: p + 8 };
+  if (art === 'S' || art === 'R') {
+    const n = sicht.getUint32(p, true);
+    const roh = new Uint8Array(puffer, p + 4, n);
+    return { wert: art === 'S' ? new TextDecoder().decode(roh) : roh, ende: p + 4 + n };
+  }
+  const laenge = sicht.getUint32(p, true);
+  const packung = sicht.getUint32(p + 4, true);
+  const bytes = sicht.getUint32(p + 8, true);
+  let roh = new Uint8Array(puffer, p + 12, bytes);
+  if (packung === 1) roh = await auspacken(roh);
+  return { wert: fbxFeld(art, roh, laenge), ende: p + 12 + bytes };
+}
+
+function fbxFeld(art, roh, laenge) {
+  // Eine frische Kopie: ein Feld mitten im Puffer liegt sonst schief fuer
+  // 8-Byte-Zahlen, und dann wirft der Browser.
+  const b = roh.slice().buffer;
+  if (art === 'd') return new Float64Array(b, 0, laenge);
+  if (art === 'f') return new Float32Array(b, 0, laenge);
+  if (art === 'i') return new Int32Array(b, 0, laenge);
+  if (art === 'l') return Array.from(new BigInt64Array(b, 0, laenge), Number);
+  if (art === 'b') return new Uint8Array(b, 0, laenge);
+  return [];
+}
+
+function fbxText(text) {
+  const wurzel = { name: '', werte: [], kinder: [] };
+  const stapel = [wurzel];
+  for (let zeile of text.split('\n')) {
+    const strich = zeile.indexOf(';');
+    if (strich >= 0) zeile = zeile.slice(0, strich);
+    zeile = zeile.trim();
+    if (!zeile) continue;
+    if (zeile.charAt(0) === '}') { if (stapel.length > 1) stapel.pop(); continue; }
+    const auf = zeile.charAt(zeile.length - 1) === '{';
+    if (auf) zeile = zeile.slice(0, -1).trim();
+    const jetzt = stapel[stapel.length - 1];
+    const doppel = zeile.indexOf(':');
+    if (doppel < 0) {
+      // Lange Zahlenreihen stehen ueber mehrere Zeilen - die Fortsetzung
+      // gehoert zum zuletzt angefangenen Knoten.
+      const letzte = jetzt.kinder[jetzt.kinder.length - 1];
+      if (letzte) for (const w of fbxWerteText(zeile)) letzte.werte.push(w);
+      continue;
+    }
+    const knoten = { name: zeile.slice(0, doppel).trim(),
+                     werte: fbxWerteText(zeile.slice(doppel + 1)), kinder: [] };
+    jetzt.kinder.push(knoten);
+    if (auf) stapel.push(knoten);
+  }
+  return wurzel;
+}
+
+function fbxWerteText(stueck) {
+  const werte = [];
+  const muster = /"([^"]*)"|(-?\d[\d.eE+-]*)/g;
+  let t;
+  while ((t = muster.exec(stueck))) {
+    if (t[1] !== undefined) { werte.push(t[1]); continue; }
+    const zahl = Number(t[2]);
+    werte.push(Number.isNaN(zahl) ? t[2] : zahl);
+  }
+  return werte;
+}
+
+function fbxKind(knoten, name) {
+  return knoten ? knoten.kinder.find(function (k) { return k.name === name; }) : null;
+}
+
+function fbxFeldVon(knoten) {
+  if (!knoten) return null;
+  for (const w of knoten.werte) {
+    if (w && typeof w === 'object' && typeof w.length === 'number') return w;
+  }
+  const a = fbxKind(knoten, 'a');      // so steht ein Feld in der Textfassung
+  return a ? a.werte : null;
+}
+
+function fbxEigenschaft(modell, wie, standard) {
+  const p = fbxKind(modell, 'Properties70') || fbxKind(modell, 'Properties60');
+  if (!p) return standard;
+  for (const e of p.kinder) {
+    if ((e.name !== 'P' && e.name !== 'Property') || e.werte[0] !== wie) continue;
+    const zahlen = e.werte.filter(function (w) { return typeof w === 'number'; });
+    if (zahlen.length >= 3) return zahlen.slice(-3);
+  }
+  return standard;
+}
+
+function matDrehZ(w) {
+  const c = Math.cos(w), s = Math.sin(w), m = matEinheit();
+  m[0] = c; m[1] = s; m[4] = -s; m[5] = c; return m;
+}
+function matSkalaXYZ(s) {
+  const m = matEinheit(); m[0] = s[0]; m[5] = s[1]; m[10] = s[2]; return m;
+}
+// Eulerwinkel in Grad, Reihenfolge XYZ - zuerst um X, zuletzt um Z.
+function matDrehGrad(g) {
+  const b = Math.PI / 180;
+  return matMal(matDrehZ(g[2] * b), matMal(matDrehY(g[1] * b), matDrehX(g[0] * b)));
+}
+
+function fbxModellLage(modell) {
+  const t = fbxEigenschaft(modell, 'Lcl Translation', [0, 0, 0]);
+  const r = fbxEigenschaft(modell, 'Lcl Rotation', [0, 0, 0]);
+  const s = fbxEigenschaft(modell, 'Lcl Scaling', [1, 1, 1]);
+  const vor = fbxEigenschaft(modell, 'PreRotation', [0, 0, 0]);
+  return matMal(matSchieben(t[0], t[1], t[2]),
+                matMal(matDrehGrad(vor), matMal(matDrehGrad(r), matSkalaXYZ(s))));
+}
+
+function fbxGeoLage(modell) {
+  const t = fbxEigenschaft(modell, 'GeometricTranslation', [0, 0, 0]);
+  const r = fbxEigenschaft(modell, 'GeometricRotation', [0, 0, 0]);
+  const s = fbxEigenschaft(modell, 'GeometricScaling', [1, 1, 1]);
+  return matMal(matSchieben(t[0], t[1], t[2]),
+                matMal(matDrehGrad(r), matSkalaXYZ(s)));
+}
+
+/* Von der Geometrie zum Modell, von dort nach oben: jede Lage multipliziert
+   sich auf. Die Geometrie-Lage gilt nur am eigenen Modell, sie wird nicht
+   vererbt. */
+function fbxLage(nummer, eltern, modelle) {
+  let m = null;
+  let id = eltern.get(nummer);
+  let tiefe = 0;
+  while (id !== undefined && tiefe++ < 64) {
+    const modell = modelle.get(id);
+    if (modell) {
+      const lage = m === null ? matMal(fbxModellLage(modell), fbxGeoLage(modell))
+                              : fbxModellLage(modell);
+      m = m === null ? lage : matMal(lage, m);
+    }
+    id = eltern.get(id);
+  }
+  return m;
+}
+
+function punkteWandeln(punkte, m) {
+  const raus = new Float32Array(punkte.length);
+  for (let i = 0; i < punkte.length; i += 3) {
+    const x = punkte[i], y = punkte[i + 1], z = punkte[i + 2];
+    raus[i] = m[0] * x + m[4] * y + m[8] * z + m[12];
+    raus[i + 1] = m[1] * x + m[5] * y + m[9] * z + m[13];
+    raus[i + 2] = m[2] * x + m[6] * y + m[10] * z + m[14];
+  }
+  return raus;
+}
+
+function fbxGeometrie(g) {
+  const ecken = fbxFeldVon(fbxKind(g, 'Vertices'));
+  const liste = fbxFeldVon(fbxKind(g, 'PolygonVertexIndex'));
+  if (!ecken || !liste || !ecken.length) return null;
+  const raus = [];
+  let vieleck = [];
+  for (let i = 0; i < liste.length; i++) {
+    let n = liste[i];
+    const schluss = n < 0;
+    // Die letzte Ecke eines Vielecks steht negativ da - so merkt man, wo es
+    // aufhoert.
+    if (schluss) n = -n - 1;
+    vieleck.push(n);
+    if (!schluss) continue;
+    for (let k = 1; k + 1 < vieleck.length; k++) {
+      for (const e of [vieleck[0], vieleck[k], vieleck[k + 1]]) {
+        raus.push(ecken[e * 3], ecken[e * 3 + 1], ecken[e * 3 + 2]);
+      }
+    }
+    vieleck = [];
+  }
+  return new Float32Array(raus);
+}
+
+function fbxNetz(baum) {
+  const objekte = fbxKind(baum, 'Objects');
+  if (!objekte) return new Float32Array(0);
+
+  const eltern = new Map();
+  const verbindungen = fbxKind(baum, 'Connections');
+  for (const c of (verbindungen ? verbindungen.kinder : [])) {
+    if (c.name !== 'C' && c.name !== 'Connect') continue;
+    if (c.werte[0] !== 'OO') continue;      // nur Objekt an Objekt
+    eltern.set(Number(c.werte[1]), Number(c.werte[2]));
+  }
+  const modelle = new Map();
+  for (const k of objekte.kinder) {
+    if (k.name === 'Model') modelle.set(Number(k.werte[0]), k);
+  }
+
+  const stuecke = [];
+  let laenge = 0;
+  for (const g of objekte.kinder) {
+    if (g.name !== 'Geometry') continue;
+    let punkte = fbxGeometrie(g);
+    if (!punkte || !punkte.length) continue;
+    const lage = fbxLage(Number(g.werte[0]), eltern, modelle);
+    if (lage) punkte = punkteWandeln(punkte, lage);
+    stuecke.push(punkte);
+    laenge += punkte.length;
+  }
+  if (stuecke.length === 1) return stuecke[0];
+  const alles = new Float32Array(laenge);
+  let p = 0;
+  for (const s of stuecke) { alles.set(s, p); p += s.length; }
+  return alles;
+}
+
+/* Normalen je Dreieck aus den Ecken, dazu Mitte und Groesse. Flach
+   schattiert: jede Ecke bekommt die Normale ihres Dreiecks, damit Kanten
+   Kanten bleiben - bei einem gedruckten Teil will man sie sehen. */
+function netzBauen(punkte) {
+  const dreiecke = Math.floor(punkte.length / 9);
+  const normalen = new Float32Array(dreiecke * 9);
+  let xa = Infinity, ya = Infinity, za = Infinity;
+  let xb = -Infinity, yb = -Infinity, zb = -Infinity;
+  for (let d = 0; d < dreiecke; d++) {
+    const i = d * 9;
+    const ux = punkte[i + 3] - punkte[i], uy = punkte[i + 4] - punkte[i + 1],
+          uz = punkte[i + 5] - punkte[i + 2];
+    const vx = punkte[i + 6] - punkte[i], vy = punkte[i + 7] - punkte[i + 1],
+          vz = punkte[i + 8] - punkte[i + 2];
+    let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    const l = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+    nx /= l; ny /= l; nz /= l;
+    for (let k = 0; k < 3; k++) {
+      normalen[i + k * 3] = nx; normalen[i + k * 3 + 1] = ny; normalen[i + k * 3 + 2] = nz;
+      const x = punkte[i + k * 3], y = punkte[i + k * 3 + 1], z = punkte[i + k * 3 + 2];
+      if (x < xa) xa = x; if (x > xb) xb = x;
+      if (y < ya) ya = y; if (y > yb) yb = y;
+      if (z < za) za = z; if (z > zb) zb = z;
+    }
+  }
+  if (!dreiecke) return { punkte, normalen, dreiecke: 0, mitte: [0, 0, 0], radius: 1 };
+  const mitte = [(xa + xb) / 2, (ya + yb) / 2, (za + zb) / 2];
+  // Der Radius der Kugel um das Teil, nicht die laengste Kante: sonst haengt
+  // beim Drehen eine Ecke aus dem Bild.
+  const kugel = Math.sqrt((xb - xa) * (xb - xa) + (yb - ya) * (yb - ya)
+                          + (zb - za) * (zb - za)) / 2;
+  return { punkte, normalen, dreiecke, mitte, radius: Math.max(kugel, 1e-6) };
+}
+
+/* --- Matrizen (spaltenweise, so wie WebGL sie will) --------------------- */
+
+function matEinheit() {
+  return new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+}
+function matMal(a, b) {
+  const m = new Float32Array(16);
+  for (let s = 0; s < 4; s++) {
+    for (let z = 0; z < 4; z++) {
+      let w = 0;
+      for (let i = 0; i < 4; i++) w += a[i * 4 + z] * b[s * 4 + i];
+      m[s * 4 + z] = w;
+    }
+  }
+  return m;
+}
+function matPerspektive(winkel, seite, nah, fern) {
+  const f = 1 / Math.tan(winkel / 2);
+  const m = new Float32Array(16);
+  m[0] = f / seite; m[5] = f;
+  m[10] = (fern + nah) / (nah - fern); m[11] = -1;
+  m[14] = (2 * fern * nah) / (nah - fern);
+  return m;
+}
+function matSchieben(x, y, z) {
+  const m = matEinheit(); m[12] = x; m[13] = y; m[14] = z; return m;
+}
+function matSkala(s) {
+  const m = matEinheit(); m[0] = s; m[5] = s; m[10] = s; return m;
+}
+function matDrehX(w) {
+  const c = Math.cos(w), s = Math.sin(w), m = matEinheit();
+  m[5] = c; m[6] = s; m[9] = -s; m[10] = c; return m;
+}
+function matDrehY(w) {
+  const c = Math.cos(w), s = Math.sin(w), m = matEinheit();
+  m[0] = c; m[2] = -s; m[8] = s; m[10] = c; return m;
+}
+// Der 3x3-Teil fuer die Normalen. Drehen allein veraendert ihre Richtung
+// nicht ungleichmaessig, also reicht die Drehung selbst.
+function mat3Von(m) {
+  return new Float32Array([m[0], m[1], m[2], m[4], m[5], m[6], m[8], m[9], m[10]]);
+}
+
+/* --- Zeichnen ----------------------------------------------------------- */
+
+const MODELL_ECKPUNKT = [
+  'attribute vec3 aOrt;',
+  'attribute vec3 aNorm;',
+  'uniform mat4 uMvp;',
+  'uniform mat3 uDreh;',
+  'varying vec3 vNorm;',
+  'void main() {',
+  '  vNorm = uDreh * aNorm;',
+  '  gl_Position = uMvp * vec4(aOrt, 1.0);',
+  '}',
+].join('\n');
+
+const MODELL_FLAECHE = [
+  'precision mediump float;',
+  'varying vec3 vNorm;',
+  'void main() {',
+  // Viele STL-Dateien haben Dreiecke verkehrt herum. Statt sie zu
+  // reparieren, wird die Normale zum Betrachter gedreht - dann sieht die
+  // Flaeche von beiden Seiten richtig aus.
+  '  vec3 n = normalize(vNorm);',
+  '  if (!gl_FrontFacing) n = -n;',
+  '  vec3 licht = normalize(vec3(0.35, 0.75, 0.55));',
+  '  float hell = 0.30 + 0.70 * max(dot(n, licht), 0.0);',
+  '  float kante = 0.10 * pow(1.0 - abs(n.z), 3.0);',
+  '  gl_FragColor = vec4(vec3(0.63, 0.64, 0.70) * hell + kante, 1.0);',
+  '}',
+].join('\n');
+
+function glBauen(bild) {
+  // alpha: die Flaeche bleibt hinter dem Modell durchsichtig, damit der
+  // Kasten seine eigene Farbe behaelt - hell wie dunkel, ohne dass hier
+  // eine Farbe nachgebaut wird.
+  const gl = bild.getContext('webgl', { alpha: true, antialias: true,
+                                        premultipliedAlpha: true });
+  if (!gl) return null;
+  const bauen = (art, quelle) => {
+    const t = gl.createShader(art);
+    gl.shaderSource(t, quelle);
+    gl.compileShader(t);
+    if (!gl.getShaderParameter(t, gl.COMPILE_STATUS)) {
+      throw new Error(gl.getShaderInfoLog(t) || 'Shader ging nicht');
+    }
+    return t;
+  };
+  const programm = gl.createProgram();
+  gl.attachShader(programm, bauen(gl.VERTEX_SHADER, MODELL_ECKPUNKT));
+  gl.attachShader(programm, bauen(gl.FRAGMENT_SHADER, MODELL_FLAECHE));
+  gl.linkProgram(programm);
+  if (!gl.getProgramParameter(programm, gl.LINK_STATUS)) {
+    throw new Error(gl.getProgramInfoLog(programm) || 'Programm ging nicht');
+  }
+  gl.useProgram(programm);
+  gl.enable(gl.DEPTH_TEST);
+  gl.clearColor(0, 0, 0, 0);
+  return {
+    gl,
+    ort: gl.getAttribLocation(programm, 'aOrt'),
+    norm: gl.getAttribLocation(programm, 'aNorm'),
+    mvp: gl.getUniformLocation(programm, 'uMvp'),
+    dreh: gl.getUniformLocation(programm, 'uDreh'),
+  };
+}
+
+function netzHochladen(z) {
+  const gl = z.glz.gl;
+  z.pufferOrt = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, z.pufferOrt);
+  gl.bufferData(gl.ARRAY_BUFFER, z.netz.punkte, gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(z.glz.ort);
+  gl.vertexAttribPointer(z.glz.ort, 3, gl.FLOAT, false, 0, 0);
+
+  z.pufferNorm = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, z.pufferNorm);
+  gl.bufferData(gl.ARRAY_BUFFER, z.netz.normalen, gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(z.glz.norm);
+  gl.vertexAttribPointer(z.glz.norm, 3, gl.FLOAT, false, 0, 0);
+}
+
+function modellZeichnen(z) {
+  if (!z.glz || !z.netz) return;
+  const gl = z.glz.gl;
+  const breit = Math.max(1, Math.round(z.bild.clientWidth * (window.devicePixelRatio || 1)));
+  const hoch = Math.max(1, Math.round(z.bild.clientHeight * (window.devicePixelRatio || 1)));
+  if (z.bild.width !== breit || z.bild.height !== hoch) {
+    z.bild.width = breit; z.bild.height = hoch;
+  }
+  gl.viewport(0, 0, breit, hoch);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+  // Der Drehpunkt sitzt normalerweise in der Mitte des Teils. Mit
+  // Umschalt-Ziehen wandert er - und weil er vor der Drehung abgezogen
+  // wird, dreht sich danach wirklich um den neuen Punkt.
+  const grund = matMal(matSchieben(-z.punkt[0], -z.punkt[1], -z.punkt[2]),
+                matMal(matSkala(1 / z.netz.radius),
+                       matSchieben(-z.netz.mitte[0], -z.netz.mitte[1], -z.netz.mitte[2])));
+  const dreh = matMal(matDrehX(z.hoehe), matDrehY(z.seite));
+  const sicht = matSchieben(0, 0, -z.weg);
+  const ferne = matPerspektive(MODELL_WINKEL, breit / hoch, 0.05, 100);
+  gl.uniformMatrix4fv(z.glz.mvp, false,
+                      matMal(ferne, matMal(sicht, matMal(dreh, grund))));
+  gl.uniformMatrix3fv(z.glz.dreh, false, mat3Von(dreh));
+  gl.drawArrays(gl.TRIANGLES, 0, z.netz.dreiecke * 3);
+}
+
+/* Umschalt-Ziehen schiebt den Drehpunkt, nicht nur das Bild: sonst sieht
+   man das Teil zwar von der Seite, dreht aber weiter um seine alte Mitte
+   und kommt an eine Ecke nie heran.
+
+   Gerechnet wird in Bildpunkten: wie weit ist bei diesem Abstand eine
+   Bildschirmhoehe? So viel wandert das Teil, wenn man ueber die ganze
+   Flaeche zieht. Die Verschiebung steht in der Sicht, der Drehpunkt im
+   Modell - dazwischen liegt die Drehung, also wird sie zurueckgerechnet
+   (bei einer Drehung heisst umgekehrt: vertauscht). */
+function punktSchieben(z, dx, dy, hoehePx) {
+  const sichtbar = 2 * Math.tan(MODELL_WINKEL / 2) * z.weg;
+  const vx = (dx / hoehePx) * sichtbar;
+  const vy = -(dy / hoehePx) * sichtbar;
+  const m = matMal(matDrehX(z.hoehe), matDrehY(z.seite));
+  z.punkt = [z.punkt[0] - (m[0] * vx + m[1] * vy),
+             z.punkt[1] - (m[4] * vx + m[5] * vy),
+             z.punkt[2] - (m[8] * vx + m[9] * vy)];
+  // Nicht beliebig weit: sonst ist das Teil aus dem Bild geschoben und man
+  // findet es ohne Doppelklick nicht wieder.
+  const weit = Math.sqrt(z.punkt[0] * z.punkt[0] + z.punkt[1] * z.punkt[1]
+                         + z.punkt[2] * z.punkt[2]);
+  if (weit > MODELL_SCHIEB_MAX) {
+    const f = MODELL_SCHIEB_MAX / weit;
+    z.punkt = [z.punkt[0] * f, z.punkt[1] * f, z.punkt[2] * f];
+  }
+}
+
+/* --- Am Leben halten ---------------------------------------------------- */
+
+function modellEinfrieren(z) {
+  if (!z.glz) return;
+  // Erst zeichnen, dann abfotografieren: ohne preserveDrawingBuffer ist das
+  // Bild sonst leer.
+  modellZeichnen(z);
+  let standbild = null;
+  try { standbild = z.bild.toDataURL('image/png'); } catch (f) { /* dann eben nicht */ }
+  const verlust = z.glz.gl.getExtension('WEBGL_lose_context');
+  if (verlust) verlust.loseContext();
+  z.glz = null; z.pufferOrt = null; z.pufferNorm = null;
+  const i = MODELL_LEBENDIG.indexOf(z);
+  if (i >= 0) MODELL_LEBENDIG.splice(i, 1);
+  // Auch wenn kein Standbild herauskam, muss hier etwas Anklickbares
+  // stehen. Vorher blieb in dem Fall die Flaeche mit verlorenem Zeichner
+  // liegen: ein schwarzes Feld, das sich nicht mehr dreht und aus dem es
+  // keinen Weg zurueck gab.
+  const ruhig = standbild
+    ? el('img', { className: 'standbild', src: standbild, alt: z.datei,
+                  title: 'Angehalten - zum Drehen anklicken' })
+    : el('div', { className: 'standbild leerbild',
+                  textContent: 'Angehalten - zum Drehen anklicken',
+                  title: 'Angehalten - zum Drehen anklicken' });
+  z.bild.replaceWith(ruhig);
+  z.bild = ruhig;
+  ruhig.addEventListener('click', function () { modellWecken(z); });
+}
+
+function platzSchaffen(ausser) {
+  // Vorher, nicht hinterher: ein Browser gibt nur eine Handvoll 3D-Flaechen
+  // je Seite her. Wer erst aufmacht und dann aufraeumt, bekommt beim einen
+  // zu viel gar keine mehr - und dann war das Modell endgueltig weg, obwohl
+  // es eben noch lief.
+  while (MODELL_LEBENDIG.length >= MODELL_MAX_LEBENDIG) {
+    const alt = MODELL_LEBENDIG.find(function (z) { return z !== ausser; });
+    if (!alt) return;
+    modellEinfrieren(alt);
+  }
+}
+
+function modellWecken(z) {
+  if (z.glz || !z.netz) return;
+  platzSchaffen(z);
+  const bild = el('canvas', {});
+  z.bild.replaceWith(bild);
+  z.bild = bild;
+  let klage = '';
+  try {
+    z.glz = glBauen(bild);
+  } catch (f) {
+    z.glz = null;
+    klage = f.message;
+  }
+  if (!z.glz) {
+    kachelBehalten(z, klage ? 'Die 3D-Fläche ging nicht auf: ' + klage
+                            : 'Dieser Browser zeichnet kein 3D (WebGL fehlt oder ist aus).');
+    return;
+  }
+  netzHochladen(z);
+  drehenAnbieten(z);
+  MODELL_LEBENDIG.push(z);
+  modellZeichnen(z);
+}
+
+/* --- Bedienung ---------------------------------------------------------- */
+
+function drehenAnbieten(z) {
+  const bild = z.bild;
+  bild.addEventListener('pointerdown', function (ev) {
+    if (ev.button !== 0) return;
+    // Sonst faengt die Flaeche darunter an, einen Rahmen zu ziehen, und der
+    // Kasten wandert.
+    ev.stopPropagation();
+    ev.preventDefault();
+    bild.setPointerCapture(ev.pointerId);
+    // Umschalt entscheidet beim Anfassen, nicht waehrenddessen: sonst
+    // springt die Bewegung, wenn man die Taste mitten im Ziehen loslaesst.
+    const schieben = ev.shiftKey;
+    z.wo.classList.add(schieben ? 'schiebt' : 'dreht');
+    let x = ev.clientX, y = ev.clientY;
+    const bewegen = function (e2) {
+      if (schieben) {
+        punktSchieben(z, e2.clientX - x, e2.clientY - y, z.bild.clientHeight || 1);
+      } else {
+        z.seite += (e2.clientX - x) * 0.01;
+        z.hoehe += (e2.clientY - y) * 0.01;
+        // Nicht ueber den Kopf: sonst steht das Teil kopf und man findet
+        // nicht zurueck.
+        z.hoehe = Math.max(-1.5, Math.min(1.5, z.hoehe));
+      }
+      x = e2.clientX; y = e2.clientY;
+      modellZeichnen(z);
+    };
+    const los = function () {
+      bild.removeEventListener('pointermove', bewegen);
+      bild.removeEventListener('pointerup', los);
+      bild.removeEventListener('pointercancel', los);
+      z.wo.classList.remove('dreht');
+      z.wo.classList.remove('schiebt');
+    };
+    bild.addEventListener('pointermove', bewegen);
+    bild.addEventListener('pointerup', los);
+    bild.addEventListener('pointercancel', los);
+  });
+  bild.addEventListener('wheel', function (ev) {
+    ev.preventDefault();
+    ev.stopPropagation();          // nicht die ganze Seite zoomen
+    z.weg = Math.max(1.3, Math.min(14, z.weg * (ev.deltaY > 0 ? 1.12 : 0.89)));
+    modellZeichnen(z);
+  }, { passive: false });
+  bild.addEventListener('dblclick', function (ev) {
+    ev.stopPropagation();
+    z.seite = 0.6; z.hoehe = -0.5; z.weg = MODELL_WEG; z.punkt = [0, 0, 0];
+    modellZeichnen(z);
+  });
+}
+
+/* --- Aufbau ------------------------------------------------------------- */
+
+function kachelBehalten(z, warum) {
+  // Die Kachel tut weiter, was sie immer getan hat - herunterladen. Der
+  // Grund steht aber sichtbar darunter und nicht nur im Tooltip: sonst
+  // steht da eine Kachel wie frueher und niemand weiss, warum kein Modell
+  // kommt. In der Notiz gespeichert wird davon nichts.
+  if (z.wo && z.wo.parentElement) z.wo.remove();
+  z.kasten.classList.remove('kasten-3d');
+  z.kasten.classList.remove('kasten-pcb');
+  const zaehler = z.kasten.querySelector('.dzahl');
+  if (zaehler) zaehler.remove();
+  if (!warum) return;
+  z.kasten.title = warum;
+  const alt = z.kasten.querySelector('.modellfehler');
+  if (alt) alt.remove();
+  z.kasten.append(el('p', { className: 'modellfehler', textContent: warum }));
+  console.error('[notizmappe] 3D: ' + warum);
+}
+
+async function modellStarten(z) {
+  if (z.laeuft) return;
+  z.laeuft = true;
+  let puffer;
+  try {
+    puffer = await modellHolen(z.datei);
+  } catch (f) {
+    kachelBehalten(z, 'Modell ließ sich nicht holen: ' + f.message);
+    return;
+  }
+  let punkte;
+  try {
+    punkte = z.art === 'fbx' ? await fbxLesen(puffer)
+           : z.art === 'obj' ? objLesen(puffer) : stlLesen(puffer);
+  } catch (f) {
+    kachelBehalten(z, 'Modell ließ sich nicht lesen: ' + f.message
+                      + ' (' + kopfschau(puffer) + ')');
+    return;
+  }
+  if (!punkte.length) {
+    kachelBehalten(z, 'Keine Dreiecke gefunden (' + kopfschau(puffer) + ')');
+    return;
+  }
+  if (punkte.length / 9 > MODELL_MAX_DREIECKE) {
+    kachelBehalten(z, 'Zu groß zum Anzeigen: '
+                      + Math.round(punkte.length / 9).toLocaleString('de-DE')
+                      + ' Dreiecke.');
+    return;
+  }
+  z.netz = netzBauen(punkte);
+  const zaehler = z.kasten.querySelector('.dzahl');
+  if (zaehler) {
+    zaehler.textContent = z.netz.dreiecke.toLocaleString('de-DE') + ' Dreiecke';
+  }
+  modellWecken(z);
+}
+
+function modellKasten(kasten) {
+  if (kasten.dataset.modell || !offen) return;
+  const eintrag = (elemente || []).find(function (x) { return x.id === kasten.dataset.id; });
+  const datei = eintrag ? eintrag.datei : '';
+  const art = modellArt(datei);
+  if (!art) {
+    // Ein ZIP kann ein Gerber-Paket sein - das sagt erst sein Inhalt.
+    if (/\.zip$/i.test(datei || '')) platineKasten(kasten, datei);
+    else kasten.dataset.modell = 'nein';
+    return;
+  }
+  if (!window.WebGLRenderingContext) { kasten.dataset.modell = 'nein'; return; }
+  kasten.dataset.modell = 'ja';
+  kasten.classList.add('kasten-3d');
+
+  const bild = el('canvas', {});
+  const lade = el('p', { className: 'lade', textContent: 'Modell wird geladen …' });
+  const wo = el('div', { className: 'modell' }, [bild, lade]);
+  // Vor die Kachel: die bleibt als Fusszeile stehen und kann weiter
+  // herunterladen.
+  const kachel = kasten.querySelector('.datei');
+  if (kachel) {
+    kachel.before(wo);
+    kachel.append(el('span', { className: 'dzahl', textContent: '…' }));
+  } else {
+    kasten.append(wo);
+  }
+
+  const z = { kasten, wo, bild, datei, art, netz: null, glz: null,
+              seite: 0.6, hoehe: -0.5, weg: MODELL_WEG, punkt: [0, 0, 0],
+              laeuft: false };
+
+  // Erst laden, wenn das Modell ins Bild rollt: zehn Anhaenge auf einer
+  // Seite waeren sonst zehn Dateien auf einmal.
+  const sehen = new IntersectionObserver(function (treffer) {
+    for (const t of treffer) {
+      if (!t.isIntersecting) continue;
+      sehen.disconnect();
+      modellStarten(z).then(function () { lade.remove(); },
+                            function () { lade.remove(); });
+    }
+  }, { rootMargin: '200px' });
+  sehen.observe(wo);
+
+  if (window.ResizeObserver) {
+    new ResizeObserver(function () { modellZeichnen(z); }).observe(wo);
+  }
+}
+
+function modelleNachsehen() {
+  for (const k of document.querySelectorAll('.kasten-datei:not([data-modell])')) {
+    try { modellKasten(k); } catch (f) { console.error('[notizmappe] 3D:', f); }
+  }
+}
+
+function modelleBauen() {
+  if (!window.IntersectionObserver) return;
+  modelleNachsehen();
+  // Die Kaesten entstehen erst, wenn eine Seite geladen ist - und bei jedem
+  // Seitenwechsel neu.
+  // Nur die Kaesten selbst, ohne subtree: die haengen direkt an der
+  // Flaeche. Mit subtree liefe das bei jedem Tastendruck in einem Textkasten
+  // mit - contenteditable aendert dabei staendig Knoten.
+  const beobachter = new MutationObserver(modelleNachsehen);
+  beobachter.observe(flaeche || document.body, { childList: true });
+}
+
 (async () => {
   zoomSetzen(parseFloat(merker.holen('zoom', '1')));
   stifteHolen();
@@ -3784,7 +5380,8 @@ function rmFusszeile() {
   // Jeder Schritt fuer sich: faellt einer aus, laeuft der Rest trotzdem - und
   // man sieht im Protokoll, welcher es war.
   for (const [name, tun] of [['Formatleiste', formatleistenBauen],
-                             ['Rechtsklick', rechtsmenueBauen]]) {
+                             ['Rechtsklick', rechtsmenueBauen],
+                             ['Anhangvorschau', modelleBauen]]) {
     try { tun(); } catch (f) { console.error('[notizmappe] ' + name + ':', f); }
   }
   // Vor allem anderen: ist zugesperrt, wird hier gewartet, bis das Passwort
