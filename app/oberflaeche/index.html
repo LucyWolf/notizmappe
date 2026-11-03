@@ -286,20 +286,10 @@ window.addEventListener('unhandledrejection', function (ev) {
 
       <section class="dateiseite" data-punkt="konto" hidden>
         <h2>Konto</h2>
-        <p class="zeile2"><span>Server</span><span id="d-konto-stand">…</span></p>
-        <p class="knoepfe">
-          <button type="button" id="d-konto-einstellungen">Verbindung einrichten …</button>
-        </p>
         <p class="hinweis">Am eigenen Rechner gibt es kein Konto — die Notizen
-          liegen in einem Ordner. Ein Konto hat man nur auf einem Server.</p>
-      </section>
-
-      <section class="dateiseite" data-punkt="optionen" hidden>
-        <h2>Optionen</h2>
-        <div id="einstellungen">
-          <div class="tafel">
-      <section id="e-ferne-abschnitt" hidden>
-        <h3>Mit einem Server verbinden</h3>
+          liegen in einem Ordner. Ein Konto hat man auf einem Server, und hier
+          wird die Verbindung dorthin eingerichtet.</p>
+        <section id="e-ferne-abschnitt" hidden>
         <p class="zeile2"><span>Zustand</span><span id="e-ferne-stand">…</span></p>
         <div id="e-ferne-anmeldung">
           <p class="ordnerzeile">
@@ -338,7 +328,15 @@ window.addEventListener('unhandledrejection', function (ev) {
           läuft nach zwei Wochen ab und endet sofort, wenn du dort das Passwort
           änderst.</p>
         <p class="hinweis" id="e-ferne-hinweis"></p>
-</section>
+        </section>
+        <p class="hinweis" id="d-konto-sonst" hidden>Diese Fassung läuft auf einem
+          Server. Dein Konto verwaltet er selbst — angemeldet bist du schon.</p>
+      </section>
+
+      <section class="dateiseite" data-punkt="optionen" hidden>
+        <h2>Optionen</h2>
+        <div id="einstellungen">
+          <div class="tafel">
             <section>
         <h3>Daten</h3>
         <p class="zeile2"><span>Ordner</span><code id="e-ordner">…</code></p>

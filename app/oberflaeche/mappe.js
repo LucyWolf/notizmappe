@@ -2645,13 +2645,18 @@ async function dateiInfoFuellen() {
   } catch (f) { $('#d-sperre').textContent = '—'; }
 }
 
+/* Das Konto IST die Serververbindung - deshalb steht sie hier und nicht mehr
+ * zusätzlich in den Optionen. Vorher lag die Verbindung unten in den Optionen,
+ * und auf der Kontoseite stand nur ihr Zustand mit einem Knopf, der dorthin
+ * sprang: zwei Orte für eine Sache, und auf dem einen konnte man nichts tun. */
 async function dateiKontoFuellen() {
   try {
-    const f = await api('/api/ferne');
-    $('#d-konto-stand').textContent = f.aktiv
-      ? `verbunden mit ${f.adresse} als ${f.benutzer}`
-      : (f.angemeldet ? `angemeldet an ${f.adresse}, arbeitet örtlich` : 'nicht verbunden');
-  } catch (e) { $('#d-konto-stand').textContent = 'nur in der Fensterfassung'; }
+    const e = await api('/api/einstellungen');
+    ferneZeigen(e);
+    $('#d-konto-sonst').hidden = !!e.hier;
+  } catch (f) {
+    $('#e-ferne-hinweis').textContent = f.message;
+  }
 }
 
 function zuDenEinstellungen(punkt) {
@@ -2663,8 +2668,8 @@ function zuDenEinstellungen(punkt) {
   }, 80);
 }
 
-$('#d-konto-einstellungen').addEventListener('click', () => zuDenEinstellungen('e-ferne-abschnitt'));
-$('#d-server').addEventListener('click', () => zuDenEinstellungen('e-ferne-abschnitt'));
+// Beide Wege führen jetzt auf die Kontoseite, nicht mehr in die Optionen.
+$('#d-server').addEventListener('click', () => dateiPunkt('konto'));
 $('#d-ordner-waehlen').addEventListener('click', () => zuDenEinstellungen('e-ordnerwahl'));
 $('#d-onenote').addEventListener('click', () => zuDenEinstellungen('e-onenote'));
 $('#d-neu-buch').addEventListener('click', () => { dateiZeigen(false); $('#neues-buch').click(); });

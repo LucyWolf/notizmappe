@@ -180,8 +180,11 @@ gewinnt das und die Wahl ist gesperrt — Tests und Docker verlassen sich darauf
 
 ## Mit einem Server verbinden
 
-Einstellungen → **Mit einem Server verbinden**: Adresse, Benutzername, Passwort,
-**Anmelden**. Danach zwei Knöpfe — „Auf dem Server arbeiten" und „Eigene
+**Datei → Konto**: Adresse, Benutzername, Passwort, **Anmelden**. Das Konto
+*ist* die Serververbindung — am eigenen Rechner gibt es keins, die Notizen
+liegen ja in einem Ordner. Vorher stand die Verbindung unten in den Optionen
+und auf der Kontoseite nur ihr Zustand mit einem Knopf, der dorthin sprang:
+zwei Orte für eine Sache, und auf dem einen konnte man nichts tun. Danach zwei Knöpfe — „Auf dem Server arbeiten" und „Eigene
 Notizen". Verbunden arbeitet dieses Fenster gegen die
 [Serverfassung](https://github.com/LucyWolf/notizmappe-server) statt gegen den
 Ordner hier: derselbe Baum, dieselben Seiten, derselbe Verlauf.
@@ -312,8 +315,9 @@ nicht mehr:
 * **Informationen**: wo die Notizen liegen, Seitenzahl, Papierkorb, Platz,
   Sperre, Fassung — und darunter die **Updates** (prüfen, installieren, beim
   Start nachsehen, automatisch einspielen).
-* **Optionen**: Datenordner, Serververbindung, OneNote übernehmen, Sperre,
-  Schriften, Darstellung.
+* **Konto**: die Verbindung zu einem Server — anmelden, umschalten, abmelden.
+* **Optionen**: Datenordner, OneNote übernehmen, Sperre, Schriften,
+  Darstellung.
 
 Das Zahnrad unten in der Leiste führt jetzt ebenfalls dorthin, und jede Meldung
 mit „Einstellungen öffnen" auch.
