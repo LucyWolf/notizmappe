@@ -35,7 +35,9 @@ def pruefe(was, bedingung, extra=""):
 
 PAKET = b"#!/usr/bin/env bash\necho 'Probe-Installer gelaufen'\nsleep 0.2\necho 'Fertig.'\n"
 SUMME = hashlib.sha256(PAKET).hexdigest()
-ZUSTAND = {"version": "v1.0.9", "paket": PAKET, "summe": SUMME, "assets": True}
+ZUSTAND = {"version": "v1.0.9", "paket": PAKET, "summe": SUMME, "assets": True,
+           # Wie GitHub antwortet, wenn das Stundenlimit aufgebraucht ist.
+           "bremse": 0, "anfragen": 0}
 
 
 class Hand(BaseHTTPRequestHandler):
@@ -53,6 +55,17 @@ class Hand(BaseHTTPRequestHandler):
         basis = f"http://127.0.0.1:{self.server.server_port}"
         v = ZUSTAND["version"]
         if self.path.endswith("/releases/latest"):
+            ZUSTAND["anfragen"] += 1
+            if ZUSTAND["bremse"]:
+                roh = b'{"message": "API rate limit exceeded"}'
+                self.send_response(403)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("x-ratelimit-remaining", "0")
+                self.send_header("x-ratelimit-reset", str(int(ZUSTAND["bremse"])))
+                self.send_header("Content-Length", str(len(roh)))
+                self.end_headers()
+                self.wfile.write(roh)
+                return
             assets = []
             if ZUSTAND["assets"]:
                 assets = [
@@ -126,6 +139,41 @@ try:
     pruefe("Quellordner verweigert Update", False)
 except RuntimeError as f:
     pruefe("Quellordner verweigert Update", "git" in str(f).lower(), str(f))
+
+# --- Die Bremse von GitHub ---------------------------------------------------
+#
+# 60 Anfragen je Stunde und je Adresse, ohne Anmeldung - und die teilen sich
+# alle Programme im selben Netz. Dann steht da ein 403, und "GitHub antwortet
+# mit 403" hilft niemandem weiter: man sieht weder, dass es eine Bremse ist,
+# noch wann sie aufhoert, noch was man dagegen tun kann.
+print("\nWenn GitHub bremst")
+import time as _zeit                                        # noqa: E402
+
+ZUSTAND["bremse"] = _zeit.time() + 1800
+ZUSTAND["anfragen"] = 0
+mb = modul_laden(ARBEIT / "bremse", "1.0.1", True)
+s = mb.pruefen(frisch=True)
+pruefe("die Meldung sagt, dass es eine Bremse ist",
+       s["fehler"] and "keine Anfragen mehr" in s["fehler"], s["fehler"])
+pruefe("und wann es wieder geht",
+       _zeit.strftime("%H:%M", _zeit.localtime(ZUSTAND["bremse"])) in s["fehler"], s["fehler"])
+pruefe("und was man dagegen tun kann", "Token" in s["fehler"], s["fehler"])
+pruefe("gefragt wurde genau einmal", ZUSTAND["anfragen"] == 1, ZUSTAND["anfragen"])
+
+# Und jetzt das Eigentliche: nicht gegen die zugehaltene Tuer rennen. Auch der
+# Knopf "Nach Updates suchen" darf bis dahin nicht noch einmal anklopfen.
+mb.pruefen()
+mb.pruefen(frisch=True)
+pruefe("bis zur Freigabe wird nicht wieder gefragt", ZUSTAND["anfragen"] == 1, ZUSTAND["anfragen"])
+pruefe("und die Meldung bleibt stehen", "keine Anfragen mehr" in mb.pruefen()["fehler"])
+
+# Ist die Sperrzeit vorbei, geht es von selbst weiter.
+ZUSTAND["bremse"] = 0
+notiz = json.loads(mb.NOTIZ.read_text(encoding="utf-8"))
+notiz["wieder"] = _zeit.time() - 1
+mb.NOTIZ.write_text(json.dumps(notiz), encoding="utf-8")
+s = mb.pruefen(frisch=True)
+pruefe("danach fragt es wieder", ZUSTAND["anfragen"] == 2 and s["fehler"] is None, (ZUSTAND["anfragen"], s))
 
 m6 = modul_laden(ARBEIT / "f", "1.0.1", True)
 r = m6.einspielen()

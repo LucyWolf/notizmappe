@@ -502,6 +502,20 @@ Angestoßen wird es nur aus dem Programm selbst — von außen gibt es keinen We
 hinein, weil nichts lauscht. Protokoll des letzten Updates:
 `~/.local/share/notizmappe/.update.log`.
 
+### „GitHub lässt gerade keine Anfragen mehr zu"
+
+Ohne Anmeldung lässt GitHub **60 Anfragen je Stunde und je Adresse** zu — und
+die teilen sich *alle* Programme im selben Netz: dieses Fenster, die
+Serverfassung, jeder andere Bot. Ist das Kontingent weg, antwortet GitHub mit
+403, und in der Meldung steht dann, **ab wann** es wieder geht.
+
+Bis dahin fragt die Mappe nicht noch einmal nach — auch nicht auf Knopfdruck.
+Gegen eine zugehaltene Tür zu rennen, verbraucht nur weitere Versuche und sagt
+nichts Neues. Der Knopf zeigt die alte Antwort samt Uhrzeit.
+
+Wen das öfter trifft, legt einen Token hin (siehe unten): damit sind es 5000
+Anfragen je Stunde statt 60.
+
 Ist das Repo **privat**, kommt die Update-Prüfung nicht an die GitHub-API (404) und
 der Knopf bleibt aus. Dann entweder das Repo öffentlich machen oder einen Token
 hinlegen:

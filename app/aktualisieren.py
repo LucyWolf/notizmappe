@@ -164,19 +164,64 @@ def neuestes_release() -> dict:
     }
 
 
+def _wieder_ab(f) -> float:
+    """Ab wann GitHub wieder antwortet - 0, wenn das nichts mit einer Bremse zu tun hat."""
+    kopf = getattr(f, "headers", None) or {}
+    if f.code not in (403, 429):
+        return 0.0
+    for name in ("x-ratelimit-reset", "X-RateLimit-Reset"):
+        try:
+            if kopf.get(name) and str(kopf.get("x-ratelimit-remaining", "0")) == "0":
+                return float(kopf[name])
+        except (TypeError, ValueError):
+            pass
+    try:
+        return time.time() + float(kopf.get("retry-after") or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _httpfehler(f) -> str:
+    """Aus einem HTTP-Fehler einen Satz machen, mit dem jemand etwas anfangen kann.
+
+    "GitHub antwortet mit 403" sagt niemandem etwas. In neun von zehn Faellen
+    ist es die Bremse: ohne Anmeldung laesst GitHub 60 Anfragen je Stunde und
+    je Adresse zu, und die teilen sich alle Programme im selben Netz. Dann
+    gehoert in die Meldung, wann es wieder geht - und dass ein Token das auf
+    5000 hebt.
+    """
+    if f.code == 404:
+        return "Repo ist privat - ohne Token kein Zugriff (404)"
+    wieder = _wieder_ab(f)
+    if wieder:
+        wann = time.strftime("%H:%M", time.localtime(wieder))
+        return (f"GitHub lässt gerade keine Anfragen mehr zu, nächster Versuch ab {wann} Uhr. "
+                "Ohne Anmeldung sind es 60 je Stunde für das ganze Netz; "
+                "ein Token in ~/.config/notizmappe/token hebt das auf 5000.")
+    if f.code in (401, 403):
+        return (f"GitHub antwortet mit {f.code} - sieht nach einem abgelaufenen "
+                "oder zu schwachen Token aus (~/.config/notizmappe/token).")
+    return f"GitHub antwortet mit {f.code}"
+
+
 def pruefen(frisch: bool = False) -> dict:
     """Stand melden. Antworten werden eine Stunde lang wiederverwendet, damit nicht
     jeder Seitenaufruf bei GitHub anklopft (und in die Bremse laeuft)."""
     jetzt = time.time()
-    if not frisch:
-        try:
-            alt = json.loads(NOTIZ.read_text(encoding="utf-8"))
-            if jetzt - alt.get("geprueft", 0) < FRIST:
-                alt["installiert"] = installierte_version()
-                alt["neuer"] = version_tupel(alt.get("verfuegbar")) > version_tupel(alt["installiert"])
-                return alt
-        except (OSError, ValueError):
-            pass
+    try:
+        alt = json.loads(NOTIZ.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        alt = None
+    # Sagt GitHub "ab 17:02 wieder", dann hat auch der Knopf keinen Sinn: jede
+    # weitere Anfrage waere noch eine, die abgewiesen wird.
+    if alt and jetzt < float(alt.get("wieder") or 0):
+        alt["installiert"] = installierte_version()
+        alt["neuer"] = version_tupel(alt.get("verfuegbar")) > version_tupel(alt["installiert"])
+        return alt
+    if not frisch and alt and jetzt - alt.get("geprueft", 0) < FRIST:
+        alt["installiert"] = installierte_version()
+        alt["neuer"] = version_tupel(alt.get("verfuegbar")) > version_tupel(alt["installiert"])
+        return alt
 
     stand = {
         "installiert": installierte_version(),
@@ -196,8 +241,8 @@ def pruefen(frisch: bool = False) -> dict:
             stand["fehler"] = "Am Release hängt keine Installationsdatei"
             stand["neuer"] = False
     except urllib.error.HTTPError as f:
-        stand["fehler"] = ("Repo ist privat - ohne Token kein Zugriff (404)" if f.code == 404
-                           else f"GitHub antwortet mit {f.code}")
+        stand["fehler"] = _httpfehler(f)
+        stand["wieder"] = _wieder_ab(f)
     except (urllib.error.URLError, ValueError, TimeoutError) as f:
         stand["fehler"] = f"GitHub nicht erreichbar: {f}"
     try:
