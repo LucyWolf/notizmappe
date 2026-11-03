@@ -688,7 +688,13 @@ class Bruecke:
             # Datenordner umstellen und Updates einspielen laesst - fehlt das
             # Feld, ist das Ordnerfeld stillschweigend weg (genau das war es).
             "hier": True,
-            "ordner": (f"Server: {verbindung['adresse']} ({verbindung['benutzer']})"
+            # Was in der Leiste steht. Am Server der Name der Mappe, wenn sie
+            # dort einen hat - sonst die Adresse; "Server: 192.168.178.27:8112"
+            # sagt niemandem etwas, der zwei davon hat. Oertlich steht da
+            # "Eigener Ordner": der Pfad ist eine Angabe fuer die
+            # Informationen-Seite, nicht fuer die Leiste.
+            "ordner": (f"Server: {verbindung.get('mappe') or verbindung['adresse']}"
+                       f" ({verbindung['benutzer']})"
                        if verbindung["aktiv"]
                        else (str(ordner) if ordner else speicher.gewaehlter_ordner())),
             "ordner_fehlt": fehlt,

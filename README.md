@@ -190,8 +190,20 @@ Notizen". Verbunden arbeitet dieses Fenster gegen die
 [Serverfassung](https://github.com/LucyWolf/notizmappe-server) statt gegen den
 Ordner hier: derselbe Baum, dieselben Seiten, derselbe Verlauf.
 
-Oben in der Seitenleiste steht dann `Server: http://… (name)` statt des
-Ordnerpfads. **Man darf nie im Zweifel sein, wo man gerade schreibt.**
+Oben in der Seitenleiste steht dann `Server: … (benutzer)` statt des eigenen
+Ordners, in der Akzentfarbe. **Man darf nie im Zweifel sein, wo man gerade
+schreibt.**
+
+Hat die Mappe am Server einen **Namen** (dort unter *Einstellungen → Name*),
+steht der da: `Server: Keller (wolfi)`. Sonst die Adresse. Der Name wird beim
+Anmelden einmal geholt und mitgemerkt; geht das schief, bleibt es bei der
+Adresse — ein Name ist eine Bequemlichkeit und nichts, woran eine Anmeldung
+scheitern darf. Beim Abmelden wird er wieder vergessen, sonst stünde er beim
+nächsten Server noch da.
+
+Arbeitest du örtlich, steht dort **Eigener Ordner**. Der Pfad hängt als Hinweis
+daran und steht unter *Datei → Informationen* — in der Leiste zählt die Frage
+„hier oder dort?", nicht der Pfad.
 
 Fragt der Server nach **zwei Schritten**, erscheint gleich darunter das Feld
 für den Code aus der Authenticator-App — oder für einen Notfallcode. Der

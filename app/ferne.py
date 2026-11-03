@@ -41,6 +41,7 @@ def _einstellung() -> dict:
         "benutzer": str(d.get("ferne_benutzer") or "").strip(),
         "keks": str(d.get("ferne_keks") or "").strip(),
         "aktiv": bool(d.get("ferne_aktiv")),
+        "mappe": str(d.get("ferne_mappe") or "").strip(),
     }
 
 
@@ -54,7 +55,32 @@ def stand() -> dict:
     e = _einstellung()
     return {"adresse": e["adresse"], "benutzer": e["benutzer"],
             "angemeldet": bool(e["keks"]), "aktiv": aktiv(),
+            # Wie die Mappe am Server heisst, falls sie dort einen Namen hat.
+            # "Server: http://192.168.178.27:8112" sagt einem nichts, wenn man
+            # zwei davon hat - "Server: Keller" schon.
+            "mappe": e["mappe"],
             "braucht_code": bool(konfig.lesen().get("ferne_halb") and not e["keks"])}
+
+
+def namen_holen() -> str:
+    """Den Namen der Mappe am Server holen und merken.
+
+    Laeuft nach dem Anmelden. Geht es schief - alte Serverfassung, kein Netz
+    mehr, Name nicht gesetzt -, bleibt es eben bei der Adresse: ein Name ist
+    eine Bequemlichkeit und nichts, woran eine Anmeldung scheitern darf.
+    """
+    e = _einstellung()
+    if not (e["adresse"] and e["keks"]):
+        return ""
+    try:
+        lage, rumpf, _ = _schicken(e["adresse"], "/bereiche", None,
+                                   {"Cookie": f"{KEKS}={e['keks']}",
+                                    "X-Notizmappe": "1"}, "GET")
+        name = str(json.loads(rumpf).get("mappe") or "").strip()[:40] if lage == 200 else ""
+    except (FerneFehler, ValueError, AttributeError):
+        name = ""
+    konfig.aendern(ferne_mappe=name)
+    return name
 
 
 def _adresse_pruefen(roh: str) -> str:
@@ -155,7 +181,8 @@ def anmelden(adresse: str, benutzer: str, passwort: str) -> dict:
     if lage == 303 and keks:
         konfig.aendern(ferne_adresse=adresse, ferne_benutzer=benutzer,
                        ferne_keks=keks, ferne_aktiv=True)
-        return {"ok": True, "adresse": adresse, "benutzer": benutzer}
+        return {"ok": True, "adresse": adresse, "benutzer": benutzer,
+                "mappe": namen_holen()}
 
     wohin = kopf.get("location") or ""
     # Zwei Schritte: das Passwort hat gestimmt, jetzt fehlt noch der Code aus
@@ -189,7 +216,8 @@ def code_senden(code: str) -> dict:
     keks = _keks_aus(kopf, KEKS)
     if lage == 303 and keks:
         konfig.aendern(ferne_keks=keks, ferne_aktiv=True, ferne_halb=None)
-        return {"ok": True, "adresse": e["adresse"], "benutzer": e["benutzer"]}
+        return {"ok": True, "adresse": e["adresse"], "benutzer": e["benutzer"],
+                "mappe": namen_holen()}
     wohin = kopf.get("location") or ""
     if "fehler=" in wohin:
         raise FerneFehler(urllib.parse.unquote_plus(wohin.split("fehler=", 1)[1]))
@@ -200,7 +228,10 @@ def code_senden(code: str) -> dict:
 
 
 def abmelden() -> dict:
-    konfig.aendern(ferne_keks=None, ferne_aktiv=False, ferne_halb=None)
+    # Der Name gehoert zur Anmeldung: bleibt er liegen, steht er beim
+    # naechsten Server in der Leiste, obwohl der ganz anders heisst.
+    konfig.aendern(ferne_keks=None, ferne_aktiv=False, ferne_halb=None,
+                   ferne_mappe=None)
     return {"ok": True}
 
 

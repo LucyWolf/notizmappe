@@ -228,6 +228,20 @@ function baumMeldung(text, knopf) {
   baum.append(kasten);
 }
 
+/* Was oben in der Leiste steht. Am Server der Name der Mappe dort, oertlich
+ * "Eigener Ordner" - der Pfad gehoert in den Hinweis, nicht in die Zeile:
+ * C:\\Users\\wolfi\\Notizen sagt einem beim Hinsehen nichts, was man nicht
+ * ohnehin weiss, und bei einem langen Pfad steht die Leiste voll. Was zaehlt,
+ * ist: schreibe ich gerade hier oder dort? */
+function ordnerZeigen(e) {
+  const wo = $('#ordner');
+  if (!wo || !e) return;
+  const fern = e.ferne && e.ferne.aktiv;
+  wo.textContent = fern ? e.ordner : 'Eigener Ordner';
+  wo.title = fern ? e.ordner : 'Datenordner: ' + (e.ordner || '?');
+  wo.classList.toggle('amserver', !!fern);
+}
+
 function baumZeichnen() {
   const baum = $('#baum');
   baum.textContent = '';
@@ -235,8 +249,7 @@ function baumZeichnen() {
     baumMeldung('Hier liegt noch kein Notizbuch.', ['Einstellungen öffnen', () => tafelZeigen(true)]);
     // Wo "hier" ist, gehört dazu - sonst sucht man an der falschen Stelle.
     api('/api/einstellungen').then((e) => {
-      const wo = $('#ordner');
-      if (wo && e && e.ordner) { wo.textContent = e.ordner; wo.title = 'Datenordner: ' + e.ordner; }
+      ordnerZeigen(e);
       const kasten = $('#baum').querySelector('.baumleer');
       if (kasten && e && e.ordner) {
         kasten.firstChild.textContent = `Hier liegt noch kein Notizbuch (${e.ordner}).`;
@@ -3682,11 +3695,7 @@ function rmFusszeile() {
     const e = await api('/api/einstellungen');
     // Wo die Notizen liegen, gehört in die Leiste - die ist immer zu sehen,
     // auch wenn das Fenster schmal gezogen ist.
-    if (e && e.ordner) {
-      const wo = $('#ordner');
-      wo.textContent = e.ordner;
-      wo.title = 'Datenordner: ' + e.ordner;
-    }
+    ordnerZeigen(e);
     if (!erstesSeitchen() && e.andere_orte && e.andere_orte.length) {
       const ziel = e.andere_orte[0];
       const wechseln = async () => {

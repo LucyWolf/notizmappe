@@ -726,3 +726,8 @@ body { display: flex; flex-direction: column; }
   border-radius: 0 0 8px 8px;
 }
 .rm-aus { opacity: .45; pointer-events: none; }
+
+/* Am Server steht in der Leiste der Name der Mappe dort, und er soll sich
+   vom eigenen Ordner unterscheiden: man darf nie im Zweifel sein, wo man
+   gerade schreibt. */
+#ordner.amserver { color: var(--akzent); font-weight: 600; }
