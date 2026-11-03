@@ -207,9 +207,11 @@ nächsten Server noch da.
 ### Beide Seiten in einer Leiste
 
 Sobald du angemeldet bist, stehen in der Leiste **beide** Bäume untereinander,
-jeder mit einer Überschrift: die Notizbücher am Server und die eigenen hier.
-Oben steht die Seite, an der du gerade arbeitest — ihre Überschrift ist in der
-Akzentfarbe, die andere blass.
+jeder mit einer Überschrift: oben die Notizbücher am Server, darunter die
+eigenen. Die Reihenfolge bleibt immer dieselbe — danach zu sortieren, wo man
+gerade arbeitet, sah klug aus und war unruhig: beim Umschalten sprangen die
+Notizbücher aneinander vorbei. Wo du schreibst, sagt die Überschrift in der
+Akzentfarbe; die andere steht blass da.
 
 Ein Klick auf eine Seite drüben **schaltet still um**: Ungespeichertes wird
 noch weggeschrieben, das Fenster stellt um, lädt kurz neu und öffnet genau

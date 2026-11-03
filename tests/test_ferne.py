@@ -211,8 +211,7 @@ print("\nBeide Seiten in der Leiste")
 (DATEN / "Hier daheim" / "Teil").mkdir(parents=True, exist_ok=True)
 baum = b.baum()
 _namen = [(x.get("name"), x.get("quelle")) for x in baum.get("notizbuecher") or []]
-pruefe("Der Server steht oben, wenn man dort arbeitet",
-       _namen[:1] == [("Vom Server", "server")], _namen)
+pruefe("Der Server steht oben", _namen[:1] == [("Vom Server", "server")], _namen)
 pruefe("Und die eigenen stehen auch da",
        ("Hier daheim", "eigen") in _namen, _namen)
 pruefe("Die Leiste weiss, welche Seite gerade gilt", baum.get("jetzt") == "server", baum.get("jetzt"))
@@ -220,8 +219,8 @@ pruefe("Die Leiste weiss, welche Seite gerade gilt", baum.get("jetzt") == "serve
 b.ferne_umschalten({"an": False})
 baum = b.baum()
 _namen = [(x.get("name"), x.get("quelle")) for x in baum.get("notizbuecher") or []]
-pruefe("Oertlich stehen die eigenen oben",
-       _namen[:1] == [("Hier daheim", "eigen")], _namen)
+pruefe("Der Server bleibt auch dann oben - die Leiste springt nicht",
+       _namen[:1] == [("Vom Server", "server")], _namen)
 pruefe("Der Server bleibt trotzdem sichtbar", ("Vom Server", "server") in _namen, _namen)
 pruefe("Und die Seite stimmt", baum.get("jetzt") == "eigen", baum.get("jetzt"))
 

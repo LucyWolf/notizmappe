@@ -277,8 +277,12 @@ class Bruecke:
             if stand["aktiv"]:
                 raise
         return {
-            # Oben steht, woran gerade gearbeitet wird.
-            "notizbuecher": (fern + eigen) if stand["aktiv"] else (eigen + fern),
+            # Der Server steht immer oben. Nach der gerade aktiven Seite zu
+            # sortieren war naheliegend und in der Leiste unruhig: beim
+            # Umschalten sprangen die Notizbuecher aneinander vorbei, und man
+            # sucht hinterher, wo das eigene geblieben ist. Wo man schreibt,
+            # sagt die Ueberschrift in der Akzentfarbe.
+            "notizbuecher": fern + eigen,
             "ordner": str(speicher.wurzel()) if not stand["aktiv"] else "",
             "jetzt": "server" if stand["aktiv"] else "eigen",
             "mappe": stand.get("mappe") or "Servermappe",
