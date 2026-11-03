@@ -195,6 +195,15 @@ jobs:
     # und Windows-Minuten zaehlen doppelt.
     timeout-minutes: 25
     runs-on: windows-latest
+    # Die Probe spielt ein echtes Selbstupdate durch und holt sich dafuer das
+    # Release ueber die GitHub-API. Ohne Anmeldung sind das 60 Anfragen je
+    # Stunde und je Adresse - und die Adresse eines Actions-Laeufers teilen
+    # sich viele. Genau daran ist die Probe zu v1.1.87 gescheitert: "HTTP
+    # Error 403: rate limit exceeded", mitten im Update. Mit dem Token des
+    # Laufs sind es 1000, und die Probe prueft wieder das Update statt das
+    # Wetter bei GitHub.
+    env:
+      NOTIZMAPPE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Setup aus dem Release holen
         shell: pwsh
