@@ -56,8 +56,8 @@ def stand() -> dict:
     return {"adresse": e["adresse"], "benutzer": e["benutzer"],
             "angemeldet": bool(e["keks"]), "aktiv": aktiv(),
             # Wie die Mappe am Server heisst, falls sie dort einen Namen hat.
-            # "Server: http://192.168.178.27:8112" sagt einem nichts, wenn man
-            # zwei davon hat - "Server: Keller" schon.
+            # "http://192.168.178.27:8112" sagt einem nichts, wenn man zwei
+            # davon hat - der Name der Mappe schon.
             "mappe": e["mappe"],
             "braucht_code": bool(konfig.lesen().get("ferne_halb") and not e["keks"])}
 

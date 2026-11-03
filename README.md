@@ -190,12 +190,13 @@ Notizen". Verbunden arbeitet dieses Fenster gegen die
 [Serverfassung](https://github.com/LucyWolf/notizmappe-server) statt gegen den
 Ordner hier: derselbe Baum, dieselben Seiten, derselbe Verlauf.
 
-Oben in der Seitenleiste steht dann `Server: … (benutzer)` statt des eigenen
-Ordners, in der Akzentfarbe. **Man darf nie im Zweifel sein, wo man gerade
-schreibt.**
+Oben in der Seitenleiste steht dann der **Name der Mappe am Server** statt des
+eigenen Ordners, in der Akzentfarbe: `Servermappe (wolfi)`. **Man darf nie im
+Zweifel sein, wo man gerade schreibt.**
 
-Hat die Mappe am Server einen **Namen** (dort unter *Einstellungen → Name*),
-steht der da: `Server: Keller (wolfi)`. Sonst die Adresse. Der Name wird beim
+Den Namen vergibt der Server (dort unter *Einstellungen → Name*); ohne eigenen
+heißt er dort „Servermappe". Eine ältere Serverfassung kennt das noch nicht —
+dann steht die Adresse da, mit `Server:` davor. Der Name wird beim
 Anmelden einmal geholt und mitgemerkt; geht das schief, bleibt es bei der
 Adresse — ein Name ist eine Bequemlichkeit und nichts, woran eine Anmeldung
 scheitern darf. Beim Abmelden wird er wieder vergessen, sonst stünde er beim
