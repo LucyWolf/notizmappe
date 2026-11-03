@@ -2583,7 +2583,7 @@ $('#e-onenote').addEventListener('click', async () => {
 /* --------------------------------------------------------------- Datei
  *
  * Die Ebene über den Notizen: was man sonst in einem Menü "Datei" sucht -
- * wo liegt das hier, was ist neu, drucken, exportieren, Konto, Optionen.
+ * wo liegt das hier, was ist neu, drucken, exportieren, Server, Optionen.
  */
 
 function dateiZeigen(an) {
@@ -2607,7 +2607,7 @@ function dateiPunkt(punkt) {
     s.hidden = s.dataset.punkt !== punkt;
   }
   if (punkt === 'info') dateiInfoFuellen();
-  if (punkt === 'konto') dateiKontoFuellen();
+  if (punkt === 'server') dateiServerFuellen();
   // "Installiert", die Update-Knoepfe und die beiden Haken stehen in
   // #einstellungen-oben, und das liegt auf der Informationen-Seite. Gefuellt
   // werden sie aber von einstellungenLaden() - wer die Datei-Ebene ueber das
@@ -2645,15 +2645,16 @@ async function dateiInfoFuellen() {
   } catch (f) { $('#d-sperre').textContent = '—'; }
 }
 
-/* Das Konto IST die Serververbindung - deshalb steht sie hier und nicht mehr
- * zusätzlich in den Optionen. Vorher lag die Verbindung unten in den Optionen,
- * und auf der Kontoseite stand nur ihr Zustand mit einem Knopf, der dorthin
- * sprang: zwei Orte für eine Sache, und auf dem einen konnte man nichts tun. */
-async function dateiKontoFuellen() {
+/* Eine eigene Seite, weil es eine eigene Sache ist. Vorher hiess sie "Konto"
+ * und zeigte nur den Zustand mit einem Knopf, der in die Optionen sprang, wo
+ * das Formular lag: zwei Orte für eine Sache, und auf dem einen konnte man
+ * nichts tun. "Konto" war dazu geraten - man hat hier keins, man verbindet
+ * sich mit einem Server. */
+async function dateiServerFuellen() {
   try {
     const e = await api('/api/einstellungen');
     ferneZeigen(e);
-    $('#d-konto-sonst').hidden = !!e.hier;
+    $('#d-server-sonst').hidden = !!e.hier;
   } catch (f) {
     $('#e-ferne-hinweis').textContent = f.message;
   }
@@ -2668,8 +2669,8 @@ function zuDenEinstellungen(punkt) {
   }, 80);
 }
 
-// Beide Wege führen jetzt auf die Kontoseite, nicht mehr in die Optionen.
-$('#d-server').addEventListener('click', () => dateiPunkt('konto'));
+// Beide Wege führen auf die Serverseite, nicht mehr in die Optionen.
+$('#d-server').addEventListener('click', () => dateiPunkt('server'));
 $('#d-ordner-waehlen').addEventListener('click', () => zuDenEinstellungen('e-ordnerwahl'));
 $('#d-onenote').addEventListener('click', () => zuDenEinstellungen('e-onenote'));
 $('#d-neu-buch').addEventListener('click', () => { dateiZeigen(false); $('#neues-buch').click(); });

@@ -208,7 +208,7 @@ window.addEventListener('unhandledrejection', function (ev) {
       <button type="button" class="dateipunkt" data-punkt="drucken">Drucken</button>
       <button type="button" class="dateipunkt" data-punkt="exportieren">Exportieren</button>
       <span class="dateitrenner"></span>
-      <button type="button" class="dateipunkt" data-punkt="konto">Konto</button>
+      <button type="button" class="dateipunkt" data-punkt="server">Server</button>
       <button type="button" class="dateipunkt" data-punkt="optionen">Optionen</button>
     </div>
     <div id="dateiinhalt">
@@ -284,11 +284,12 @@ window.addEventListener('unhandledrejection', function (ev) {
         <p class="hinweis" id="d-export-hinweis"></p>
       </section>
 
-      <section class="dateiseite" data-punkt="konto" hidden>
-        <h2>Konto</h2>
-        <p class="hinweis">Am eigenen Rechner gibt es kein Konto — die Notizen
-          liegen in einem Ordner. Ein Konto hat man auf einem Server, und hier
-          wird die Verbindung dorthin eingerichtet.</p>
+      <section class="dateiseite" data-punkt="server" hidden>
+        <h2>Mit einem Server verbinden</h2>
+        <p class="hinweis">Am eigenen Rechner liegen die Notizen in einem Ordner —
+          da gibt es nichts zu verbinden. Hast du die Notizmappe zusätzlich auf
+          einem Server, meldest du dich hier dort an und arbeitest im selben
+          Fenster gegen deine Notizen dort.</p>
         <section id="e-ferne-abschnitt" hidden>
         <p class="zeile2"><span>Zustand</span><span id="e-ferne-stand">…</span></p>
         <div id="e-ferne-anmeldung">
@@ -329,8 +330,8 @@ window.addEventListener('unhandledrejection', function (ev) {
           änderst.</p>
         <p class="hinweis" id="e-ferne-hinweis"></p>
         </section>
-        <p class="hinweis" id="d-konto-sonst" hidden>Diese Fassung läuft auf einem
-          Server. Dein Konto verwaltet er selbst — angemeldet bist du schon.</p>
+        <p class="hinweis" id="d-server-sonst" hidden>Diese Fassung läuft schon auf
+          einem Server — angemeldet bist du, und zu verbinden gibt es nichts.</p>
       </section>
 
       <section class="dateiseite" data-punkt="optionen" hidden>

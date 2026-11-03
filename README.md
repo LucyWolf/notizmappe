@@ -180,11 +180,12 @@ gewinnt das und die Wahl ist gesperrt — Tests und Docker verlassen sich darauf
 
 ## Mit einem Server verbinden
 
-**Datei → Konto**: Adresse, Benutzername, Passwort, **Anmelden**. Das Konto
-*ist* die Serververbindung — am eigenen Rechner gibt es keins, die Notizen
-liegen ja in einem Ordner. Vorher stand die Verbindung unten in den Optionen
-und auf der Kontoseite nur ihr Zustand mit einem Knopf, der dorthin sprang:
-zwei Orte für eine Sache, und auf dem einen konnte man nichts tun. Danach zwei Knöpfe — „Auf dem Server arbeiten" und „Eigene
+**Datei → Server**: Adresse, Benutzername, Passwort, **Anmelden**. Eine eigene
+Seite, weil es eine eigene Sache ist. Vorher lag das Formular unten in den
+Optionen, und eine Seite namens „Konto" zeigte nur seinen Zustand mit einem
+Knopf, der dorthin sprang: zwei Orte für eine Sache, auf dem einen konnte man
+nichts tun — und ein Konto hat man hier ohnehin nicht, man verbindet sich mit
+einem Server. Danach zwei Knöpfe — „Auf dem Server arbeiten" und „Eigene
 Notizen". Verbunden arbeitet dieses Fenster gegen die
 [Serverfassung](https://github.com/LucyWolf/notizmappe-server) statt gegen den
 Ordner hier: derselbe Baum, dieselben Seiten, derselbe Verlauf.
@@ -306,7 +307,7 @@ OneNote:
 
 **Datei** ist kein Reiter mit Werkzeugen, sondern eine Ebene darüber: eine
 ganzseitige Übersicht mit **Informationen**, **Neu**, **Öffnen** (anderer
-Ordner, Server, OneNote), **Drucken**, **Exportieren**, **Konto** und
+Ordner, Server, OneNote), **Drucken**, **Exportieren**, **Server** und
 **Optionen**. Zurück mit dem Pfeil oder `Esc`.
 
 Dort wohnen auch die Einstellungen — ein eigenes Einstellungsfenster gibt es
@@ -315,7 +316,9 @@ nicht mehr:
 * **Informationen**: wo die Notizen liegen, Seitenzahl, Papierkorb, Platz,
   Sperre, Fassung — und darunter die **Updates** (prüfen, installieren, beim
   Start nachsehen, automatisch einspielen).
-* **Konto**: die Verbindung zu einem Server — anmelden, umschalten, abmelden.
+* **Server**: die Verbindung zu einem Server — anmelden, umschalten, abmelden.
+  Hieß vorher „Konto"; man hat hier aber keins, man verbindet sich mit einem
+  Server.
 * **Optionen**: Datenordner, OneNote übernehmen, Sperre, Schriften,
   Darstellung.
 
