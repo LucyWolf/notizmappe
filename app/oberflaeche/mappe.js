@@ -240,7 +240,11 @@ function ordnerZeigen(e) {
   if (!wo || !e) return;
   const fern = e.ferne && e.ferne.aktiv;
   wo.textContent = fern ? e.ordner : 'Eigener Ordner';
-  wo.title = fern ? e.ordner : 'Datenordner: ' + (e.ordner || '?');
+  // Die Adresse gehoert in den Hinweis, nicht in die Zeile: dort wird sie
+  // abgeschnitten, und wissen will man "hier oder dort", nicht "welcher Port".
+  wo.title = fern
+    ? `${e.ferne.adresse || 'Server'} als ${e.ferne.benutzer || '?'}`
+    : 'Datenordner: ' + (e.ordner || '?');
   wo.classList.toggle('amserver', !!fern);
 }
 

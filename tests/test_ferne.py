@@ -189,8 +189,12 @@ pruefe("Anlegen passiert auf dem Server", angelegt.get("name") == "Vom Server an
 pruefe("Im eigenen Ordner entsteht dabei nichts", not list(DATEN.glob("*")), list(DATEN.glob("*")))
 pruefe("Die Werte kommen mit", ("notizbuch_anlegen", ["Neues Buch"]) in gerufen, gerufen[-3:])
 e = b.einstellungen()
+# Kurz halten: in der schmalen Leiste wird eine Adresse ohnehin
+# abgeschnitten. Hat die Mappe am Server einen Namen, steht der da.
 pruefe("Die Leiste zeigt den Server statt eines Pfads",
-       e["ordner"].startswith("Server: "), e["ordner"])
+       e["ordner"] == "Server verbunden", e["ordner"])
+pruefe("Und kein Pfad und keine Adresse",
+       "/" not in e["ordner"] and ":" not in e["ordner"], e["ordner"])
 pruefe("Und die Einstellungen kennen den Zustand", e["ferne"]["aktiv"] is True)
 
 # Was oertlich bleiben muss, bleibt oertlich

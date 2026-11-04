@@ -779,8 +779,11 @@ class Bruecke:
             # nicht fuer die Leiste.
             "ordner": (f"{verbindung['mappe']} ({verbindung['benutzer']})"
                        if verbindung["aktiv"] and verbindung.get("mappe")
-                       else (f"Server: {verbindung['adresse']} ({verbindung['benutzer']})"
-                             if verbindung["aktiv"]
+                       # Ohne Namen (aeltere Serverfassung) nur "Server
+                       # verbunden": eine Adresse in der schmalen Leiste wird
+                       # ohnehin abgeschnitten und beantwortet die Frage nicht,
+                       # die man dort hat. Sie steht im Hinweis daran.
+                       else ("Server verbunden" if verbindung["aktiv"]
                              else (str(ordner) if ordner else speicher.gewaehlter_ordner()))),
             "ordner_fehlt": fehlt,
             "ordner_quelle": speicher.ordner_quelle(),

@@ -198,7 +198,9 @@ Zweifel sein, wo man gerade schreibt.**
 
 Den Namen vergibt der Server (dort unter *Einstellungen → Name*); ohne eigenen
 heißt er dort „Servermappe". Eine ältere Serverfassung kennt das noch nicht —
-dann steht die Adresse da, mit `Server:` davor. Der Name wird beim
+dann steht schlicht **Server verbunden** da. Die Adresse steht im Hinweis am
+Text, nicht in der Zeile: in der schmalen Leiste wird sie abgeschnitten, und
+wissen will man „hier oder dort", nicht „welcher Port". Der Name wird beim
 Anmelden einmal geholt und mitgemerkt; geht das schief, bleibt es bei der
 Adresse — ein Name ist eine Bequemlichkeit und nichts, woran eine Anmeldung
 scheitern darf. Beim Abmelden wird er wieder vergessen, sonst stünde er beim
