@@ -1712,11 +1712,18 @@ function updateBalken(v) {
   const schon = $('#updatebalken');
   if (schon) schon.remove();
   const melden = (t) => { const z = $('#u-text'); if (z) z.textContent = t; };
+  // Laeuft das hier nicht aus einer Installation, laesst sich nichts
+  // einspielen - aber da ist trotzdem eine neue Fassung, und das gehoert
+  // gesagt. Vorher kam in diesem Fall gar nichts, und es sah aus, als
+  // pruefe das Fenster nie nach.
+  const geht = !!v.aktualisierbar;
   const text = Object.assign(document.createElement('span'),
     { id: 'u-text',
-      textContent: `Fassung ${v.verfuegbar} ist da - hier läuft ${v.installiert}.` });
+      textContent: `Fassung ${v.verfuegbar} ist da - hier läuft ${v.installiert}.`
+        + (geht ? '' : ' Dieses Fenster läuft nicht aus einer Installation,'
+                     + ' deshalb lässt es sich hier nicht einspielen.') });
   const jetzt = Object.assign(document.createElement('button'),
-    { type: 'button', id: 'u-jetzt', textContent: 'Jetzt aktualisieren' });
+    { type: 'button', id: 'u-jetzt', textContent: 'Jetzt aktualisieren', hidden: !geht });
   const weg = Object.assign(document.createElement('button'),
     { type: 'button', id: 'u-spaeter', title: 'Für diese Fassung nicht mehr fragen',
       textContent: 'Später' });
@@ -1764,7 +1771,11 @@ function updateHinweisBauen() {
       setTimeout(nachsehen, 15000);
       return;
     }
-    if (!v || !v.neuer || !v.aktualisierbar) return;
+    // Nur auf neuer sehen, nicht auch auf aktualisierbar - genau wie die
+    // Serverfassung. Dort steht der Balken da, sobald es etwas Neues gibt;
+    // hier kam gar nichts, wenn sich die Fassung nicht einspielen laesst,
+    // und es sah aus, als werde nie nachgesehen.
+    if (!v || !v.neuer) return;
     if (merker.holen(UPDATE_WEG, '') === v.verfuegbar) return;
     if ($('#updatebalken')) return;
     updateBalken(v);

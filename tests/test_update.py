@@ -249,6 +249,22 @@ if _hinweis:
     # Vier Sekunden nach dem Start steht die Bruecke manchmal noch nicht.
     pruefe("und versucht es nach einem Fehlschlag frueher noch einmal",
            "versuche" in _text, _text[:200])
+    # Der Unterschied zur Serverfassung, der dafuer gesorgt hat, dass im
+    # Fenster nie etwas kam: dort steht der Balken da, sobald es etwas
+    # Neues gibt. Hier hing er zusaetzlich an aktualisierbar - und das ist
+    # aus, sobald das Fenster nicht aus einer Installation laeuft.
+    pruefe("der Balken haengt nur an neuer, so wie in der Serverfassung",
+           "!v.neuer) return;" in _text and "!v.aktualisierbar) return;" not in _text,
+           _text[-300:])
+_balken = _re.search(r"^function updateBalken\(.*?^\}", _mappe, _re.S | _re.M)
+pruefe("updateBalken steht in mappe.js", bool(_balken))
+if _balken:
+    # Ein Knopf, der nichts tun kann, gehoert weg - der Satz daneben sagt
+    # dann, warum.
+    pruefe("und laesst 'Jetzt aktualisieren' weg, wenn sich nichts einspielen laesst",
+           "hidden: !geht" in _balken.group(0), _balken.group(0)[:200])
+    pruefe("sagt aber trotzdem, dass es etwas Neues gibt",
+           "nicht aus einer Installation" in _balken.group(0))
 pruefe("der Reiter Hilfe zeigt den Stand",
        bool(_re.search(r"^function hilfeStandZeigen\(.*?^\}", _mappe, _re.S | _re.M)))
 # Der Fall, der sonst stumm bleibt: neuer waere da, aber das Fenster laeuft
