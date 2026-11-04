@@ -285,11 +285,6 @@ body { display: flex; flex-direction: column; }
 }
 
 /* --- Einstellungen --- */
-#zahnrad {
-  min-width: 28px; height: 28px; border: 1px solid var(--linie); border-radius: 6px;
-  background: var(--papier); color: var(--schrift); cursor: pointer; font-size: 14px;
-}
-#zahnrad:hover { border-color: var(--akzent); }
 /* Die Einstellungen sind kein schwebendes Fenster mehr, sondern eine Seite
    hinter "Datei". Die Auswahlregeln bleiben gleich, damit alles Bestehende
    weiter passt - nur der Rahmen drumherum ist ein anderer. */

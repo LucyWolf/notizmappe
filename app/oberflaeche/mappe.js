@@ -258,10 +258,6 @@ function ordnerZeigen(e) {
     const konto = fern || !hierAmRechner;
     const wer = (e.ferne && e.ferne.benutzer) || '';
     knopf.hidden = !konto;
-    // Wie in der Serverfassung: steht der Zugang da, ist das Zahnrad weg -
-    // die Einstellungen wohnen in der Datei-Ebene, und zwei Wege zur selben
-    // Seite sind einer zu viel.
-    $('#zahnrad').hidden = konto;
     if (!konto) $('#profilmenue').hidden = true;
     if (konto) {
       const zeigen = (name, rolle) => {
@@ -1779,15 +1775,16 @@ async function updateBeimStart() {
 
 /* Die Einstellungen sind kein eigenes Fenster mehr, sondern eine Seite in der
  * Datei-Ebene. tafelZeigen() bleibt trotzdem stehen: es wird von einem Dutzend
- * Stellen gerufen ("Einstellungen öffnen" in Meldungen, aus der Leiste, aus
- * dem Zahnrad) - die sollen alle weiter funktionieren. */
+ * Stellen gerufen ("Einstellungen öffnen" in Meldungen, aus der Leiste) -
+ * die sollen alle weiter funktionieren. Das Zahnrad unten gibt es nicht
+ * mehr: dafuer ist oben die Datei-Ebene da, und zwei Wege zur selben Seite
+ * sind einer zu viel. */
 function tafelZeigen(an, punkt) {
   if (!an) { dateiZeigen(false); return; }
   dateiZeigen(true);
   dateiPunkt(punkt || 'optionen');
 }
 
-$('#zahnrad').addEventListener('click', () => tafelZeigen(true));
 
 $('#e-ordner-waehlen').addEventListener('click', async () => {
   try {

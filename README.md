@@ -165,8 +165,8 @@ hängt als `pre-commit` davor und parst Python, Jinja und JS.
 
 ## Einstellungen
 
-Zahnrad unten in der Seitenleiste, neben der Versionsnummer. Dort steht, welche Version läuft und welche es gibt, mit Knopf
-zum Einspielen; der Datenordner, wie viele Seiten darin liegen, was im Papierkorb
+**Datei → Optionen** (und **Informationen**). Dort steht, welche Version läuft
+und welche es gibt, mit Knopf zum Einspielen; der Datenordner, wie viele Seiten darin liegen, was im Papierkorb
 ist und wie viel Platz das Laufwerk noch hat; dazu die Darstellungsgröße.
 
 **Datenordner wählen:** Unter „Daten“ einen Pfad eintragen oder „Durchsuchen …“
@@ -209,9 +209,7 @@ nächsten Server noch da.
 ### Dein Zugang am Server, im Fenster
 
 Verbunden steht unten **rechts** in der Leiste dein Zugang — rundes Zeichen mit
-dem ersten Buchstaben, daneben der Name, genau wie in der Serverfassung. Das
-Zahnrad verschwindet dabei: die Einstellungen wohnen in der Datei-Ebene, und
-zwei Wege zur selben Seite sind einer zu viel. Ein Klick
+dem ersten Buchstaben, daneben der Name, genau wie in der Serverfassung. Ein Klick
 klappt ein kleines Menü auf: **Mein Profil** und **Abmelden**. „Mein Profil"
 führt auf **Datei → Profil**: Rolle, zweiter Schritt, Mailadresse eintragen,
 Passwort ändern. Vorher ging das nur im Browser.
@@ -391,8 +389,9 @@ nicht mehr:
 * **Optionen**: Datenordner, OneNote übernehmen, Sperre, Schriften,
   Darstellung.
 
-Das Zahnrad unten in der Leiste führt jetzt ebenfalls dorthin, und jede Meldung
-mit „Einstellungen öffnen" auch.
+Jede Meldung mit „Einstellungen öffnen" führt ebenfalls dorthin. Ein Zahnrad
+unten in der Leiste gibt es nicht mehr — die Datei-Ebene oben ist der eine Weg
+dorthin.
 
 **Exportieren** schreibt die offene Seite als eine HTML-Datei, die ohne dieses
 Programm aufgeht — Bilder stecken als `data:`-Adresse mit drin, sonst wäre es
