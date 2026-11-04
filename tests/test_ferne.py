@@ -13,6 +13,7 @@ wäre er die Serverfassung. Worauf es ankommt:
 * Läuft die Anmeldung ab, wird das gesagt - nicht stillschweigend weiter in den
   eigenen Ordner geschrieben.
 """
+import base64
 import json
 import os
 import shutil
@@ -235,6 +236,19 @@ pruefe("Ist der Server weg, bleiben die eigenen stehen",
        _namen == [("Hier daheim", "eigen")] and not baum.get("fehler"), (baum, _namen))
 konfig.aendern(ferne_adresse=ADRESSE)
 b.ferne_umschalten({"an": True})
+
+# Die Vorschau von Modellen und Platinen holt ihre Bytes ueber /anhang, nicht
+# ueber die Bruecke: am Server steht anhang_roh nicht auf der Positivliste,
+# und bei einer aelteren Fassung dort wird sie es auch nie. Genau daran
+# scheiterte sie zuerst - "Modell liess sich nicht holen: Das geht nur am
+# eigenen Rechner".
+r = b.anhang_roh("Buch", "Teil", "Seite", "Koerper.stl")
+pruefe("Ein Modell vom Server kommt an",
+       not r.get("fehler") and base64.b64decode(r["daten"]) == b"DATEIINHALT", r)
+pruefe("Die Bruecke wurde dafuer nicht bemueht",
+       not any(m == "anhang_roh" for m, _ in gerufen), gerufen[-2:])
+pruefe("Eine andere Endung nimmt sie nicht",
+       "fehler" in b.anhang_roh("Buch", "Teil", "Seite", "geheim.json"))
 
 # --- Umschalten --------------------------------------------------------------
 print("\nUmschalten")

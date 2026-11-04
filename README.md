@@ -389,6 +389,12 @@ Die Bytes holt die Vorschau über `anhang_roh` — nur für diese vier Endungen,
 höchstens 40 MB, und als Daten, nie als HTML. Eine Brückenmethode, die jede
 Datei herausgibt, wäre in der Serverfassung ein Werkzeug zum Stöbern.
 
+Arbeitest du gerade auf einem **Server**, holt sie dieselben Bytes über
+`/anhang` statt über die Brücke — denselben Weg geht das Herunterladen eines
+Anhangs. Grund: auf dem Server steht `anhang_roh` nicht auf der Positivliste
+der erlaubten Methoden, und bei einer älteren Serverfassung wird sie das auch
+nie. Vorher stand an der Kachel „Das geht nur am eigenen Rechner".
+
 **Was hier nicht geht:** die Bauteile als Körper, so wie es JLCPCB zeigt. Die
 stecken in keiner dieser Dateien — JLCPCB holt sie über die Bauteilnummer aus
 seiner eigenen Bibliothek.

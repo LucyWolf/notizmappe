@@ -130,9 +130,11 @@ def _ins_protokoll(wo: str, x: Exception) -> None:
 ROH_ENDUNGEN = (".stl", ".obj", ".fbx", ".zip")
 MAX_ROH = 40 * 1024 * 1024
 
-FERN_SELBST = {"baum"}
+# Diese holen sich ihren fernen Teil selbst, statt umgeleitet zu werden:
+# baum zeigt beide Seiten, anhang_roh geht ueber /anhang.
+FERN_SELBST = {"baum", "anhang_roh"}
 FERN = {
-    "notizbuch_anlegen", "anhang_roh", "abschnitt_anlegen", "seite_anlegen",
+    "notizbuch_anlegen", "abschnitt_anlegen", "seite_anlegen",
     "seite_lesen", "seite_speichern", "seite_umbenennen", "stand", "loeschen",
     "anhang_ablegen", "anhang_bild", "favorit_setzen",
     "versionen", "version_lesen", "version_zurueck",
@@ -414,11 +416,20 @@ class Bruecke:
     # am Server (wo dieselbe Bruecke steht) ein Werkzeug zum Stoebern.
     @_gefasst
     def anhang_roh(self, notizbuch: str, abschnitt: str, name: str, datei: str) -> dict:
-        """Ein Anhang als Base64 - fuer die Vorschau von Modellen und Platinen."""
+        """Ein Anhang als Base64 - fuer die Vorschau von Modellen und Platinen.
+
+        Holt sich die Bytes selbst, statt ueber FERN umgeleitet zu werden: am
+        Server steht diese Methode nicht auf der Positivliste (und bei einer
+        aelteren Fassung dort wird sie es auch nie). Ueber /anhang kommt man
+        trotzdem heran - denselben Weg geht das Herunterladen eines Anhangs.
+        """
         datei = reinigen.text(datei, 200)
         if not datei.lower().endswith(ROH_ENDUNGEN):
             raise Abbruch("Diese Art von Anhang wird hier nicht gelesen")
-        daten = speicher.anhang_inhalt(notizbuch, abschnitt, name, datei)
+        if ferne.aktiv():
+            daten = ferne.anhang_holen(notizbuch, abschnitt, name, datei)
+        else:
+            daten = speicher.anhang_inhalt(notizbuch, abschnitt, name, datei)
         if len(daten) > MAX_ROH:
             raise Abbruch(f"Die Datei ist groesser als {MAX_ROH // 1024 // 1024} MB")
         return {"daten": base64.b64encode(daten).decode("ascii"), "groesse": len(daten)}
