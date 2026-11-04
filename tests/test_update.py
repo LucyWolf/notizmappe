@@ -231,6 +231,31 @@ pruefe("und schreibt seine Antwort ins Protokoll",
 shutil.rmtree(ohne_konsole, ignore_errors=True)
 (QUELLE / ".update-stand.json").unlink(missing_ok=True)
 
+# --- Wird das Ergebnis ueberhaupt angezeigt? --------------------------------
+#
+# Der Mechanismus kann tadellos laufen und trotzdem sieht man nichts: Balken
+# und Knopf im Band hingen frueher an zwei verschiedenen Wegen. Der Knopf kam
+# nur ueber updateBeimStart(), und das steigt aus, wenn "beim Start nachsehen"
+# aus ist - dann blieb das Band stumm, egal was GitHub sagte.
+import re as _re                                                    # noqa: E402
+
+_mappe = (QUELLE / "app/oberflaeche/mappe.js").read_text(encoding="utf-8")
+_hinweis = _re.search(r"^function updateHinweisBauen\(.*?^\}", _mappe, _re.S | _re.M)
+pruefe("updateHinweisBauen steht in mappe.js", bool(_hinweis))
+if _hinweis:
+    _text = _hinweis.group(0)
+    pruefe("und geht ueber versionPruefen - so wird auch der Knopf im Band gesetzt",
+           "versionPruefen(" in _text and "api('/api/version'" not in _text, _text[:200])
+    # Vier Sekunden nach dem Start steht die Bruecke manchmal noch nicht.
+    pruefe("und versucht es nach einem Fehlschlag frueher noch einmal",
+           "versuche" in _text, _text[:200])
+pruefe("der Reiter Hilfe zeigt den Stand",
+       bool(_re.search(r"^function hilfeStandZeigen\(.*?^\}", _mappe, _re.S | _re.M)))
+# Der Fall, der sonst stumm bleibt: neuer waere da, aber das Fenster laeuft
+# aus dem Quellordner - dann gibt es weder Knopf noch Balken.
+pruefe("und nennt den Grund, wenn sich hier nichts einspielen laesst",
+       "nicht aus einer Installation" in _mappe)
+
 print()
 print("alles gruen" if not fehler else f"{len(fehler)} FEHLER: " + ", ".join(fehler))
 server.shutdown()

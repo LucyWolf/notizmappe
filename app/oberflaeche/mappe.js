@@ -1743,18 +1743,56 @@ function updateBalken(v) {
   document.body.append(balken);
 }
 
+// Was beim letzten Nachsehen herauskam. Steht im Reiter Hilfe, damit man
+// nachsehen kann, statt zu raten, warum nichts angezeigt wird.
+let updateStand = null;
+
 function updateHinweisBauen() {
+  let versuche = 0;
   const nachsehen = async () => {
-    try {
-      const v = await api('/api/version');
-      if (!v || !v.neuer || !v.aktualisierbar) return;
-      if (merker.holen(UPDATE_WEG, '') === v.verfuegbar) return;
-      if ($('#updatebalken')) return;
-      updateBalken(v);
-    } catch (f) { /* kein Netz, kein Hinweis */ }
+    // Ueber versionPruefen, nicht ueber api(): nur so wird auch der Knopf
+    // oben im Band gesetzt. Vorher hingen Balken und Knopf an zwei Wegen,
+    // und der Knopf kam nur, wenn "beim Start nachsehen" anstand - war das
+    // aus, blieb das Band stumm.
+    const v = await versionPruefen();
+    updateStand = v;
+    hilfeStandZeigen();
+    // Vier Sekunden nach dem Start steht die Bruecke manchmal noch nicht.
+    // Dann nicht fuenf Minuten warten, sondern gleich noch einmal.
+    if (v && v.fehler && versuche < 3) {
+      versuche += 1;
+      setTimeout(nachsehen, 15000);
+      return;
+    }
+    if (!v || !v.neuer || !v.aktualisierbar) return;
+    if (merker.holen(UPDATE_WEG, '') === v.verfuegbar) return;
+    if ($('#updatebalken')) return;
+    updateBalken(v);
   };
   setTimeout(nachsehen, 4000);
   setInterval(nachsehen, 5 * 60 * 1000);
+}
+
+/* Im Reiter Hilfe steht, was Sache ist. Der Fall, der sonst stumm bleibt:
+   eine neuere Fassung ist da, aber dieses Fenster laeuft aus dem
+   Quellordner statt aus einer Installation - dann gibt es weder Knopf noch
+   Balken, und ohne diesen Satz sieht es aus, als kaeme einfach nie ein
+   Update. */
+function hilfeStandZeigen() {
+  const z = $('#hilfe-version');
+  if (!z) return;
+  const hier = ($('#version').textContent || '').trim();
+  let text = 'Notizmappe ' + hier;
+  const v = updateStand;
+  if (v) {
+    if (v.fehler) text += ' — Update-Prüfung: ' + v.fehler;
+    else if (v.neuer && v.aktualisierbar) text += ` — Fassung ${v.verfuegbar} ist da`;
+    else if (v.neuer) {
+      text += ` — Fassung ${v.verfuegbar} ist da, lässt sich hier aber nicht`
+            + ' einspielen: dieses Fenster läuft nicht aus einer Installation.';
+    } else if (v.verfuegbar) text += ' — das ist die neueste Fassung';
+  }
+  z.textContent = text;
 }
 
 async function updateBeimStart() {
@@ -2290,7 +2328,7 @@ function reiterSetzen(name) {
     $('#' + leiste).hidden = reiter !== name;
   }
   merker.legen('reiter', name);
-  if (name === 'hilfe') $('#hilfe-version').textContent = 'Notizmappe ' + ($('#version').textContent || '');
+  if (name === 'hilfe') hilfeStandZeigen();
   // Beim Verlassen des Reiters nicht weitermalen: sonst fängt der nächste Klick
   // in den Text einen Strich an.
   werkzeugSetzen(name === 'zeichnen' ? (werkzeug === 'auswahl' ? 'stift' : werkzeug) : 'auswahl',
