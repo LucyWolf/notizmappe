@@ -440,8 +440,11 @@ Schriftart und Größe, F K U S, hoch- und tiefgestellt, Marker, Farbe,
 Formatierung entfernen, Aufzählung und Nummerierung, Einzug, Ausrichtung,
 Zeilenabstand, Formatvorlage, Aufgabe und Kategorie.
 
-Markierst du Text, geht **dieselbe Leiste** als kleines Fenster darüber auf —
-dort auf zwei Reihen und ohne die Zwischenablage, die steht im Menü darunter.
+Markierst du Text, geht wie bisher die **kleine Leiste** darüber auf — zwei
+Reihen, unverändert: Schriftart, Größe, Formatvorlage, Einzug, Aufgabe und
+Kategorie oben; F K U S, Marker, Farbe, Listen, Format übertragen und Löschen
+unten. Was oben dazugekommen ist, steht bewusst nur dort: eine Palette, die
+beim Markieren aufgeht, darf nicht breiter werden als der Text darunter.
 
 Dieselbe Leiste steht noch einmal **im Rechtsklick-Menü**, über den vier
 Punkten für die Zwischenablage. Drückst du die rechte Maustaste, verschwindet

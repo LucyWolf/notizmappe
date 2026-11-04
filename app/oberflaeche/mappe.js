@@ -3719,6 +3719,12 @@ function formatleisteBauen(wie) {
   // Gruppen statt einer festen Reihenfolge: im Band stehen sie nebeneinander
   // in einer Zeile, in der schwebenden Leiste und im Rechtsklick-Menue auf
   // zwei Reihen verteilt. Gebaut wird jeder Knopf nur einmal.
+  //
+  // Die schwebende Leiste zeigt davon nur, was sie schon vorher zeigte -
+  // sie war so in Ordnung, und eine Palette, die beim Markieren aufgeht,
+  // darf nicht breiter werden als der Text darunter. Die Zwischenablage,
+  // hoch- und tiefgestellt, Ausrichtung und Zeilenabstand gibt es deshalb
+  // nur oben im Band.
   const ablage = [
     flTaste(FL_KLEMME, 'Einfügen (Strg+V)', function () { flAblage('einfuegen'); }),
     flTaste(FL_SCHERE, 'Ausschneiden (Strg+X)', function () { flAblage('ausschneiden'); }),
@@ -3800,13 +3806,17 @@ function formatleisteBauen(wie) {
 
   if (imBand) {
     // Oben ist Platz fuer alles auf einmal - und wer auf Start geht, will
-    // nicht erst noch irgendwo aufklappen.
+    // nicht erst noch irgendwo aufklappen. Nur hier gibt es deshalb die
+    // Zwischenablage, hoch- und tiefgestellt, Ausrichtung und Zeilenabstand.
     wirt.append(reihe([ablage, schrift, zeichen, farben, listen, absatz, vorlagen]));
   } else {
-    // Schwebend und im Rechtsklick-Menue: ohne Zwischenablage, die steht
-    // dort schon als eigene Punkte darunter.
-    wirt.append(reihe([schrift, vorlagen, absatz]),
-                reihe([zeichen, farben, listen, [ablage[3]]]));
+    // Schwebend und im Rechtsklick-Menue: unveraendert, zwei Reihen in
+    // derselben Reihenfolge wie vorher. Sie war so in Ordnung, und eine
+    // Leiste, die beim Markieren aufgeht, darf nicht breiter sein als der
+    // Text darunter.
+    wirt.append(reihe([schrift, [vorlagen[0], ...absatz.slice(0, 2)], vorlagen.slice(1)]),
+                reihe([zeichen.slice(0, 4), farben.slice(0, 2), listen,
+                       [ablage[3], farben[2]]]));
   }
   flSchriftenSpiegeln(wirt);      // gleich, nicht erst beim ersten Auffrischen
   // Ein Klick in die Leiste darf die Markierung nicht kosten - sonst

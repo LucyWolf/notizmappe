@@ -301,11 +301,11 @@ ergebnis.raus = druecke('Einzug verkleinern');
 ergebnis.sauber = druecke('Formatierung entfernen');
 
 /* Klappmenues: aufmachen, Eintrag anklicken, sehen was ankommt */
-function klappe(titel, welcher) {
+function klappe(titel, welcher, wo, wotasten) {
   befehle.length = 0;
-  const k = tasten.find((t) => t.title === titel);
+  const k = (wotasten || tasten).find((t) => t.title === titel);
   k.klick();
-  const liste = leiste.querySelector('.fl-liste');
+  const liste = (wo || leiste).querySelector('.fl-liste');
   if (!liste) return { eintraege: null, befehle: [] };
   const namen = liste.kinder.map((e) => e.textContent.trim());
   liste.kinder[welcher].klick();
@@ -467,23 +467,23 @@ auswahl = {
   }),
 };
 befehle.length = 0;
-tasten.find((t) => t.title === 'Zentriert').klick();
+bandtasten.find((t) => t.title === 'Zentriert').klick();
 ergebnis.aus_befehle = befehle.slice();
 ergebnis.aus = [absatz1.merkmale['data-aus'] || null, absatz2.merkmale['data-aus'] || null];
 
 // Nur der markierte Absatz, nicht gleich die ganze Seite
 nurErster = true;
 absatz1.merkmale = {}; absatz2.merkmale = {};
-tasten.find((t) => t.title === 'Blocksatz').klick();
+bandtasten.find((t) => t.title === 'Blocksatz').klick();
 ergebnis.aus_einer = [absatz1.merkmale['data-aus'] || null,
                       absatz2.merkmale['data-aus'] || null];
 nurErster = false;
 
-const za = klappe('Zeilenabstand', 2);
+const za = klappe('Zeilenabstand', 2, bandleiste, bandtasten);
 ergebnis.abstaende = za.eintraege;
 ergebnis.za_befehle = za.befehle;
 ergebnis.za = absatz1.merkmale['data-za'] || null;
-klappe('Zeilenabstand', 5);              // "Standard" nimmt ihn wieder weg
+klappe('Zeilenabstand', 5, bandleiste, bandtasten);   // "Standard" nimmt ihn weg
 ergebnis.za_weg = absatz1.merkmale['data-za'] || null;
 
 /* Steht der Text noch nackt im Feld, gibt es keinen Absatz - dann muss erst
@@ -505,7 +505,7 @@ aufAuswahl = function (befehl, wert) {
     feld3.append(d);
   }
 };
-tasten.find((t) => t.title === 'Rechtsbündig').klick();
+bandtasten.find((t) => t.title === 'Rechtsbündig').klick();
 ergebnis.ohne_block = befehle.slice();
 ergebnis.ohne_block_gesetzt = feld3.kinder.length
   ? (feld3.kinder[0].merkmale['data-aus'] || null) : null;
@@ -586,23 +586,30 @@ LISTEN = ['Aufzählung', 'Aufzählungszeichenbibliothek',
           'Nummerierung', 'Nummerierungsbibliothek']
 ABSATZ = ['Einzug verkleinern', 'Einzug vergrößern', *AUSRICHTEN, 'Zeilenabstand']
 VORLAGEN = ['Formatvorlage', 'Aufgabe (zum Abhaken)', 'Kategorie']
-ERWARTET = [*VORLAGEN, *ABSATZ, *ZEICHEN, *FARBEN, *LISTEN, 'Format übertragen']
+ABLAGE = ['Einfügen (Strg+V)', 'Ausschneiden (Strg+X)', 'Kopieren (Strg+C)',
+          'Format übertragen']
+# Die schwebende Leiste bleibt, wie sie war - Wort fuer Wort dieselbe Liste
+# wie vor dem Umbau des Bands.
+ERWARTET = ['Formatvorlage', 'Einzug verkleinern', 'Einzug vergrößern',
+            'Aufgabe (zum Abhaken)', 'Kategorie', 'Fett (Strg+B)', 'Kursiv (Strg+I)',
+            'Unterstrichen (Strg+U)', 'Durchgestrichen', 'Hervorheben', 'Schriftfarbe',
+            'Aufzählung', 'Aufzählungszeichenbibliothek', 'Nummerierung',
+            'Nummerierungsbibliothek', 'Format übertragen', 'Formatierung entfernen']
 pruefe("alle Knöpfe, in dieser Reihenfolge", d["knoepfe"] == ERWARTET, d["knoepfe"])
+# Das ist der Punkt: was oben dazukam, darf die kleine Leiste nicht aufblähen.
+pruefe("und keiner der neuen Knöpfe steht schwebend mit drin",
+       not [k for k in d["knoepfe"]
+            if k in [*ABLAGE[:3], 'Hochgestellt', 'Tiefgestellt',
+                     *AUSRICHTEN, 'Zeilenabstand']], d["knoepfe"])
 
-print("\nDieselbe Leiste oben im Reiter Start")
+print("\nDie Leiste oben im Reiter Start")
 # Vorher standen dort vier Knöpfe; alles andere gab es nur, wenn man etwas
 # markierte und die schwebende Leiste aufging.
 pruefe("eine Reihe statt zwei", d["bandreihen"] == 1, d["bandreihen"])
 pruefe("und sie weiß, dass sie im Band steht", d["bandklasse"])
-ABLAGE = ['Einfügen (Strg+V)', 'Ausschneiden (Strg+X)', 'Kopieren (Strg+C)',
-          'Format übertragen']
-pruefe("mit Zwischenablage vorne, sonst dieselben Knöpfe",
+pruefe("dort steht alles: Zwischenablage, hoch/tief, Ausrichtung, Abstand",
        d["bandknoepfe"] == [*ABLAGE, *ZEICHEN, *FARBEN, *LISTEN, *ABSATZ, *VORLAGEN],
        d["bandknoepfe"])
-# Im Rechtsklick-Menue stehen Kopieren und Einfuegen schon als eigene Punkte
-# darunter - zweimal dasselbe waere einmal zu viel.
-pruefe("schwebend ohne Zwischenablage",
-       not [k for k in d["knoepfe"] if k in ABLAGE[:3]], d["knoepfe"])
 
 print("\nWas unten ankommt")
 for was, soll in (("fett", [["bold", None]]), ("kursiv", [["italic", None]]),
