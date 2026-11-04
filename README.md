@@ -155,6 +155,7 @@ halb umgestellte Ordner (Abbruch mitten im Verschlüsseln).
 | `tests/test_update.py` | Selbstupdate gegen eine nachgemachte GitHub-Antwort |
 | `tests/test_modell.py` | STL, OBJ und FBX einlesen — und ob das Teil wirklich im Bild liegt |
 | `tests/test_platine.py` | Gerber: ZIP auspacken, Koordinatenformat, Zoll, Bohrdatei — und ob die Platine im Bild liegt und von unten gespiegelt ist |
+| `tests/test_balken.py` | dass der Update-Hinweis wirklich ankommt — der Weg läuft in einem nachgebauten Dokument, und hinterher wird nachgesehen, ob ein Balken dasteht und was auf ihm steht |
 | `tests/test_leiste.py` | dass hinter jedem Knopf der Formatleiste der richtige Befehl steckt — und dass beim Rechtsklick nicht zwei Leisten übereinander stehen |
 | `tests/test_kein_server.py` | dass nirgends ein Webserver, Port oder HTTP-Aufruf steckt |
 | `tests/test_installer.sh` | Installationsdatei in einem Wegwerf-Heim durchspielen |
