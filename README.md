@@ -208,9 +208,15 @@ nächsten Server noch da.
 
 ### Dein Zugang am Server, im Fenster
 
-Verbunden steht unten in der Leiste, als wer du dort angemeldet bist
-(`👤 wolfi`). Ein Klick führt auf **Datei → Profil**: Rolle, zweiter Schritt,
-Mailadresse eintragen, Passwort ändern. Vorher ging das nur im Browser.
+Verbunden steht unten in der Leiste dein Zugang — rundes Zeichen mit dem
+ersten Buchstaben, daneben der Name, genau wie in der Serverfassung. Ein Klick
+klappt ein kleines Menü auf: **Mein Profil** und **Abmelden**. „Mein Profil"
+führt auf **Datei → Profil**: Rolle, zweiter Schritt, Mailadresse eintragen,
+Passwort ändern. Vorher ging das nur im Browser.
+
+Das Menü klappt **über** seinem Knopf auf. Dafür ist die Fußzeile der Leiste
+positioniert — ohne das rechnet ein `position: absolute` gegen die ganze Seite
+und das Menü landet in der Ecke des Fensters.
 
 Die Seiten dafür sind keine Brückenmethoden, sondern gewöhnliche Routen des
 Servers. Deshalb gibt es in `ferne.py` eine **feste Liste** (`SERVERSEITEN`) —

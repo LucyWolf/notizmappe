@@ -247,11 +247,19 @@ function ordnerZeigen(e) {
     ? `${e.ferne.adresse || 'Server'} als ${e.ferne.benutzer || '?'}`
     : 'Datenordner: ' + (e.ordner || '?');
   wo.classList.toggle('amserver', !!fern);
-  // Unten in der Leiste: als wer man am Server angemeldet ist.
-  const ich = $('#meinprofil');
-  if (ich) {
-    ich.hidden = !fern;
-    ich.textContent = fern ? `👤 ${(e.ferne && e.ferne.benutzer) || 'Profil'}` : '';
+  // Unten in der Leiste: als wer man am Server angemeldet ist - genau so wie
+  // in der Serverfassung, mit rundem Zeichen und Menue nach oben.
+  const knopf = $('#profilknopf');
+  if (knopf) {
+    const wer = (e.ferne && e.ferne.benutzer) || '';
+    knopf.hidden = !fern;
+    if (!fern) $('#profilmenue').hidden = true;
+    if (fern) {
+      $('#profilname').textContent = wer || 'angemeldet';
+      $('#profilbild').textContent = (wer || '?').slice(0, 1).toUpperCase();
+      $('#profilwer').textContent = wer || '…';
+      $('#profilrolle').textContent = profilRolle;
+    }
   }
 }
 
@@ -2828,6 +2836,8 @@ async function profilFuellen() {
   } catch (f) { $('#p-hinweis').textContent = f.message; return; }
   $('#p-ich').textContent = d.ich || '?';
   $('#p-rolle').textContent = d.rolle || '?';
+  profilRolle = d.rolle || '';
+  $('#profilrolle').textContent = profilRolle;
   $('#p-zwei').textContent = d.zwei ? 'eingeschaltet' : 'aus';
   if (document.activeElement !== $('#p-email')) $('#p-email').value = d.email || '';
   $('#p-verwaltung').textContent = d.darf_verwalten
@@ -2859,7 +2869,35 @@ $('#p-passwort-setzen').addEventListener('click', async () => {
   } catch (f) { $('#p-hinweis').textContent = f.message; }
 });
 
-$('#meinprofil').addEventListener('click', () => { dateiZeigen(true); dateiPunkt('profil'); });
+/* Die Rolle steht im Profil am Server; gemerkt, damit das Menue sie zeigen
+ * kann, ohne bei jedem Aufklappen zu fragen. */
+let profilRolle = '';
+
+$('#profilknopf').addEventListener('click', (ev) => {
+  ev.stopPropagation();
+  $('#profilmenue').hidden = !$('#profilmenue').hidden;
+});
+document.addEventListener('click', (ev) => {
+  const m = $('#profilmenue');
+  if (!m.hidden && !m.contains(ev.target)) m.hidden = true;
+});
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape') $('#profilmenue').hidden = true;
+});
+$('#profil-oeffnen').addEventListener('click', () => {
+  $('#profilmenue').hidden = true;
+  dateiZeigen(true);
+  dateiPunkt('profil');
+});
+$('#profil-abmelden').addEventListener('click', async () => {
+  $('#profilmenue').hidden = true;
+  try {
+    await api('/api/ferne/abmelden', 'POST', {});
+    merker.legen('zuletzt', 'null');
+    sagen('Vom Server abgemeldet.', 0);
+    await wiederAufbauen();
+  } catch (f) { melden(f.message); }
+});
 
 // Beide Wege führen auf die Serverseite, nicht mehr in die Optionen.
 $('#d-server').addEventListener('click', () => dateiPunkt('server'));

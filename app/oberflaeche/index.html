@@ -134,7 +134,17 @@ window.addEventListener('unhandledrejection', function (ev) {
     <nav id="baum" aria-label="Notizbücher"></nav>
     <footer>
       <button type="button" id="neues-buch">+ Notizbuch</button>
-      <button type="button" id="meinprofil" hidden title="Dein Zugang am Server"></button>
+      <button type="button" id="profilknopf" hidden title="Profil und Einstellungen">
+        <span id="profilbild">·</span><span id="profilname">angemeldet</span>
+      </button>
+      <div id="profilmenue" hidden>
+        <p id="profilkopf">
+          <strong id="profilwer">…</strong>
+          <span id="profilrolle" class="hinweis"></span>
+        </p>
+        <button type="button" class="profilpunkt" id="profil-oeffnen">Mein Profil</button>
+        <button type="button" class="profilpunkt" id="profil-abmelden">Abmelden</button>
+      </div>
       <span class="fussrechts">
         <span id="version"></span>
         <button type="button" id="sperren" title="Sperren" hidden>🔒</button>

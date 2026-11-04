@@ -137,6 +137,9 @@ body { display: flex; flex-direction: column; }
 #leiste footer {
   padding: 8px 10px; border-top: 1px solid var(--linie);
   display: flex; align-items: center; justify-content: space-between;
+  /* Damit das Profilmenue ueber seinem Knopf aufgeht und nicht in der Ecke
+     des Fensters: ohne positionierten Vorfahren rechnet es gegen die Seite. */
+  position: relative;
 }
 #version { font-size: 11px; color: var(--matt); }
 .fussrechts { display: flex; align-items: center; gap: 8px; }
@@ -794,11 +797,40 @@ body { display: flex; flex-direction: column; }
   margin: 4px 0 0; color: var(--warnung); font-size: 11px; line-height: 1.4;
 }
 
-/* Unten in der Leiste: als wer man am Server angemeldet ist. */
-#meinprofil {
-  border: 1px solid transparent; border-radius: 6px; background: none;
-  color: var(--akzent); cursor: pointer; font: inherit; font-size: 12px;
-  padding: 2px 6px; max-width: 46%; overflow: hidden;
-  text-overflow: ellipsis; white-space: nowrap;
+/* --- Profil unten in der Leiste ----------------------------------------
+   Genau wie in der Serverfassung: rundes Zeichen, Name, und ein Menue, das
+   nach oben aufklappt - die Leiste sitzt ja ganz unten. */
+#profilknopf {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 28px; padding: 0 8px 0 3px;
+  border: 1px solid var(--linie); border-radius: 14px;
+  background: var(--papier); color: var(--schrift);
+  cursor: pointer; font-size: 12px; max-width: 150px;
 }
-#meinprofil:hover { border-color: var(--linie); background: var(--flaeche); }
+#profilknopf:hover { border-color: var(--akzent); }
+#profilbild {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--akzent); color: var(--papier);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; flex: 0 0 auto;
+}
+#profilname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#profilmenue {
+  position: absolute; bottom: 36px; right: 8px; z-index: 40;
+  min-width: 170px; padding: 4px;
+  background: var(--papier); color: var(--schrift);
+  border: 1px solid var(--linie); border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .28);
+}
+#profilkopf {
+  margin: 0; padding: 6px 8px 8px;
+  border-bottom: 1px solid var(--linie); display: grid; gap: 1px;
+}
+#profilkopf .hinweis { font-size: 11px; }
+.profilpunkt {
+  display: block; width: 100%; text-align: left;
+  padding: 7px 8px; margin: 1px 0;
+  background: none; border: 0; border-radius: 6px;
+  color: var(--schrift); cursor: pointer; font-size: 13px;
+}
+.profilpunkt:hover { background: var(--flaeche); }
