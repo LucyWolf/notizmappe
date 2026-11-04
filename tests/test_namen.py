@@ -148,7 +148,9 @@ pruefe("es gibt ueberhaupt Wege", len(wege) > 15, f"{len(wege)} gefunden")
 html = (WURZEL / "app/oberflaeche/index.html").read_text(encoding="utf-8")
 vorhanden = set(re.findall(r'id="([^"]+)"', html))
 # Was die Oberflaeche selbst zur Laufzeit baut und erst danach anspricht.
-GEBAUT = {"schwebe"}
+# Der Update-Balken und das Profilfenster entstehen erst, wenn es etwas zu
+# sagen gibt - in index.html stuenden sie sonst als leere Huelsen herum.
+GEBAUT = {"schwebe", "updatebalken", "u-text", "profilfenster", "profilteil"}
 gesucht = set(re.findall(r"""\$\(['"]#([A-Za-z0-9_-]+)['"]\)""", js))
 fehlende = sorted(gesucht - vorhanden - GEBAUT)
 pruefe("jede angesprochene Kennung steht in index.html", not fehlende,

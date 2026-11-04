@@ -1685,6 +1685,68 @@ function updateVerfolgen(ziel) {
 
 /* Beim Start nachsehen - und auf Wunsch gleich einspielen. Erst danach wird die
  * Seite geöffnet, damit ein Update nicht mitten in eine Bearbeitung platzt. */
+/* ---- Der Hinweis auf eine neue Fassung --------------------------------
+ *
+ * Eins zu eins aus der Serverfassung: ein Balken unten rechts, der nicht nur
+ * Bescheid sagt, sondern den Knopf gleich mitbringt - eine Meldung, die ein
+ * Problem nur beschreibt, nimmt einem die Arbeit nicht ab. "Später" merkt
+ * sich genau diese Fassung und fragt dafuer nicht wieder.
+ *
+ * Nachgesehen wird vier Sekunden nach dem Start (erst soll die Oberflaeche
+ * stehen) und dann alle fuenf Minuten. Wer das Fenster offen stehen laesst,
+ * erfuehre sonst stundenlang nichts. Bei GitHub landet dabei hoechstens eine
+ * Anfrage je Stunde: aktualisieren.py haelt die Antwort so lange. */
+const UPDATE_WEG = 'notizmappe.updateweg';
+
+function updateBalken(v) {
+  const schon = $('#updatebalken');
+  if (schon) schon.remove();
+  const melden = (t) => { const z = $('#u-text'); if (z) z.textContent = t; };
+  const text = Object.assign(document.createElement('span'),
+    { id: 'u-text',
+      textContent: `Fassung ${v.verfuegbar} ist da - hier läuft ${v.installiert}.` });
+  const jetzt = Object.assign(document.createElement('button'),
+    { type: 'button', id: 'u-jetzt', textContent: 'Jetzt aktualisieren' });
+  const weg = Object.assign(document.createElement('button'),
+    { type: 'button', id: 'u-spaeter', title: 'Für diese Fassung nicht mehr fragen',
+      textContent: 'Später' });
+  const balken = document.createElement('div');
+  balken.id = 'updatebalken';
+  balken.append(text, jetzt, weg);
+  jetzt.addEventListener('click', async () => {
+    jetzt.disabled = weg.disabled = true;
+    melden(`Fassung ${v.verfuegbar} wird geholt …`);
+    try {
+      const r = await api('/api/update', 'POST');
+      balken.remove();
+      updateFensterZeigen('Update wird eingespielt …', `Version ${r.nach} ist unterwegs.`);
+      updateVerfolgen(r.nach);
+    } catch (f) {
+      melden(f.message);
+      jetzt.disabled = weg.disabled = false;
+    }
+  });
+  weg.addEventListener('click', () => {
+    merker.legen(UPDATE_WEG, v.verfuegbar || '');
+    balken.remove();
+  });
+  document.body.append(balken);
+}
+
+function updateHinweisBauen() {
+  const nachsehen = async () => {
+    try {
+      const v = await api('/api/version');
+      if (!v || !v.neuer || !v.aktualisierbar) return;
+      if (merker.holen(UPDATE_WEG, '') === v.verfuegbar) return;
+      if ($('#updatebalken')) return;
+      updateBalken(v);
+    } catch (f) { /* kein Netz, kein Hinweis */ }
+  };
+  setTimeout(nachsehen, 4000);
+  setInterval(nachsehen, 5 * 60 * 1000);
+}
+
 async function updateBeimStart() {
   let e;
   try { e = await api('/api/einstellungen'); } catch (f) { return; }
@@ -5656,7 +5718,8 @@ async function profilDatenLaden() {
   // man sieht im Protokoll, welcher es war.
   for (const [name, tun] of [['Formatleiste', formatleistenBauen],
                              ['Rechtsklick', rechtsmenueBauen],
-                             ['Anhangvorschau', modelleBauen]]) {
+                             ['Anhangvorschau', modelleBauen],
+                             ['Update-Hinweis', updateHinweisBauen]]) {
     try { tun(); } catch (f) { console.error('[notizmappe] ' + name + ':', f); }
   }
   // Vor allem anderen: ist zugesperrt, wird hier gewartet, bis das Passwort

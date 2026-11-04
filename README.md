@@ -636,6 +636,18 @@ läuft deshalb über einen Merker, der es versucht und sonst nur für die Sitzun
 
 ## Updates
 
+Vier Sekunden nach dem Start und danach alle fünf Minuten sieht das Fenster
+nach, ob es eine neuere Fassung gibt. Gibt es eine, steht unten rechts ein
+**Balken**: *„Fassung 1.2.3 ist da — hier läuft 1.2.2."* mit **Jetzt
+aktualisieren** und **Später**. Eine Meldung, die ein Problem nur beschreibt,
+nimmt einem die Arbeit nicht ab — deshalb bringt der Balken den Knopf gleich
+mit. „Später" merkt sich genau diese Fassung und fragt dafür nicht wieder.
+
+Genau so sieht es in der Serverfassung aus; es sind dieselben Stilregeln.
+
+Bei GitHub landet dabei höchstens eine Anfrage je Stunde: `aktualisieren.py`
+hält die Antwort so lange, der Takt hier fragt nur das eigene Programm.
+
 Läuft eine Installation, schaut sie einmal pro Stunde beim neuesten Release vorbei.
 Gibt es eine höhere Nummer, erscheint in der Kopfzeile *„Version x.y.z laden"* —
 ein Klick lädt das Paket, vergleicht die SHA256-Summe und spielt es ein. Der Dienst
