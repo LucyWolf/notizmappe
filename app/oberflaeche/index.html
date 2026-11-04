@@ -134,9 +134,6 @@ window.addEventListener('unhandledrejection', function (ev) {
     <nav id="baum" aria-label="Notizbücher"></nav>
     <footer>
       <button type="button" id="neues-buch">+ Notizbuch</button>
-      <button type="button" id="profilknopf" hidden title="Profil und Einstellungen">
-        <span id="profilbild">·</span><span id="profilname">angemeldet</span>
-      </button>
       <div id="profilmenue" hidden>
         <p id="profilkopf">
           <strong id="profilwer">…</strong>
@@ -149,6 +146,9 @@ window.addEventListener('unhandledrejection', function (ev) {
         <span id="version"></span>
         <button type="button" id="sperren" title="Sperren" hidden>🔒</button>
         <button type="button" id="zahnrad" title="Einstellungen">⚙</button>
+        <button type="button" id="profilknopf" hidden title="Profil und Einstellungen">
+          <span id="profilbild">·</span><span id="profilname">angemeldet</span>
+        </button>
       </span>
     </footer>
   </aside>

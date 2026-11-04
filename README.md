@@ -208,8 +208,10 @@ nächsten Server noch da.
 
 ### Dein Zugang am Server, im Fenster
 
-Verbunden steht unten in der Leiste dein Zugang — rundes Zeichen mit dem
-ersten Buchstaben, daneben der Name, genau wie in der Serverfassung. Ein Klick
+Verbunden steht unten **rechts** in der Leiste dein Zugang — rundes Zeichen mit
+dem ersten Buchstaben, daneben der Name, genau wie in der Serverfassung. Das
+Zahnrad verschwindet dabei: die Einstellungen wohnen in der Datei-Ebene, und
+zwei Wege zur selben Seite sind einer zu viel. Ein Klick
 klappt ein kleines Menü auf: **Mein Profil** und **Abmelden**. „Mein Profil"
 führt auf **Datei → Profil**: Rolle, zweiter Schritt, Mailadresse eintragen,
 Passwort ändern. Vorher ging das nur im Browser.

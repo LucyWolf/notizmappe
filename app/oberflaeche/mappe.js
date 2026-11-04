@@ -253,6 +253,10 @@ function ordnerZeigen(e) {
   if (knopf) {
     const wer = (e.ferne && e.ferne.benutzer) || '';
     knopf.hidden = !fern;
+    // Wie in der Serverfassung: steht der Zugang da, ist das Zahnrad weg -
+    // die Einstellungen wohnen in der Datei-Ebene, und zwei Wege zur selben
+    // Seite sind einer zu viel.
+    $('#zahnrad').hidden = fern;
     if (!fern) $('#profilmenue').hidden = true;
     if (fern) {
       $('#profilname').textContent = wer || 'angemeldet';
