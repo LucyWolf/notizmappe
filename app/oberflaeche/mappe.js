@@ -1406,15 +1406,28 @@ for (const w of minileiste.querySelectorAll('select[data-befehl]')) {
 
 /* <mark> gibt es als Befehl nicht - also von Hand um die Auswahl legen.
  * Eine Hintergrundfarbe per style waere der uebliche Weg und genau die Art
- * Freitext-CSS, die hier nicht in die Dateien soll. */
-function hervorheben() {
+ * Freitext-CSS, die hier nicht in die Dateien soll. Deshalb steht nur der
+ * Name der Farbe als data-farbe da, und die Stildatei macht daraus die
+ * Farbe - dieselbe feste Liste steht in reinigen.py. Gelb bekommt keinen
+ * Eintrag: so bleibt alles unveraendert, was hervorgehoben wurde, als es
+ * nur diese eine Farbe gab. */
+function hervorheben(farbe) {
   const sel = window.getSelection();
   if (!sel.rangeCount || sel.isCollapsed) return;
   const r = sel.getRangeAt(0);
   const schon = (sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement)
     .closest('mark');
-  if (schon) { hervorhebungWeg(); return; }
+  if (schon) {
+    // Dieselbe Farbe noch einmal heisst: weg damit. Eine andere faerbt um.
+    const jetzt = schon.getAttribute('data-farbe') || 'gelb';
+    if (!farbe || farbe === jetzt) { hervorhebungWeg(); return; }
+    if (farbe === 'gelb') schon.removeAttribute('data-farbe');
+    else schon.setAttribute('data-farbe', farbe);
+    gemerkt();
+    return;
+  }
   const m = document.createElement('mark');
+  if (farbe && farbe !== 'gelb') m.setAttribute('data-farbe', farbe);
   try {
     m.appendChild(r.extractContents());
     r.insertNode(m);
@@ -3371,6 +3384,16 @@ const FL_SCHILD = flBild('<path d="M8.5 1.5H14v5.5L7 14 2 9z"/>'
                          + '<circle cx="11.2" cy="4.6" r=".9"/>');
 const FL_PINSEL = flBild('<path d="M11 2.5 13.5 5 7 11.5 4.5 9z"/>'
                          + '<path d="M4.5 9 3 12.5 6.5 11"/>');
+// Der Textmarker. Ein "A" mit gelbem Grund sagt nicht, was passiert - der
+// Stift schon, und darunter liegt der Balken in seiner Farbe.
+const FL_MARKERSTIFT = flBild('<path d="M3.5 12.5h3L13 6l-3-3-6.5 6.5z"/>'
+                              + '<path d="M9 4.5 11.5 7"/><path d="M2.5 14.5h5"/>');
+// Die Farben des Markers. Dieselben Namen stehen in reinigen.py; was dort
+// nicht drinsteht, faellt beim Speichern heraus. Gelb braucht keinen
+// Eintrag im Text und steht deshalb vorn.
+const FL_MARKERFARBEN = [['gelb', 'Gelb', '#ffe680'], ['gruen', 'Grün', '#b7ec9a'],
+                         ['blau', 'Blau', '#aad8ff'], ['rosa', 'Rosa', '#ffc0dd'],
+                         ['orange', 'Orange', '#ffcf9e'], ['grau', 'Grau', '#dcdcd4']];
 const FL_SCHERE = flBild('<circle cx="4" cy="12.2" r="2"/><circle cx="12" cy="12.2" r="2"/>'
                          + '<path d="M5.4 10.8 12 2M10.6 10.8 4 2"/>');
 const FL_KOPIE = flBild('<rect x="5.5" y="5.5" width="8.5" height="9" rx="1.2"/>'
@@ -3478,6 +3501,26 @@ function flBefehl(was, wert) {
   try {
     if (typeof aufAuswahl === 'function') aufAuswahl(was, wert);
   } catch (f) { console.error('[notizmappe] Format:', f); }
+}
+
+/* Eine Taste mit Farbbalken darunter - Schriftfarbe und Textmarker. Der
+   Balken zeigt, welche Farbe ein Klick nimmt; der Pfeil daneben waehlt eine
+   andere. Genau so steht es in Word, und genau deshalb klickt dort niemand
+   erst auf den Pfeil, wenn er die Farbe von eben noch einmal will. */
+function markerSetzen(farbe) {
+  try {
+    if (typeof hervorheben === 'function') hervorheben(farbe);
+  } catch (f) { console.error('[notizmappe] Hervorheben:', f); }
+}
+
+function flFarbtaste(inhalt, titel, farbe, tun) {
+  const k = flTaste(inhalt, titel, tun);
+  k.classList.add('fl-farbtaste');
+  const balken = el('span', { className: 'fl-balken' });
+  balken.style.background = farbe;
+  k.append(balken);
+  k.balken = balken;
+  return k;
 }
 
 function flTaste(inhalt, titel, tun, stand) {
@@ -3747,12 +3790,37 @@ function formatleisteBauen(wie) {
             function () { flBefehl('subscript'); }, 'subscript'),
   ];
 
+  // Beide Farbknoepfe wie in Word: links die Farbe von eben, rechts der
+  // Pfeil fuer eine andere. Der Balken darunter zieht mit und sagt, was
+  // ein Klick nimmt.
+  let markerwahl = FL_MARKERFARBEN[0];
+  const kMarkerKnopf = flFarbtaste(FL_MARKERSTIFT, 'Hervorheben', markerwahl[2],
+                                   function () { markerSetzen(markerwahl[0]); });
+  const kMarker = flGeteilt(kMarkerKnopf,
+    flKlappe(wirt, 'Andere Farbe zum Hervorheben', '', FL_MARKERFARBEN,
+             function (w) {
+               markerwahl = FL_MARKERFARBEN.find((f) => f[0] === w) || markerwahl;
+               kMarkerKnopf.balken.style.background = markerwahl[2];
+               markerSetzen(markerwahl[0]);
+             }));
+
+  const farbliste = flFarben();
+  // Nicht die erste: die ist die Schriftfarbe selbst, und ein schwarzer
+  // Balken unter dem A sieht aus wie gar keiner.
+  let schriftwahl = (farbliste[1] || farbliste[0] || ['#b23b2e'])[0];
+  const kFarbeKnopf = flFarbtaste('<span class="fl-buchstabe">A</span>', 'Schriftfarbe',
+                                  schriftwahl,
+                                  function () { flBefehl('foreColor', schriftwahl); });
+  const kFarbe = flGeteilt(kFarbeKnopf,
+    flKlappe(wirt, 'Andere Schriftfarbe', '', farbliste, function (farbe) {
+      schriftwahl = farbe;
+      kFarbeKnopf.balken.style.background = farbe;
+      flBefehl('foreColor', farbe);
+    }));
+
   const farben = [
-    flTaste('<span class="fl-marker">A</span>', 'Hervorheben', function () {
-      try { if (typeof hervorheben === 'function') hervorheben(); } catch (f) { /* egal */ }
-    }),
-    flKlappe(wirt, 'Schriftfarbe', '<span class="fl-buchstabe">A</span>',
-             flFarben(), function (farbe) { flBefehl('foreColor', farbe); }),
+    kMarker,
+    kFarbe,
     flTaste('<span class="fl-weg">✕</span>', 'Formatierung entfernen', function () {
       flBefehl('removeFormat');
       try { if (typeof hervorhebungWeg === 'function') hervorhebungWeg(); } catch (f) { /* egal */ }

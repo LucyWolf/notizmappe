@@ -43,6 +43,10 @@ for muster, name in ((r"^function el\(.*?^\}", "el"),
                      (r"^const FL_NUMMERNLISTE = flBild\(.*?\);", "FL_NUMMERNLISTE"),
                      (r"^const FL_SCHILD = [^;]*;", "FL_SCHILD"),
                      (r"^const FL_PINSEL = [^;]*;", "FL_PINSEL"),
+                     (r"^const FL_MARKERSTIFT = [^;]*;", "FL_MARKERSTIFT"),
+                     (r"^const FL_MARKERFARBEN = \[.*?\];", "FL_MARKERFARBEN"),
+                     (r"^function markerSetzen\(.*?^\}", "markerSetzen"),
+                     (r"^function flFarbtaste\(.*?^\}", "flFarbtaste"),
                      (r"^const FL_SCHERE = [^;]*;", "FL_SCHERE"),
                      (r"^const FL_KOPIE = [^;]*;", "FL_KOPIE"),
                      (r"^const FL_KLEMME = [^;]*;", "FL_KLEMME"),
@@ -216,7 +220,7 @@ const document = {
 };
 let stand = {};
 function aufAuswahl(befehl, wert) { befehle.push([befehl, wert === undefined ? null : wert]); }
-function hervorheben() { befehle.push(['hervorheben', null]); }
+function hervorheben(f) { befehle.push(['hervorheben', f || null]); }
 function hervorhebungWeg() { befehle.push(['hervorhebungWeg', null]); }
 const window = { getSelection: () => auswahl, innerWidth: 1200, innerHeight: 800 };
 function gemerkt() { befehle.push(['gemerkt', null]); }
@@ -315,7 +319,7 @@ function klappe(titel, welcher, wo, wotasten) {
 const vorlage = klappe('Formatvorlage', 1);
 ergebnis.vorlagen = vorlage.eintraege;
 ergebnis.vorlage_befehl = vorlage.befehle;
-const farbe = klappe('Schriftfarbe', 1);
+const farbe = klappe('Andere Schriftfarbe', 1);
 ergebnis.farben = farbe.eintraege;
 ergebnis.farbe_befehl = farbe.befehle;
 
@@ -449,6 +453,33 @@ ergebnis.bandreihen = bandleiste.kinder.filter((k) => k.klassen.has('fl-reihe'))
 ergebnis.bandknoepfe = bandtasten.map((k) => k.title);
 ergebnis.bandklasse = bandleiste.klassen.has('fl-band');
 
+/* --- Die beiden Farbknoepfe: Balken zeigt, was ein Klick nimmt ----------- */
+const markerknopf = bandtasten.find((t) => t.title === 'Hervorheben');
+const farbknopf = bandtasten.find((t) => t.title === 'Schriftfarbe');
+ergebnis.balken_anfang = [markerknopf.kinder.map((k) => k.style.background),
+                          farbknopf.kinder.map((k) => k.style.background)];
+ergebnis.balkenklasse = [markerknopf.klassen.has('fl-farbtaste'),
+                         farbknopf.klassen.has('fl-farbtaste')];
+befehle.length = 0;
+markerknopf.klick();
+ergebnis.marker_klick = befehle.slice();
+befehle.length = 0;
+farbknopf.klick();
+ergebnis.farbe_klick = befehle.slice();
+// Eine andere Farbe waehlen: faerbt gleich und merkt sie sich fuer den Knopf
+const markerwahl = klappe('Andere Farbe zum Hervorheben', 1, bandleiste, bandtasten);
+ergebnis.markerfarben = markerwahl.eintraege;
+ergebnis.marker_gewaehlt = markerwahl.befehle;
+ergebnis.balken_danach = markerknopf.kinder.map((k) => k.style.background);
+befehle.length = 0;
+markerknopf.klick();
+ergebnis.marker_nochmal = befehle.slice();
+klappe('Andere Schriftfarbe', 2, bandleiste, bandtasten);
+befehle.length = 0;
+farbknopf.klick();
+ergebnis.farbe_nochmal = befehle.slice();
+ergebnis.farbbalken_danach = farbknopf.kinder.map((k) => k.style.background);
+
 /* --- Ausrichtung und Zeilenabstand haengen am Absatz --------------------- */
 const feld2 = new Knoten('div');
 feld2.klassen.add('text');
@@ -581,7 +612,8 @@ pruefe("die Gruppen kommen mit", d["gruppen"] == ['★ Favoriten'], d["gruppen"]
 AUSRICHTEN = ['Linksbündig', 'Zentriert', 'Rechtsbündig', 'Blocksatz']
 ZEICHEN = ['Fett (Strg+B)', 'Kursiv (Strg+I)', 'Unterstrichen (Strg+U)',
            'Durchgestrichen', 'Hochgestellt', 'Tiefgestellt']
-FARBEN = ['Hervorheben', 'Schriftfarbe', 'Formatierung entfernen']
+FARBEN = ['Hervorheben', 'Andere Farbe zum Hervorheben',
+          'Schriftfarbe', 'Andere Schriftfarbe', 'Formatierung entfernen']
 LISTEN = ['Aufzählung', 'Aufzählungszeichenbibliothek',
           'Nummerierung', 'Nummerierungsbibliothek']
 ABSATZ = ['Einzug verkleinern', 'Einzug vergrößern', *AUSRICHTEN, 'Zeilenabstand']
@@ -592,7 +624,9 @@ ABLAGE = ['Einfügen (Strg+V)', 'Ausschneiden (Strg+X)', 'Kopieren (Strg+C)',
 # wie vor dem Umbau des Bands.
 ERWARTET = ['Formatvorlage', 'Einzug verkleinern', 'Einzug vergrößern',
             'Aufgabe (zum Abhaken)', 'Kategorie', 'Fett (Strg+B)', 'Kursiv (Strg+I)',
-            'Unterstrichen (Strg+U)', 'Durchgestrichen', 'Hervorheben', 'Schriftfarbe',
+            'Unterstrichen (Strg+U)', 'Durchgestrichen',
+            'Hervorheben', 'Andere Farbe zum Hervorheben',
+            'Schriftfarbe', 'Andere Schriftfarbe',
             'Aufzählung', 'Aufzählungszeichenbibliothek', 'Nummerierung',
             'Nummerierungsbibliothek', 'Format übertragen', 'Formatierung entfernen']
 pruefe("alle Knöpfe, in dieser Reihenfolge", d["knoepfe"] == ERWARTET, d["knoepfe"])
@@ -615,7 +649,7 @@ print("\nWas unten ankommt")
 for was, soll in (("fett", [["bold", None]]), ("kursiv", [["italic", None]]),
                   ("unterstrichen", [["underline", None]]),
                   ("durch", [["strikeThrough", None]]),
-                  ("marker", [["hervorheben", None]]),
+                  ("marker", [["hervorheben", "gelb"]]),
                   ("liste", [["insertUnorderedList", None]]),
                   ("nummern", [["insertOrderedList", None]]),
                   ("einzug", [["indent", None]]), ("raus", [["outdent", None]])):
@@ -656,8 +690,10 @@ pruefe("und gibt genau das weiter, was an der Stelle galt",
 print("\nListe und Bibliothek sind ein Knopf")
 # Vorher standen vier Knoepfe nebeneinander, und keiner sagte, dass je zwei
 # dasselbe meinen.
-pruefe("je Listenart ein Paar aus Knopf und Pfeil",
-       d["paare"] == [['Aufzählung', 'Aufzählungszeichenbibliothek'],
+pruefe("je Listenart ein Paar aus Knopf und Pfeil - und dasselbe bei den Farben",
+       d["paare"] == [['Hervorheben', 'Andere Farbe zum Hervorheben'],
+                      ['Schriftfarbe', 'Andere Schriftfarbe'],
+                      ['Aufzählung', 'Aufzählungszeichenbibliothek'],
                       ['Nummerierung', 'Nummerierungsbibliothek']], d["paare"])
 pruefe("der Knopf zeigt eine Liste, nicht nur sein Zeichen",
        d["listenbild"] == ['<svg', '<svg'], d["listenbild"])
@@ -706,6 +742,32 @@ pruefe("und beide Felder zeigen den Stand an der Markierung",
        d["schriftwahl"] == 'DejaVu Sans' and d["groessenwahl"] == '5',
        (d["schriftwahl"], d["groessenwahl"]))
 
+print("\nSchriftfarbe und Textmarker")
+# Wie in Word: unter dem Zeichen ein Balken in der Farbe, die ein Klick
+# nimmt. Ohne ihn sagt der Knopf nicht, was er gerade setzt.
+pruefe("beide Knöpfe tragen einen Farbbalken",
+       d["balken_anfang"] == [['#ffe680'], ['#b23b2e']], d["balken_anfang"])
+pruefe("und sind als Farbtaste gebaut", d["balkenklasse"] == [True, True],
+       d["balkenklasse"])
+pruefe("ein Klick hebt gleich hervor, ohne Umweg über den Pfeil",
+       d["marker_klick"] == [["hervorheben", "gelb"]], d["marker_klick"])
+pruefe("und setzt die Schriftfarbe von eben",
+       d["farbe_klick"] == [["foreColor", "#b23b2e"]], d["farbe_klick"])
+pruefe("der Marker hat sechs Farben zur Wahl",
+       d["markerfarben"] == ['Gelb', 'Grün', 'Blau', 'Rosa', 'Orange', 'Grau'],
+       d["markerfarben"])
+pruefe("eine andere Farbe färbt sofort",
+       d["marker_gewaehlt"] == [["hervorheben", "gruen"]], d["marker_gewaehlt"])
+pruefe("der Balken zieht mit", d["balken_danach"] == ['#b7ec9a'], d["balken_danach"])
+# Das ist der Punkt an der geteilten Taste: die Farbe von eben bleibt die
+# des Knopfs.
+pruefe("und der nächste Klick nimmt sie wieder",
+       d["marker_nochmal"] == [["hervorheben", "gruen"]], d["marker_nochmal"])
+pruefe("dasselbe bei der Schriftfarbe",
+       d["farbe_nochmal"] == [["foreColor", "#2f7d32"]]
+       and d["farbbalken_danach"] == ['#2f7d32'],
+       (d["farbe_nochmal"], d["farbbalken_danach"]))
+
 print("\nAusrichtung und Zeilenabstand")
 # Beides gilt fuer die Zeile, nicht fuer die markierten Buchstaben - also
 # muss es am Absatz haengen und nicht als Befehl auf die Auswahl gehen.
@@ -749,9 +811,26 @@ pruefe("Erfundenes fliegt raus",
        reinigen.html('<p data-aus="hinten" data-za="9">x</p>') == '<p>x</p>',
        reinigen.html('<p data-aus="hinten" data-za="9">x</p>'))
 
+# Dasselbe fuer den Marker: die Farbe steht als Name im Text, und den muss
+# der Reiniger kennen - sonst ist sie beim Speichern wieder weg. Gelb hat
+# keinen Eintrag, damit alte Notizen unveraendert bleiben.
+js_marker = {w for w in re.findall(
+    r"\['(\w+)', '[^']+', '#[0-9a-fA-F]{6}'\]",
+    re.search(r"^const FL_MARKERFARBEN = \[.*?\];", mappe, re.S | re.M).group(0))}
+pruefe("der Reiniger kennt dieselben Markerfarben",
+       js_marker - {'gelb'} == reinigen.MARKERFARBEN,
+       (js_marker, reinigen.MARKERFARBEN))
+pruefe("und lässt sie durch",
+       reinigen.html('<mark data-farbe="gruen">x</mark>') == '<mark data-farbe="gruen">x</mark>')
+pruefe("Erfundenes nicht",
+       reinigen.html('<mark data-farbe="neon">x</mark>') == '<mark>x</mark>',
+       reinigen.html('<mark data-farbe="neon">x</mark>'))
+
 # Und die Stildatei muss daraus eine Regel machen, sonst sieht man nichts.
 stil = (WURZEL / "app/oberflaeche/stil.css").read_text(encoding="utf-8")
 stil = re.sub(r"/\*.*?\*/", "", stil, flags=re.S)
+pruefe("die Stildatei hat zu jeder Markerfarbe eine Regel",
+       all(f'mark[data-farbe="{w}"]' in stil for w in reinigen.MARKERFARBEN))
 pruefe("die Stildatei hat zu jeder Ausrichtung eine Regel",
        all(f'[data-aus="{w}"]' in stil for w in reinigen.AUSRICHTUNG))
 pruefe("und zu jedem Abstand",

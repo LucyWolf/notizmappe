@@ -23,7 +23,14 @@ LEER = {"br", "img"}
 # irgendwohin - die Adresse setzt die Oberflaeche beim Anzeigen.
 ATTRIBUTE = {"a": {"href"}, "img": {"data-datei", "alt"},
              "font": {"size", "face", "color"},
-             "ol": {"data-art"}, "ul": {"data-art"}}
+             "ol": {"data-art"}, "ul": {"data-art"},
+             "mark": {"data-farbe"}}
+
+# Die Farben des Textmarkers. Wieder als Name aus einer festen Liste statt
+# als Hintergrundfarbe im style-Attribut: die Stildatei macht daraus die
+# Farbe, und ueber data-farbe laesst sich nichts hineinschreiben. Gelb
+# braucht keinen Eintrag - so bleiben alte Notizen unveraendert.
+MARKERFARBEN = {"gruen", "blau", "rosa", "orange", "grau"}
 
 # Ausrichtung und Zeilenabstand haengen am Absatz, nicht an den markierten
 # Buchstaben. text-align und line-height waeren wieder freies CSS; deshalb
@@ -258,6 +265,8 @@ class _Reiniger(HTMLParser):
                 continue
             if name == "data-art" and wert not in (LISTENARTEN if tag == "ol"
                                                    else LISTENZEICHEN):
+                continue
+            if name == "data-farbe" and wert not in MARKERFARBEN:
                 continue
             if name == "data-aus" and wert not in AUSRICHTUNG:
                 continue

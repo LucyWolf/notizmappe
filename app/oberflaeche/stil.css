@@ -403,10 +403,22 @@ body { display: flex; flex-direction: column; }
 }
 #minileiste #farben button:hover { outline: 2px solid var(--akzent); outline-offset: 1px; }
 
-/* Hervorhebung und Farben in den Kästen */
+/* Hervorhebung und Farben in den Kästen.
+   Gelb steht ohne data-farbe da - so bleiben Notizen von früher, als es nur
+   diese eine Farbe gab, unverändert. */
 .kasten .text mark { background: #ffe680; color: #1f1d1a; border-radius: 2px; padding: 0 1px; }
+.kasten .text mark[data-farbe="gruen"] { background: #b7ec9a; }
+.kasten .text mark[data-farbe="blau"] { background: #aad8ff; }
+.kasten .text mark[data-farbe="rosa"] { background: #ffc0dd; }
+.kasten .text mark[data-farbe="orange"] { background: #ffcf9e; }
+.kasten .text mark[data-farbe="grau"] { background: #dcdcd4; }
 @media (prefers-color-scheme: dark) {
   .kasten .text mark { background: #b59000; color: #fff; }
+  .kasten .text mark[data-farbe="gruen"] { background: #3f7a2c; }
+  .kasten .text mark[data-farbe="blau"] { background: #2a5e92; }
+  .kasten .text mark[data-farbe="rosa"] { background: #8e3663; }
+  .kasten .text mark[data-farbe="orange"] { background: #95571c; }
+  .kasten .text mark[data-farbe="grau"] { background: #55544e; }
 }
 
 /* --- Update laeuft --- */
@@ -667,8 +679,12 @@ body { display: flex; flex-direction: column; }
 .fl-bild { display: block; }
 .fl-haken { color: var(--akzent); font-size: 13px; }
 .fl-weg { opacity: .6; }
-.fl-marker { background: #ffe680; color: #1f1d1a; padding: 0 3px; border-radius: 2px; }
-.fl-buchstabe { border-bottom: 3px solid var(--warnung); line-height: 1.1; }
+/* Schriftfarbe und Textmarker wie in Word: das Zeichen, darunter ein Balken
+   in der Farbe, die ein Klick nimmt - und daneben der Pfeil für die Wahl.
+   Ohne den Balken sagt der Knopf nicht, welche Farbe er gerade setzt. */
+.fl-farbtaste { flex-direction: column; gap: 1px; padding: 0 3px; }
+.fl-balken { display: block; width: 15px; height: 3px; border-radius: 1px; }
+.fl-buchstabe { line-height: 1.05; }
 .fl-hoch { font-size: 9px; }
 .formatleiste .fl-trenner {
   width: 1px; height: 16px; background: var(--linie); margin: 0 3px;
