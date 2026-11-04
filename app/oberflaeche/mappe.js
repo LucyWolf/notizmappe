@@ -4157,6 +4157,19 @@ function textfeldEinfuegen() {
   kastenNeu(links, oben);
 }
 
+/* Im Reiter Einfügen steht neben jedem Symbol das Wort - so wie in OneNote.
+   Oben bei Start waere das eine Leiste ueber zwei Bildschirmbreiten; hier
+   sind es neun Knoepfe, und "Schreibbereich einfuegen" errät niemand am
+   Bildchen. */
+function flWort(bild, wort) {
+  return bild + '<span class="fl-wort">' + wort + '</span>';
+}
+
+function mitWort(knopf) {
+  knopf.classList.add('fl-mitwort');
+  return knopf;
+}
+
 function einfuegeleisteBauen() {
   const leiste = document.getElementById('einfuegen');
   if (!leiste || leiste.querySelector('.formatleiste')) return;
@@ -4166,21 +4179,28 @@ function einfuegeleisteBauen() {
   const wirt = el('div', { className: 'formatleiste fl-band' });
   const trenner = () => el('span', { className: 'fl-trenner' });
   const gruppen = [
-    [flTafel(wirt, 'Tabelle', FL_TABELLE, flTabellenraster)],
-    [flTaste(FL_TEXTFELD, 'Schreibbereich einfügen', textfeldEinfuegen)],
-    [flTaste(FL_KLEMME, 'Dateianlage', function () { dateiWaehlen(false); }),
-     flTaste(FL_BILD, 'Bilder', function () { dateiWaehlen(true); })],
-    [flTaste(FL_KETTE, 'Link', function () {
+    [mitWort(flTafel(wirt, 'Tabelle', flWort(FL_TABELLE, 'Tabelle'), flTabellenraster))],
+    [mitWort(flTaste(flWort(FL_TEXTFELD, 'Schreibbereich einfügen'),
+                     'Schreibbereich einfügen', textfeldEinfuegen))],
+    [mitWort(flTaste(flWort(FL_KLEMME, 'Dateianlage'), 'Dateianlage',
+                     function () { dateiWaehlen(false); })),
+     mitWort(flTaste(flWort(FL_BILD, 'Bilder'), 'Bilder',
+                     function () { dateiWaehlen(true); }))],
+    [mitWort(flTaste(flWort(FL_KETTE, 'Link'), 'Link', function () {
       try { if (typeof linkSetzen === 'function') linkSetzen(); } catch (f) { /* egal */ }
-    }),
-     flKlappe(wirt, 'Datum und Uhrzeit', FL_KALENDER,
-              [['datum', 'Datum', ''], ['zeit', 'Uhrzeit', ''],
-               ['beides', 'Datum und Uhrzeit', '']],
-              function (art) { flBefehl('insertText', datumText(art)); }),
-     flTafel(wirt, 'Symbol', '<span class="fl-sinn">Ω</span>', flZeichentafel)],
-    [flTaste('＋ Seite', 'Neue Seite', function () { altKlick('neue-seite-band'); }),
-     flTaste('＋ Abschnitt', 'Neuer Abschnitt',
-             function () { altKlick('neuer-abschnitt-band'); })],
+    })),
+     mitWort(flKlappe(wirt, 'Datum und Uhrzeit',
+                      flWort(FL_KALENDER, 'Datum und Uhrzeit'),
+                      [['datum', 'Datum', ''], ['zeit', 'Uhrzeit', ''],
+                       ['beides', 'Datum und Uhrzeit', '']],
+                      function (art) { flBefehl('insertText', datumText(art)); })),
+     mitWort(flTafel(wirt, 'Symbol',
+                     flWort('<span class="fl-sinn">Ω</span>', 'Symbol'),
+                     flZeichentafel))],
+    [mitWort(flTaste(flWort('＋', 'Seite'), 'Neue Seite',
+                     function () { altKlick('neue-seite-band'); })),
+     mitWort(flTaste(flWort('＋', 'Abschnitt'), 'Neuer Abschnitt',
+                     function () { altKlick('neuer-abschnitt-band'); }))],
   ];
   const reihe = el('div', { className: 'fl-reihe' });
   gruppen.forEach(function (g, i) {

@@ -101,6 +101,8 @@ for muster, name in ((r"^function el\(.*?^\}", "el"),
                      (r"^function altKlick\(.*?^\}", "altKlick"),
                      (r"^function dateiWaehlen\(.*?^\}", "dateiWaehlen"),
                      (r"^function textfeldEinfuegen\(.*?^\}", "textfeldEinfuegen"),
+                     (r"^function flWort\(.*?^\}", "flWort"),
+                     (r"^function mitWort\(.*?^\}", "mitWort"),
                      (r"^function einfuegeleisteBauen\(.*?^\}", "einfuegeleisteBauen"),
                      (r"^function formatleisteBauen\(.*?^\}", "formatleisteBauen"),
                      (r"^function formatleisteFrischen\(.*?^\}", "formatleisteFrischen")):
@@ -584,6 +586,9 @@ const einfleiste = einfkasten.kinder.find((k) => k.klassen.has('formatleiste'));
 const einftasten = einfleiste.alle().filter((k) => k.klassen.has('fl-taste'));
 ergebnis.einfknoepfe = einftasten.map((k) => k.title);
 ergebnis.einfalt = einfkasten.kinder[0].id;
+// An jedem Knopf muss das Wort stehen, nicht nur das Bildchen.
+ergebnis.einfworte = einftasten.map((k) => k.klassen.has('fl-mitwort'));
+ergebnis.einftext = einftasten.map((k) => k.innerHTML);
 
 function einfKlick(titel) {
   befehle.length = 0;
@@ -954,6 +959,13 @@ pruefe("die Knöpfe stehen in dieser Reihenfolge",
 # neue Seiten und Abschnitte, und die soll es nur einmal geben.
 pruefe("die alten Knöpfe stehen versteckt dahinter", d["einfalt"] == 'einfalt',
        d["einfalt"])
+# "Schreibbereich einfügen" errät niemand am Bildchen.
+pruefe("an jedem Knopf steht das Wort, nicht nur das Symbol",
+       all(d["einfworte"]) and d["einftext"] == ['Tabelle▾', 'Schreibbereich einfügen',
+                                                 'Dateianlage', 'Bilder', 'Link',
+                                                 'Datum und Uhrzeit▾', 'ΩSymbol▾',
+                                                 '＋Seite', '＋Abschnitt'],
+       (d["einfworte"], d["einftext"]))
 pruefe("Dateianlage nimmt alles an",
        d["anlage"] == [["angeklickt", "dateiwahl:"]], d["anlage"])
 pruefe("Bilder nur Bilder",

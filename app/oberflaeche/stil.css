@@ -770,6 +770,11 @@ body { display: flex; flex-direction: column; }
   color: var(--schrift); font: inherit; font-size: 15px; line-height: 1;
 }
 .fl-zeichenfeld:hover { background: var(--flaeche); border-color: var(--linie); }
+
+/* Symbol und Wort nebeneinander - im Reiter Einfügen steht an jedem Knopf,
+   was er tut. */
+.fl-mitwort { padding: 0 8px; gap: 6px; }
+.fl-wort { font-size: 12px; white-space: nowrap; }
 .fl-geteilt { display: inline-flex; align-items: center; }
 .fl-geteilt .fl-taste { border-radius: 3px 0 0 3px; }
 .fl-geteilt .fl-nurpfeil {
