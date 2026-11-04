@@ -254,7 +254,8 @@ function ordnerZeigen(e) {
     // Ein Konto gibt es, wenn man mit einem Server verbunden ist - oder wenn
     // dies die Serverfassung selbst ist (dort laeuft die Oberflaeche nicht
     // am eigenen Rechner, und angemeldet ist man ohnehin).
-    const konto = fern || e.hier === false;
+    hierAmRechner = e.hier !== false;
+    const konto = fern || !hierAmRechner;
     const wer = (e.ferne && e.ferne.benutzer) || '';
     knopf.hidden = !konto;
     // Wie in der Serverfassung: steht der Zugang da, ist das Zahnrad weg -
@@ -2947,10 +2948,14 @@ $('#profil-oeffnen').addEventListener('click', () => {
   profilBearbeitenBauen();
   profilOeffnen();
 });
-/* Laeuft die Oberflaeche in der Serverfassung? Dort gibt es keine Bruecke zu
- * einem eigenen Rechner - und "Abmelden" heisst dort, sich abzumelden. */
+/* Laeuft die Oberflaeche in der Serverfassung? Die Bruecke sagt es mit
+ * "hier": am eigenen Rechner true, im Browser false. Nicht an
+ * window.pywebview.platform ablesen - die Oberflaeche redet mit dem Programm
+ * ueber genau eine Schnittstelle, und das soll so bleiben. */
+let hierAmRechner = true;
+
 function amServer() {
-  return !!(window.pywebview && window.pywebview.platform === 'server');
+  return hierAmRechner === false;
 }
 
 $('#profil-abmelden').addEventListener('click', async () => {
