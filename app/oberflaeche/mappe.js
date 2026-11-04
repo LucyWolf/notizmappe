@@ -85,6 +85,7 @@ const WEGE = {
   'POST /api/einstellungen':   (p, b, r) => b.optionen_setzen(r),
   'POST /api/ordner/waehlen':  (p, b) => b.ordner_waehlen(),
   'POST /api/ordner':          (p, b, r) => b.ordner_setzen(r),
+  'POST /api/server':          (p, b, r) => b.server_seite(r.art, r.weg, r.rumpf),
   'GET /api/version':          (p, b) => b.version(p.frisch === 'true'),
   'POST /api/update':          (p, b) => b.update(),
   'GET /api/update/stand':     (p, b) => b.update_stand(),
@@ -246,6 +247,12 @@ function ordnerZeigen(e) {
     ? `${e.ferne.adresse || 'Server'} als ${e.ferne.benutzer || '?'}`
     : 'Datenordner: ' + (e.ordner || '?');
   wo.classList.toggle('amserver', !!fern);
+  // Unten in der Leiste: als wer man am Server angemeldet ist.
+  const ich = $('#meinprofil');
+  if (ich) {
+    ich.hidden = !fern;
+    ich.textContent = fern ? `👤 ${(e.ferne && e.ferne.benutzer) || 'Profil'}` : '';
+  }
 }
 
 function baumZeichnen() {
@@ -2742,6 +2749,7 @@ function dateiPunkt(punkt) {
   }
   if (punkt === 'info') dateiInfoFuellen();
   if (punkt === 'server') dateiServerFuellen();
+  if (punkt === 'profil') profilFuellen();
   // "Installiert", die Update-Knoepfe und die beiden Haken stehen in
   // #einstellungen-oben, und das liegt auf der Informationen-Seite. Gefuellt
   // werden sie aber von einstellungenLaden() - wer die Datei-Ebene ueber das
@@ -2802,6 +2810,56 @@ function zuDenEinstellungen(punkt) {
     if (ziel) ziel.scrollIntoView({ block: 'center' });
   }, 80);
 }
+
+/* Das eigene Konto am Server - im Fenster, nicht nur im Browser. Verbunden
+ * steht unten in der Leiste, als wer man dort angemeldet ist; ein Klick
+ * fuehrt hierher. Oertlich gibt es nichts einzustellen: dann steht das auch
+ * so da, statt eine leere Seite zu zeigen. */
+async function profilFuellen() {
+  const e = await api('/api/einstellungen').catch(() => null);
+  const fern = !!(e && e.ferne && e.ferne.aktiv);
+  $('#p-nichts').hidden = fern;
+  $('#p-alles').hidden = !fern;
+  if (!fern) return;
+  $('#p-hinweis').textContent = '';
+  let d;
+  try {
+    d = await api('/api/server', 'POST', { art: 'GET', weg: '/profil' });
+  } catch (f) { $('#p-hinweis').textContent = f.message; return; }
+  $('#p-ich').textContent = d.ich || '?';
+  $('#p-rolle').textContent = d.rolle || '?';
+  $('#p-zwei').textContent = d.zwei ? 'eingeschaltet' : 'aus';
+  if (document.activeElement !== $('#p-email')) $('#p-email').value = d.email || '';
+  $('#p-verwaltung').textContent = d.darf_verwalten
+    ? 'Du darfst dort Benutzer und Projekte verwalten. Das geht im Browser: '
+      + 'die Mappe am Server aufrufen, dann Einstellungen.'
+    : 'Benutzer und Projekte verwaltet dort jemand anderes.';
+}
+
+$('#p-email-setzen').addEventListener('click', async () => {
+  try {
+    const r = await api('/api/server', 'POST',
+                        { art: 'POST', weg: '/profil/email',
+                          rumpf: { email: $('#p-email').value } });
+    $('#p-hinweis').textContent = r.hinweis || 'Übernommen.';
+    profilFuellen();
+  } catch (f) { $('#p-hinweis').textContent = f.message; }
+});
+
+$('#p-passwort-setzen').addEventListener('click', async () => {
+  const alt = $('#p-alt').value;
+  const neu = $('#p-neu').value;
+  if (!alt || !neu) { $('#p-hinweis').textContent = 'Beide Felder ausfüllen.'; return; }
+  try {
+    const r = await api('/api/server', 'POST',
+                        { art: 'POST', weg: '/profil/passwort', rumpf: { alt, neu } });
+    $('#p-alt').value = '';
+    $('#p-neu').value = '';
+    $('#p-hinweis').textContent = r.hinweis || 'Passwort geändert.';
+  } catch (f) { $('#p-hinweis').textContent = f.message; }
+});
+
+$('#meinprofil').addEventListener('click', () => { dateiZeigen(true); dateiPunkt('profil'); });
 
 // Beide Wege führen auf die Serverseite, nicht mehr in die Optionen.
 $('#d-server').addEventListener('click', () => dateiPunkt('server'));

@@ -268,6 +268,47 @@ def ruf(methode: str, args: list) -> dict:
     return antwort
 
 
+# Seiten des Servers, die keine Brueckenmethode sind: das eigene Profil, der
+# zweite Schritt, die Bereiche. Eine feste Liste und keine freie Adresse -
+# sonst waere das eine Stelle, mit der sich jede Route des Servers aufrufen
+# laesst, und zwar mit dem Kennzeichen des angemeldeten Benutzers.
+SERVERSEITEN = {
+    "GET": {"/profil", "/zwei-schritte", "/bereiche", "/verwaltung"},
+    "POST": {"/profil/email", "/profil/passwort", "/profil/meldung",
+             "/zwei-schritte", "/bereich"},
+}
+
+
+def serverseite(art: str, weg: str, rumpf=None) -> dict:
+    """Eine Seite des Servers aufrufen - fuer das Profil im Fenster."""
+    art = (art or "GET").upper()
+    if weg not in SERVERSEITEN.get(art, ()):
+        raise FerneFehler(f"Diese Seite ruft das Fenster nicht auf: {art} {weg}")
+    e = _einstellung()
+    if not e["adresse"] or not e["keks"]:
+        raise FerneFehler("Nicht mit einem Server verbunden")
+    daten = json.dumps(rumpf or {}).encode("utf-8") if art == "POST" else None
+    lage, roh, kopf = _schicken(
+        e["adresse"], weg, daten,
+        {"Cookie": f"{KEKS}={e['keks']}", "X-Notizmappe": "1",
+         **({"Content-Type": "application/json"} if daten is not None else {})}, art)
+    # Ein neues Passwort wechselt drueben das Sitzungs-Kennzeichen. Ohne das
+    # hier waere man nach dem Aendern aus dem eigenen Fenster ausgesperrt.
+    neu = _keks_aus(kopf, KEKS)
+    if neu:
+        konfig.aendern(ferne_keks=neu)
+    try:
+        antwort = json.loads(roh or b"{}")
+    except ValueError:
+        raise FerneFehler(f"Der Server antwortet nicht verständlich ({lage})")
+    if lage == 401:
+        konfig.aendern(ferne_keks=None, ferne_aktiv=False)
+        raise FerneFehler("Die Anmeldung am Server gilt nicht mehr - bitte neu anmelden")
+    if not isinstance(antwort, dict):
+        raise FerneFehler("Der Server antwortet nicht verständlich")
+    return antwort
+
+
 def anhang_holen(notizbuch: str, abschnitt: str, name: str, datei: str) -> bytes:
     """Einen Anhang vom Server holen - zum Öffnen oder Ablegen hier."""
     e = _einstellung()

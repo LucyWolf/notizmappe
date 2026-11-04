@@ -100,6 +100,15 @@ class Gegenserver(BaseHTTPRequestHandler):
         self._antwort(404)
 
     def do_GET(self):
+        if self.path == "/profil":
+            keks = self.headers.get("Cookie") or ""
+            if GUELTIG not in keks:
+                self._antwort(401, b'{"fehler": "Nicht angemeldet"}')
+                return
+            self._antwort(200, json.dumps({"ich": "lucy", "rolle": "Verwalter",
+                                           "zwei": False, "email": "",
+                                           "darf_verwalten": True}).encode())
+            return
         if self.path.startswith("/anhang"):
             keks = self.headers.get("Cookie") or ""
             if GUELTIG not in keks:
@@ -253,6 +262,15 @@ pruefe("Die Bruecke wurde dafuer nicht bemueht",
        not any(m == "anhang_roh" for m, _ in gerufen), gerufen[-2:])
 pruefe("Eine andere Endung nimmt sie nicht",
        "fehler" in b.anhang_roh("Buch", "Teil", "Seite", "geheim.json"))
+
+# Das eigene Konto am Server, aus dem Fenster heraus. Die Seiten dafuer sind
+# keine Brueckenmethoden, also gibt es eine feste Liste - eine freie Adresse
+# waere eine Stelle, mit der sich jede Route des Servers aufrufen laesst.
+p = b.server_seite("GET", "/profil")
+pruefe("Das Profil kommt vom Server", p.get("ich") == "lucy", p)
+pruefe("Eine Seite, die nicht auf der Liste steht, geht nicht",
+       "fehler" in b.server_seite("GET", "/verwaltung/benutzer"))
+pruefe("Und auch keine erfundene", "fehler" in b.server_seite("GET", "/../etc/passwd"))
 
 # --- Umschalten --------------------------------------------------------------
 print("\nUmschalten")

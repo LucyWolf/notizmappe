@@ -435,6 +435,18 @@ class Bruecke:
         return {"daten": base64.b64encode(daten).decode("ascii"), "groesse": len(daten)}
 
     @_gefasst
+    def server_seite(self, art: str, weg: str, rumpf=None) -> dict:
+        """Eine Seite des Servers - das eigene Profil, der zweite Schritt.
+
+        Nur verbunden: oertlich gibt es kein Konto, das man einstellen
+        koennte. Welche Seiten gehen, steht in ferne.SERVERSEITEN.
+        """
+        if not ferne.aktiv():
+            raise Abbruch("Das gibt es nur, wenn du an einem Server arbeitest")
+        return ferne.serverseite(str(art or "GET"), str(weg or ""),
+                                 rumpf if isinstance(rumpf, dict) else None)
+
+    @_gefasst
     def anhang_oeffnen(self, notizbuch: str, abschnitt: str, name: str, datei: str) -> dict:
         """Mit dem Programm oeffnen, das das System dafuer vorsieht. Ein Download
         waere hier sinnlos - die Datei liegt ja schon auf dieser Platte."""

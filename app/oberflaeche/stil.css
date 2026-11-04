@@ -793,3 +793,12 @@ body { display: flex; flex-direction: column; }
 .kasten .modellfehler {
   margin: 4px 0 0; color: var(--warnung); font-size: 11px; line-height: 1.4;
 }
+
+/* Unten in der Leiste: als wer man am Server angemeldet ist. */
+#meinprofil {
+  border: 1px solid transparent; border-radius: 6px; background: none;
+  color: var(--akzent); cursor: pointer; font: inherit; font-size: 12px;
+  padding: 2px 6px; max-width: 46%; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+#meinprofil:hover { border-color: var(--linie); background: var(--flaeche); }

@@ -206,6 +206,21 @@ Adresse — ein Name ist eine Bequemlichkeit und nichts, woran eine Anmeldung
 scheitern darf. Beim Abmelden wird er wieder vergessen, sonst stünde er beim
 nächsten Server noch da.
 
+### Dein Zugang am Server, im Fenster
+
+Verbunden steht unten in der Leiste, als wer du dort angemeldet bist
+(`👤 wolfi`). Ein Klick führt auf **Datei → Profil**: Rolle, zweiter Schritt,
+Mailadresse eintragen, Passwort ändern. Vorher ging das nur im Browser.
+
+Die Seiten dafür sind keine Brückenmethoden, sondern gewöhnliche Routen des
+Servers. Deshalb gibt es in `ferne.py` eine **feste Liste** (`SERVERSEITEN`) —
+eine Stelle, die jede beliebige Adresse am Server aufruft, und zwar mit dem
+Kennzeichen des Angemeldeten, wäre ein Werkzeug und kein Profil.
+
+Ein neues Passwort wechselt am Server das Sitzungs-Kennzeichen. Das Fenster
+nimmt das neue aus der Antwort mit — sonst hätte man sich mit dem eigenen
+Passwortwechsel aus dem eigenen Fenster ausgesperrt.
+
 ### Beide Seiten in einer Leiste
 
 Sobald du angemeldet bist, stehen in der Leiste **beide** Bäume untereinander,
