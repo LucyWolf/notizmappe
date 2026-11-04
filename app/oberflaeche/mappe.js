@@ -251,25 +251,32 @@ function ordnerZeigen(e) {
   // in der Serverfassung, mit rundem Zeichen und Menue nach oben.
   const knopf = $('#profilknopf');
   if (knopf) {
+    // Ein Konto gibt es, wenn man mit einem Server verbunden ist - oder wenn
+    // dies die Serverfassung selbst ist (dort laeuft die Oberflaeche nicht
+    // am eigenen Rechner, und angemeldet ist man ohnehin).
+    const konto = fern || e.hier === false;
     const wer = (e.ferne && e.ferne.benutzer) || '';
-    knopf.hidden = !fern;
+    knopf.hidden = !konto;
     // Wie in der Serverfassung: steht der Zugang da, ist das Zahnrad weg -
     // die Einstellungen wohnen in der Datei-Ebene, und zwei Wege zur selben
     // Seite sind einer zu viel.
-    $('#zahnrad').hidden = fern;
-    if (!fern) $('#profilmenue').hidden = true;
-    if (fern) {
-      $('#profilname').textContent = wer || 'angemeldet';
-      $('#profilbild').textContent = (wer || '?').slice(0, 1).toUpperCase();
-      $('#profilwer').textContent = wer || '…';
-      $('#profilrolle').textContent = profilRolle;
-      // Die Rolle steht nur im Profil am Server - einmal holen, dann steht
-      // sie im Menue, ohne bei jedem Aufklappen zu fragen.
+    $('#zahnrad').hidden = konto;
+    if (!konto) $('#profilmenue').hidden = true;
+    if (konto) {
+      const zeigen = (name, rolle) => {
+        $('#profilname').textContent = name || 'angemeldet';
+        $('#profilbild').textContent = (name || '?').slice(0, 1).toUpperCase();
+        $('#profilwer').textContent = name || '…';
+        $('#profilrolle').textContent = rolle || '';
+      };
+      zeigen(wer, profilRolle);
+      // Name und Rolle stehen im Profil am Server - einmal holen, dann
+      // stehen sie da, ohne bei jedem Aufklappen zu fragen.
       if (!profilRolle) {
         serverHol('GET', '/profil').then((d) => {
           profilRolle = (d && d.rolle) || '';
-          $('#profilrolle').textContent = profilRolle;
-        }).catch(() => { /* dann eben ohne Rolle */ });
+          zeigen((d && d.ich) || wer, profilRolle);
+        }).catch(() => { /* dann eben ohne */ });
       }
     } else {
       profilRolle = '';
@@ -2940,8 +2947,15 @@ $('#profil-oeffnen').addEventListener('click', () => {
   profilBearbeitenBauen();
   profilOeffnen();
 });
+/* Laeuft die Oberflaeche in der Serverfassung? Dort gibt es keine Bruecke zu
+ * einem eigenen Rechner - und "Abmelden" heisst dort, sich abzumelden. */
+function amServer() {
+  return !!(window.pywebview && window.pywebview.platform === 'server');
+}
+
 $('#profil-abmelden').addEventListener('click', async () => {
   $('#profilmenue').hidden = true;
+  if (amServer()) { location.href = '/abmelden'; return; }
   try {
     await api('/api/ferne/abmelden', 'POST', {});
     merker.legen('zuletzt', 'null');
@@ -5651,6 +5665,7 @@ function profilBearbeitenBauen() {
   const abmelden = el('button', { type: 'button', textContent: 'Abmelden' });
   abmelden.addEventListener('click', async function () {
     fensterZu();
+    if (amServer()) { location.href = '/abmelden'; return; }
     try {
       await api('/api/ferne/abmelden', 'POST', {});
       merker.legen('zuletzt', 'null');
