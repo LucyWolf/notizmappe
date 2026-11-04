@@ -1075,17 +1075,6 @@ document.addEventListener('keyup', (ev) => { if (ev.code === 'Space') leertaste 
 // Klick schob danach die Flaeche statt etwas auszuwaehlen.
 window.addEventListener('blur', () => { leertaste = false; });
 
-for (const b of document.querySelectorAll('#werkzeuge [data-befehl]')) {
-  b.addEventListener('mousedown', (ev) => ev.preventDefault());  // Fokus im Text behalten
-  b.addEventListener('click', () => {
-    document.execCommand(b.dataset.befehl);
-    const k = document.activeElement && document.activeElement.closest('.kasten');
-    if (k) {
-      const e = elemente.find((x) => x.id === k.dataset.id);
-      if (e) { e.html = k.querySelector('.text').innerHTML; angefasst(); }
-    }
-  });
-}
 
 let letzterKasten = null;
 
@@ -1176,6 +1165,10 @@ function auswahlfelderFuellen() {
     }
     if (vorher) feld.value = vorher;
   }
+  // Die Leisten haben eine eigene Schriftliste, die von hier gespiegelt
+  // wird. Ohne das stuende dort "Standard", bis man das erste Mal etwas
+  // markiert - die Liste kommt ja erst vom Rechner nachgeladen.
+  for (const w of document.querySelectorAll('.formatleiste')) flSchriftenSpiegeln(w);
 }
 
 /* --- Schriftenliste in den Einstellungen ---------------------------------- */
@@ -3378,6 +3371,108 @@ const FL_SCHILD = flBild('<path d="M8.5 1.5H14v5.5L7 14 2 9z"/>'
                          + '<circle cx="11.2" cy="4.6" r=".9"/>');
 const FL_PINSEL = flBild('<path d="M11 2.5 13.5 5 7 11.5 4.5 9z"/>'
                          + '<path d="M4.5 9 3 12.5 6.5 11"/>');
+const FL_SCHERE = flBild('<circle cx="4" cy="12.2" r="2"/><circle cx="12" cy="12.2" r="2"/>'
+                         + '<path d="M5.4 10.8 12 2M10.6 10.8 4 2"/>');
+const FL_KOPIE = flBild('<rect x="5.5" y="5.5" width="8.5" height="9" rx="1.2"/>'
+                        + '<path d="M10.5 5.5v-3a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2.5"/>');
+const FL_KLEMME = flBild('<rect x="3" y="2.5" width="10" height="12" rx="1.2"/>'
+                         + '<path d="M6 2.5a2 2 0 0 1 4 0"/><path d="M5.5 7.5h5M5.5 10.5h5"/>');
+
+/* Ausrichtung und Zeilenabstand. Beides waere im Browser text-align und
+   line-height, also freies CSS - und das nimmt die Ablage nicht an (siehe
+   reinigen.py). Deshalb derselbe Weg wie bei den Listenarten: ein Attribut
+   mit einem Wert aus einer festen Liste, und die Stildatei macht daraus die
+   Regel. So laesst sich ueber data-aus nichts hineinschreiben. */
+const FL_AUS_ATTR = 'data-aus';
+const FL_ZA_ATTR = 'data-za';
+// Welche Zeilen in welchem Bild kurz sind - daraus entsteht das Symbol.
+function flAusBild(art) {
+  const kurz = art === 'block' ? [] : [1, 3];
+  let p = '';
+  [2.6, 6.2, 9.8, 13.4].forEach(function (y, i) {
+    let a = 2;
+    let b = 14;
+    if (kurz.indexOf(i) >= 0) {
+      if (art === 'links') b = 10;
+      else if (art === 'rechts') a = 6;
+      else { a = 4; b = 12; }
+    }
+    p += `M${a} ${y}h${b - a}`;
+  });
+  return flBild(`<path d="${p}"/>`);
+}
+const FL_AUSRICHTUNG = [['links', 'Linksbündig'], ['mitte', 'Zentriert'],
+                        ['rechts', 'Rechtsbündig'], ['block', 'Blocksatz']];
+// Die Werte stehen genau so in reinigen.py; was dort fehlt, faellt beim
+// Speichern wieder heraus.
+const FL_ABSTAENDE = [['1', 'Einfach'], ['1.15', '1,15'], ['1.5', 'Anderthalb'],
+                      ['2', 'Doppelt'], ['3', 'Dreifach'], ['', 'Standard']];
+const FL_ABSTANDBILD = flBild('<path d="M6.5 3h7.5M6.5 8h7.5M6.5 13h7.5"/>'
+                              + '<path d="M3 4.5V11.5M1.6 6 3 4.3 4.4 6M1.6 10 3 11.7 4.4 10"/>');
+
+/* Die Bloecke, in denen die Markierung steckt. Absatzsachen - Ausrichtung,
+   Zeilenabstand - gelten fuer die ganze Zeile, nicht fuer die markierten
+   Buchstaben, also muessen sie am Block haengen. Steht der Text noch nackt
+   im Feld, gibt es keinen: dann macht formatBlock erst einen daraus. */
+const FL_BLOECKE = 'p,div,h1,h2,h3,h4,blockquote,pre,li,ul,ol';
+
+function flBloecke() {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return [];
+  const r = sel.getRangeAt(0);
+  let anfang = r.startContainer;
+  if (anfang && anfang.nodeType !== 1) anfang = anfang.parentElement;
+  const feld = anfang && anfang.closest ? anfang.closest('.text') : null;
+  if (!feld) return [];
+  const treffer = [];
+  for (const b of feld.querySelectorAll(FL_BLOECKE)) {
+    let drin = true;
+    try { drin = r.intersectsNode(b); } catch (f) { /* nicht jede Ansicht kann das */ }
+    // Ein Block, der nur andere Bloecke enthaelt, bekommt nichts: sonst
+    // steht die Ausrichtung zweimal da und die innere gewinnt ohnehin.
+    if (drin && !b.querySelector(FL_BLOECKE)) treffer.push(b);
+  }
+  return treffer;
+}
+
+function flBlockSetzen(name, wert) {
+  let bloecke = flBloecke();
+  if (!bloecke.length) {
+    flBefehl('formatBlock', '<div>');
+    bloecke = flBloecke();
+  }
+  if (!bloecke.length) return;
+  for (const b of bloecke) {
+    if (wert) b.setAttribute(name, wert);
+    else b.removeAttribute(name);
+  }
+  gemerkt();
+}
+
+function flAusrichten(wert) { flBlockSetzen(FL_AUS_ATTR, wert); }
+function flAbstand(wert) { flBlockSetzen(FL_ZA_ATTR, wert); }
+
+/* Ausschneiden, Kopieren, Einfuegen als Knoepfe. Dieselbe Vorsicht wie im
+   Rechtsklick-Menue: je nach Webansicht darf mal die Zwischenablage des
+   Systems, mal nur der alte Befehl. */
+async function flAblage(tun) {
+  try {
+    if (tun === 'kopieren' || tun === 'ausschneiden') {
+      const text = window.getSelection().toString();
+      try { await navigator.clipboard.writeText(text); }
+      catch (f) { document.execCommand('copy'); }
+      if (tun === 'ausschneiden') { document.execCommand('delete'); gemerkt(); }
+      return;
+    }
+    let text = '';
+    try { text = await navigator.clipboard.readText(); }
+    catch (f) { sagen('Einfügen geht hier nur mit Strg+V', 3000); return; }
+    document.execCommand('insertText', false, text);
+    gemerkt();
+  } catch (f) {
+    melden('Ging nicht: ' + f.message);
+  }
+}
 
 function flBefehl(was, wert) {
   try {
@@ -3604,8 +3699,9 @@ function flGeteilt(knopf, pfeil) {
   return el('span', { className: 'fl-geteilt' }, [knopf, pfeil]);
 }
 
-function formatleisteBauen() {
-  const wirt = el('div', { className: 'formatleiste' });
+function formatleisteBauen(wie) {
+  const imBand = !!(wie && wie.band);
+  const wirt = el('div', { className: 'formatleiste' + (imBand ? ' fl-band' : '') });
 
   const art = el('select', { className: 'fl-art', title: 'Schriftart' });
   art.addEventListener('change', function () { flBefehl('fontName', art.value); });
@@ -3618,38 +3714,46 @@ function formatleisteBauen() {
   }
   groesse.addEventListener('change', function () { flBefehl('fontSize', groesse.value); });
 
-  const reihe1 = el('div', { className: 'fl-reihe' }, [
-    art, groesse,
-    el('span', { className: 'fl-trenner' }),
-    flKlappe(wirt, 'Formatvorlage', '<span class="fl-sinn">¶</span>',
-             FL_VORLAGEN.map(([w, n]) => [w, n, '']),
-             function (w) { flBefehl('formatBlock', w); }),
-    flTaste(FL_EINZUG_RAUS, 'Einzug verkleinern',
-            function () { flBefehl('outdent'); }),
-    flTaste(FL_EINZUG_REIN, 'Einzug vergrößern',
-            function () { flBefehl('indent'); }),
-    el('span', { className: 'fl-trenner' }),
-    flTaste('<span class="fl-haken">☑</span>', 'Aufgabe (zum Abhaken)',
-            function () { flZeichenSetzen('☐'); }),
-    flKlappe(wirt, 'Kategorie', FL_SCHILD,
-             FL_KATEGORIEN.map(([z, n]) => [z, n, z]),
-             function (z) { flZeichenSetzen(z); }),
-  ]);
+  const trenner = () => el('span', { className: 'fl-trenner' });
 
-  const reihe2 = el('div', { className: 'fl-reihe' }, [
+  // Gruppen statt einer festen Reihenfolge: im Band stehen sie nebeneinander
+  // in einer Zeile, in der schwebenden Leiste und im Rechtsklick-Menue auf
+  // zwei Reihen verteilt. Gebaut wird jeder Knopf nur einmal.
+  const ablage = [
+    flTaste(FL_KLEMME, 'Einfügen (Strg+V)', function () { flAblage('einfuegen'); }),
+    flTaste(FL_SCHERE, 'Ausschneiden (Strg+X)', function () { flAblage('ausschneiden'); }),
+    flTaste(FL_KOPIE, 'Kopieren (Strg+C)', function () { flAblage('kopieren'); }),
+    flTaste(FL_PINSEL, 'Format übertragen', flPinselNehmen, 'pinsel'),
+  ];
+
+  const schrift = [art, groesse];
+
+  const zeichen = [
     flTaste('<b>F</b>', 'Fett (Strg+B)', function () { flBefehl('bold'); }, 'bold'),
     flTaste('<i>K</i>', 'Kursiv (Strg+I)', function () { flBefehl('italic'); }, 'italic'),
     flTaste('<u>U</u>', 'Unterstrichen (Strg+U)',
             function () { flBefehl('underline'); }, 'underline'),
     flTaste('<s>S</s>', 'Durchgestrichen',
             function () { flBefehl('strikeThrough'); }, 'strikeThrough'),
-    el('span', { className: 'fl-trenner' }),
+    flTaste('x<sup class="fl-hoch">2</sup>', 'Hochgestellt',
+            function () { flBefehl('superscript'); }, 'superscript'),
+    flTaste('x<sub class="fl-hoch">2</sub>', 'Tiefgestellt',
+            function () { flBefehl('subscript'); }, 'subscript'),
+  ];
+
+  const farben = [
     flTaste('<span class="fl-marker">A</span>', 'Hervorheben', function () {
       try { if (typeof hervorheben === 'function') hervorheben(); } catch (f) { /* egal */ }
     }),
     flKlappe(wirt, 'Schriftfarbe', '<span class="fl-buchstabe">A</span>',
              flFarben(), function (farbe) { flBefehl('foreColor', farbe); }),
-    el('span', { className: 'fl-trenner' }),
+    flTaste('<span class="fl-weg">✕</span>', 'Formatierung entfernen', function () {
+      flBefehl('removeFormat');
+      try { if (typeof hervorhebungWeg === 'function') hervorhebungWeg(); } catch (f) { /* egal */ }
+    }),
+  ];
+
+  const listen = [
     flGeteilt(
       flTaste(FL_PUNKTLISTE, 'Aufzählung',
               function () { flBefehl('insertUnorderedList'); }, 'insertUnorderedList'),
@@ -3660,16 +3764,50 @@ function formatleisteBauen() {
               function () { flBefehl('insertOrderedList'); }, 'insertOrderedList'),
       flGalerie(wirt, 'Nummerierungsbibliothek', '',
                 FL_NUMMERN, flNummerSetzen, nrKachel)),
-    el('span', { className: 'fl-trenner' }),
-    flTaste(FL_PINSEL, 'Format übertragen',
-            flPinselNehmen, 'pinsel'),
-    flTaste('<span class="fl-weg">✕</span>', 'Formatierung entfernen', function () {
-      flBefehl('removeFormat');
-      try { if (typeof hervorhebungWeg === 'function') hervorhebungWeg(); } catch (f) { /* egal */ }
-    }),
-  ]);
+  ];
 
-  wirt.append(reihe1, reihe2);
+  const absatz = [
+    flTaste(FL_EINZUG_RAUS, 'Einzug verkleinern',
+            function () { flBefehl('outdent'); }),
+    flTaste(FL_EINZUG_REIN, 'Einzug vergrößern',
+            function () { flBefehl('indent'); }),
+    ...FL_AUSRICHTUNG.map(([w, n]) => flTaste(flAusBild(w), n,
+                                              function () { flAusrichten(w); })),
+    flKlappe(wirt, 'Zeilenabstand', FL_ABSTANDBILD,
+             FL_ABSTAENDE.map(([w, n]) => [w, n, '']),
+             function (w) { flAbstand(w); }),
+  ];
+
+  const vorlagen = [
+    flKlappe(wirt, 'Formatvorlage', '<span class="fl-sinn">¶</span>',
+             FL_VORLAGEN.map(([w, n]) => [w, n, '']),
+             function (w) { flBefehl('formatBlock', w); }),
+    flTaste('<span class="fl-haken">☑</span>', 'Aufgabe (zum Abhaken)',
+            function () { flZeichenSetzen('☐'); }),
+    flKlappe(wirt, 'Kategorie', FL_SCHILD,
+             FL_KATEGORIEN.map(([z, n]) => [z, n, z]),
+             function (z) { flZeichenSetzen(z); }),
+  ];
+
+  const reihe = (gruppen) => {
+    const r = el('div', { className: 'fl-reihe' });
+    gruppen.forEach(function (g, i) {
+      if (i) r.append(trenner());
+      for (const k of g) r.append(k);
+    });
+    return r;
+  };
+
+  if (imBand) {
+    // Oben ist Platz fuer alles auf einmal - und wer auf Start geht, will
+    // nicht erst noch irgendwo aufklappen.
+    wirt.append(reihe([ablage, schrift, zeichen, farben, listen, absatz, vorlagen]));
+  } else {
+    // Schwebend und im Rechtsklick-Menue: ohne Zwischenablage, die steht
+    // dort schon als eigene Punkte darunter.
+    wirt.append(reihe([schrift, vorlagen, absatz]),
+                reihe([zeichen, farben, listen, [ablage[3]]]));
+  }
   flSchriftenSpiegeln(wirt);      // gleich, nicht erst beim ersten Auffrischen
   // Ein Klick in die Leiste darf die Markierung nicht kosten - sonst
   // formatiert der Knopf nichts. Auswahlfelder brauchen den Fokus, sonst
@@ -3759,7 +3897,28 @@ function minileisteUmbauen() {
   }
 }
 
+/* Dasselbe oben im Band, Reiter "Start". Dort standen bisher vier Knoepfe
+   und zwei Auswahlfelder - alles andere gab es nur, wenn man etwas
+   markierte und die schwebende Leiste aufging. Wer auf Start geht, erwartet
+   aber die ganze Leiste.
+
+   Die alten Knoepfe bleiben stehen, nur versteckt: an #schriftart haengt die
+   Schriftliste, die der Rechner erst nachlaedt, und die Favoriten-Tafel -
+   von dort wird hierher gespiegelt. */
+function bandleisteUmbauen() {
+  const leiste = document.getElementById('werkzeuge');
+  if (!leiste || leiste.querySelector('.formatleiste')) return;
+  const alt = el('div', { id: 'bandalt', hidden: true });
+  while (leiste.firstChild) alt.append(leiste.firstChild);
+  const neu = formatleisteBauen({ band: true });
+  leiste.append(alt, neu);
+  document.addEventListener('selectionchange', function () {
+    if (!leiste.hidden) formatleisteFrischen(neu);
+  });
+}
+
 function formatleistenBauen() {
+  bandleisteUmbauen();
   minileisteUmbauen();
   flHakenAnschalten();
   flPinselAnschalten();

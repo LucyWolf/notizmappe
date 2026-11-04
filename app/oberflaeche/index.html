@@ -47,11 +47,10 @@ window.addEventListener('unhandledrejection', function (ev) {
     </span>
   </nav>
   <div id="bandinhalt">
+      <!-- Hier baut mappe.js die Formatleiste hinein; die beiden Felder
+           rutschen dabei nach #bandalt und bleiben als Quelle stehen: an
+           #schriftart haengt die Schriftliste des Rechners. -->
       <div id="werkzeuge" class="bandleiste">
-        <button type="button" data-befehl="bold" title="Fett (Strg+B)"><b>B</b></button>
-        <button type="button" data-befehl="italic" title="Kursiv (Strg+I)"><i>I</i></button>
-        <button type="button" data-befehl="underline" title="Unterstrichen (Strg+U)"><u>U</u></button>
-        <button type="button" data-befehl="insertUnorderedList" title="Liste">•</button>
         <select id="schriftart" title="Schriftart">
           <option value="system-ui">Standard</option>
         </select>

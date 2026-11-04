@@ -43,6 +43,21 @@ for muster, name in ((r"^function el\(.*?^\}", "el"),
                      (r"^const FL_NUMMERNLISTE = flBild\(.*?\);", "FL_NUMMERNLISTE"),
                      (r"^const FL_SCHILD = [^;]*;", "FL_SCHILD"),
                      (r"^const FL_PINSEL = [^;]*;", "FL_PINSEL"),
+                     (r"^const FL_SCHERE = [^;]*;", "FL_SCHERE"),
+                     (r"^const FL_KOPIE = [^;]*;", "FL_KOPIE"),
+                     (r"^const FL_KLEMME = [^;]*;", "FL_KLEMME"),
+                     (r"^const FL_AUS_ATTR = [^;]*;", "FL_AUS_ATTR"),
+                     (r"^const FL_ZA_ATTR = [^;]*;", "FL_ZA_ATTR"),
+                     (r"^function flAusBild\(.*?^\}", "flAusBild"),
+                     (r"^const FL_AUSRICHTUNG = \[.*?\];", "FL_AUSRICHTUNG"),
+                     (r"^const FL_ABSTAENDE = \[.*?\];", "FL_ABSTAENDE"),
+                     (r"^const FL_ABSTANDBILD = [^;]*;", "FL_ABSTANDBILD"),
+                     (r"^const FL_BLOECKE = [^;]*;", "FL_BLOECKE"),
+                     (r"^function flBloecke\(.*?^\}", "flBloecke"),
+                     (r"^function flBlockSetzen\(.*?^\}", "flBlockSetzen"),
+                     (r"^function flAusrichten\(.*?$", "flAusrichten"),
+                     (r"^function flAbstand\(.*?$", "flAbstand"),
+                     (r"^async function flAblage\(.*?^\}", "flAblage"),
                      (r"^function flBefehl\(.*?^\}", "flBefehl"),
                      (r"^function flSchriftenSpiegeln\(.*?^\}", "flSchriftenSpiegeln"),
                      (r"^function flTaste\(.*?^\}", "flTaste"),
@@ -139,6 +154,7 @@ class Knoten {
     return { left: 0, top: 0, right: 20, bottom: 20, width: 340, height: 220 };
   }
   setAttribute(name, wert) { this.merkmale[name] = wert; }
+  removeAttribute(name) { delete this.merkmale[name]; }
   getAttribute(name) { return this.merkmale[name]; }
   addEventListener(art, f) { (this.zuhoerer[art] = this.zuhoerer[art] || []).push(f); }
   klick() {
@@ -147,7 +163,25 @@ class Knoten {
     }
   }
   alle() { return this.kinder.reduce((a, k) => a.concat(k.alle()), [this]); }
+  // Im Browser laeuft closest den Baum hinauf. Einzelne Tests setzen es von
+  // Hand; das ueberschreibt diese Fassung dann.
+  closest(w) {
+    let k = this;
+    while (k) {
+      let traf = false;
+      try { traf = k.passt(w); } catch (f) { traf = false; }
+      if (traf) return k;
+      k = k.eltern;
+    }
+    return null;
+  }
   passt(w) {
+    // Der Waehler mit allen Blocknamen - flBloecke() sucht damit.
+    if (w.indexOf('blockquote') >= 0) {
+      return w.split(',').indexOf(this.art) >= 0;
+    }
+    if (w === '.text') return this.klassen.has('text');
+    if (w === '.formatleiste') return this.klassen.has('formatleiste');
     if (w === '.fl-liste') return this.klassen.has('fl-liste');
     if (w === '.fl-kachel') return this.klassen.has('fl-kachel');
     if (w === '.fl-art') return this.klassen.has('fl-art');
@@ -188,6 +222,25 @@ const window = { getSelection: () => auswahl, innerWidth: 1200, innerHeight: 800
 function gemerkt() { befehle.push(['gemerkt', null]); }
 let auswahl = null;
 const console = { error: () => {} };
+function sagen(text) { befehle.push(['sagen', text]); }
+function melden(text) { befehle.push(['melden', text]); }
+// Die Zwischenablage des Systems. Darf sie nicht, faellt die Leiste auf den
+// alten Befehl zurueck - genau das soll hier pruefbar sein.
+let ablageDarf = true;
+let ablageInhalt = 'aus der Ablage';
+const navigator = {
+  clipboard: {
+    writeText(t) {
+      if (!ablageDarf) return Promise.reject(new Error('nein'));
+      befehle.push(['ablage-schreiben', t]);
+      return Promise.resolve();
+    },
+    readText() {
+      if (!ablageDarf) return Promise.reject(new Error('nein'));
+      return Promise.resolve(ablageInhalt);
+    },
+  },
+};
 
 /* Die Farben und die Schriftliste stehen drueben - hier nachgebaut. */
 const farbkasten = new Knoten('span');
@@ -388,8 +441,111 @@ ergebnis.keine = befehle.slice();
 ergebnis.keine_art = ol.merkmale['data-art'] || null;
 aufAuswahl = alterBefehl;
 
+/* --- Dieselbe Leiste oben im Band ---------------------------------------- */
+const bandleiste = formatleisteBauen({ band: true });
+wurzel.append(bandleiste);
+const bandtasten = bandleiste.alle().filter((k) => k.klassen.has('fl-taste'));
+ergebnis.bandreihen = bandleiste.kinder.filter((k) => k.klassen.has('fl-reihe')).length;
+ergebnis.bandknoepfe = bandtasten.map((k) => k.title);
+ergebnis.bandklasse = bandleiste.klassen.has('fl-band');
+
+/* --- Ausrichtung und Zeilenabstand haengen am Absatz --------------------- */
+const feld2 = new Knoten('div');
+feld2.klassen.add('text');
+feld2.nodeType = 1;
+const absatz1 = new Knoten('p'); absatz1.nodeType = 1;
+const absatz2 = new Knoten('p'); absatz2.nodeType = 1;
+feld2.append(absatz1, absatz2);
+let nurErster = false;
+auswahl = {
+  rangeCount: 1,
+  isCollapsed: false,
+  toString: () => 'markiert',
+  getRangeAt: () => ({
+    startContainer: absatz1,
+    intersectsNode: (b) => (nurErster ? b === absatz1 : true),
+  }),
+};
+befehle.length = 0;
+tasten.find((t) => t.title === 'Zentriert').klick();
+ergebnis.aus_befehle = befehle.slice();
+ergebnis.aus = [absatz1.merkmale['data-aus'] || null, absatz2.merkmale['data-aus'] || null];
+
+// Nur der markierte Absatz, nicht gleich die ganze Seite
+nurErster = true;
+absatz1.merkmale = {}; absatz2.merkmale = {};
+tasten.find((t) => t.title === 'Blocksatz').klick();
+ergebnis.aus_einer = [absatz1.merkmale['data-aus'] || null,
+                      absatz2.merkmale['data-aus'] || null];
+nurErster = false;
+
+const za = klappe('Zeilenabstand', 2);
+ergebnis.abstaende = za.eintraege;
+ergebnis.za_befehle = za.befehle;
+ergebnis.za = absatz1.merkmale['data-za'] || null;
+klappe('Zeilenabstand', 5);              // "Standard" nimmt ihn wieder weg
+ergebnis.za_weg = absatz1.merkmale['data-za'] || null;
+
+/* Steht der Text noch nackt im Feld, gibt es keinen Absatz - dann muss erst
+   einer daraus werden, sonst haengt die Ausrichtung an nichts. */
+const feld3 = new Knoten('div');
+feld3.klassen.add('text');
+feld3.nodeType = 1;
+auswahl = {
+  rangeCount: 1,
+  getRangeAt: () => ({ startContainer: feld3, intersectsNode: () => true }),
+};
+befehle.length = 0;
+const alterBefehl2 = aufAuswahl;
+aufAuswahl = function (befehl, wert) {
+  befehle.push([befehl, wert === undefined ? null : wert]);
+  if (befehl === 'formatBlock') {
+    const d = new Knoten('div');
+    d.nodeType = 1;
+    feld3.append(d);
+  }
+};
+tasten.find((t) => t.title === 'Rechtsbündig').klick();
+ergebnis.ohne_block = befehle.slice();
+ergebnis.ohne_block_gesetzt = feld3.kinder.length
+  ? (feld3.kinder[0].merkmale['data-aus'] || null) : null;
+aufAuswahl = alterBefehl2;
+
 console.log = (...a) => process.stdout.write(a.join(' ') + '\n');
-process.stdout.write(JSON.stringify(ergebnis) + '\n');
+
+/* --- Ausschneiden, Kopieren, Einfuegen ----------------------------------- */
+auswahl = {
+  rangeCount: 1,
+  isCollapsed: false,
+  toString: () => 'markiert',
+  getRangeAt: () => ({ startContainer: absatz1, intersectsNode: () => true }),
+};
+const ruhe = () => new Promise((f) => setTimeout(f, 0));
+
+(async () => {
+  for (const [name, titel] of [['kopieren', 'Kopieren (Strg+C)'],
+                               ['ausschneiden', 'Ausschneiden (Strg+X)'],
+                               ['einfuegen', 'Einfügen (Strg+V)']]) {
+    befehle.length = 0;
+    bandtasten.find((t) => t.title === titel).klick();
+    await ruhe();
+    ergebnis[name] = befehle.slice();
+  }
+  // Darf die Webansicht nicht an die Zwischenablage, muss das dastehen -
+  // ein Knopf, der stumm nichts tut, ist schlimmer als kein Knopf.
+  ablageDarf = false;
+  befehle.length = 0;
+  bandtasten.find((t) => t.title === 'Einfügen (Strg+V)').klick();
+  await ruhe();
+  ergebnis.einfuegen_verboten = befehle.slice();
+  befehle.length = 0;
+  bandtasten.find((t) => t.title === 'Kopieren (Strg+C)').klick();
+  await ruhe();
+  ergebnis.kopieren_alt = befehle.slice();
+  ablageDarf = true;
+
+  process.stdout.write(JSON.stringify(ergebnis) + '\n');
+})();
 """
 
 ordner = Path(tempfile.mkdtemp(prefix="leiste-"))
@@ -422,12 +578,31 @@ pruefe("und die Schriftliste ist gleich beim Bauen da",
 # Die Favoriten stehen drueben in einer eigenen Gruppe. Ohne sie waeren sie
 # irgendwo in der Liste - gerade die, die man sucht.
 pruefe("die Gruppen kommen mit", d["gruppen"] == ['★ Favoriten'], d["gruppen"])
-ERWARTET = ['Formatvorlage', 'Einzug verkleinern', 'Einzug vergrößern',
-            'Aufgabe (zum Abhaken)', 'Kategorie', 'Fett (Strg+B)', 'Kursiv (Strg+I)',
-            'Unterstrichen (Strg+U)', 'Durchgestrichen', 'Hervorheben', 'Schriftfarbe',
-            'Aufzählung', 'Aufzählungszeichenbibliothek', 'Nummerierung',
-            'Nummerierungsbibliothek', 'Format übertragen', 'Formatierung entfernen']
+AUSRICHTEN = ['Linksbündig', 'Zentriert', 'Rechtsbündig', 'Blocksatz']
+ZEICHEN = ['Fett (Strg+B)', 'Kursiv (Strg+I)', 'Unterstrichen (Strg+U)',
+           'Durchgestrichen', 'Hochgestellt', 'Tiefgestellt']
+FARBEN = ['Hervorheben', 'Schriftfarbe', 'Formatierung entfernen']
+LISTEN = ['Aufzählung', 'Aufzählungszeichenbibliothek',
+          'Nummerierung', 'Nummerierungsbibliothek']
+ABSATZ = ['Einzug verkleinern', 'Einzug vergrößern', *AUSRICHTEN, 'Zeilenabstand']
+VORLAGEN = ['Formatvorlage', 'Aufgabe (zum Abhaken)', 'Kategorie']
+ERWARTET = [*VORLAGEN, *ABSATZ, *ZEICHEN, *FARBEN, *LISTEN, 'Format übertragen']
 pruefe("alle Knöpfe, in dieser Reihenfolge", d["knoepfe"] == ERWARTET, d["knoepfe"])
+
+print("\nDieselbe Leiste oben im Reiter Start")
+# Vorher standen dort vier Knöpfe; alles andere gab es nur, wenn man etwas
+# markierte und die schwebende Leiste aufging.
+pruefe("eine Reihe statt zwei", d["bandreihen"] == 1, d["bandreihen"])
+pruefe("und sie weiß, dass sie im Band steht", d["bandklasse"])
+ABLAGE = ['Einfügen (Strg+V)', 'Ausschneiden (Strg+X)', 'Kopieren (Strg+C)',
+          'Format übertragen']
+pruefe("mit Zwischenablage vorne, sonst dieselben Knöpfe",
+       d["bandknoepfe"] == [*ABLAGE, *ZEICHEN, *FARBEN, *LISTEN, *ABSATZ, *VORLAGEN],
+       d["bandknoepfe"])
+# Im Rechtsklick-Menue stehen Kopieren und Einfuegen schon als eigene Punkte
+# darunter - zweimal dasselbe waere einmal zu viel.
+pruefe("schwebend ohne Zwischenablage",
+       not [k for k in d["knoepfe"] if k in ABLAGE[:3]], d["knoepfe"])
 
 print("\nWas unten ankommt")
 for was, soll in (("fett", [["bold", None]]), ("kursiv", [["italic", None]]),
@@ -523,6 +698,74 @@ pruefe("die Schriftliste kommt von drüben",
 pruefe("und beide Felder zeigen den Stand an der Markierung",
        d["schriftwahl"] == 'DejaVu Sans' and d["groessenwahl"] == '5',
        (d["schriftwahl"], d["groessenwahl"]))
+
+print("\nAusrichtung und Zeilenabstand")
+# Beides gilt fuer die Zeile, nicht fuer die markierten Buchstaben - also
+# muss es am Absatz haengen und nicht als Befehl auf die Auswahl gehen.
+pruefe("die Ausrichtung geht an den Absatz, nicht an die Auswahl",
+       d["aus_befehle"] == [["gemerkt", None]], d["aus_befehle"])
+pruefe("und steht an beiden markierten Absätzen",
+       d["aus"] == ['mitte', 'mitte'], d["aus"])
+pruefe("markiert man nur einen, bleibt der andere in Ruhe",
+       d["aus_einer"] == ['block', None], d["aus_einer"])
+pruefe("die Abstände stehen zur Wahl",
+       d["abstaende"] == ['Einfach', '1,15', 'Anderthalb', 'Doppelt',
+                          'Dreifach', 'Standard'], d["abstaende"])
+pruefe("und landen am Absatz", d["za"] == '1.5' and d["za_befehle"] == [["gemerkt", None]],
+       (d["za"], d["za_befehle"]))
+pruefe("'Standard' nimmt ihn wieder weg", d["za_weg"] is None, d["za_weg"])
+# Ohne Absatz haengt die Ausrichtung an nichts und ist beim naechsten
+# Speichern weg - der Browser raeumt losen Text nicht von selbst ein.
+pruefe("steht der Text nackt im Feld, wird erst ein Absatz daraus",
+       d["ohne_block"] == [["formatBlock", "<div>"], ["gemerkt", None]]
+       and d["ohne_block_gesetzt"] == 'rechts',
+       (d["ohne_block"], d["ohne_block_gesetzt"]))
+
+# Gegenprobe: was die Leiste setzt, muss der Reiniger kennen - sonst faellt
+# es beim Speichern wieder heraus und niemand sieht, warum.
+sys.path.insert(0, str(WURZEL))
+from app import reinigen            # noqa: E402
+
+js_aus = set(re.findall(r"\['(\w+)', '[^']+'\]",
+                        re.search(r"^const FL_AUSRICHTUNG = \[.*?\];", mappe,
+                                  re.S | re.M).group(0)))
+js_za = {w for w in re.findall(r"\['([\d.]*)', '[^']+'\]",
+                               re.search(r"^const FL_ABSTAENDE = \[.*?\];", mappe,
+                                         re.S | re.M).group(0)) if w}
+pruefe("der Reiniger kennt dieselben Ausrichtungen",
+       js_aus == reinigen.AUSRICHTUNG, (js_aus, reinigen.AUSRICHTUNG))
+pruefe("und dieselben Abstände", js_za == reinigen.ABSTAENDE,
+       (js_za, reinigen.ABSTAENDE))
+roh = '<p data-aus="mitte" data-za="1.5">hallo</p>'
+pruefe("und laesst sie durch", reinigen.html(roh) == roh, reinigen.html(roh))
+pruefe("Erfundenes fliegt raus",
+       reinigen.html('<p data-aus="hinten" data-za="9">x</p>') == '<p>x</p>',
+       reinigen.html('<p data-aus="hinten" data-za="9">x</p>'))
+
+# Und die Stildatei muss daraus eine Regel machen, sonst sieht man nichts.
+stil = (WURZEL / "app/oberflaeche/stil.css").read_text(encoding="utf-8")
+stil = re.sub(r"/\*.*?\*/", "", stil, flags=re.S)
+pruefe("die Stildatei hat zu jeder Ausrichtung eine Regel",
+       all(f'[data-aus="{w}"]' in stil for w in reinigen.AUSRICHTUNG))
+pruefe("und zu jedem Abstand",
+       all(f'[data-za="{w}"]' in stil for w in reinigen.ABSTAENDE))
+
+print("\nAusschneiden, Kopieren, Einfügen")
+pruefe("Kopieren legt die Markierung in die Ablage",
+       d["kopieren"] == [["ablage-schreiben", "markiert"]], d["kopieren"])
+pruefe("Ausschneiden nimmt sie danach weg",
+       d["ausschneiden"] == [["ablage-schreiben", "markiert"],
+                             ["execCommand", "delete", None], ["gemerkt", None]],
+       d["ausschneiden"])
+pruefe("Einfügen schreibt den Text hinein",
+       d["einfuegen"] == [["execCommand", "insertText", "aus der Ablage"],
+                          ["gemerkt", None]], d["einfuegen"])
+# Keine Beschwichtigung, sondern der Weg, der dann noch geht.
+pruefe("darf die Ansicht nicht an die Ablage, steht der Tastenweg da",
+       d["einfuegen_verboten"] == [["sagen", "Einfügen geht hier nur mit Strg+V"]],
+       d["einfuegen_verboten"])
+pruefe("und Kopieren fällt auf den alten Befehl zurück",
+       d["kopieren_alt"] == [["execCommand", "copy", None]], d["kopieren_alt"])
 
 print("\nBeim Rechtsklick ist die schwebende Leiste zu viel")
 # Sie steht sonst neben dem Menue, das dieselben Knoepfe noch einmal zeigt.

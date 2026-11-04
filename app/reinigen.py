@@ -25,6 +25,17 @@ ATTRIBUTE = {"a": {"href"}, "img": {"data-datei", "alt"},
              "font": {"size", "face", "color"},
              "ol": {"data-art"}, "ul": {"data-art"}}
 
+# Ausrichtung und Zeilenabstand haengen am Absatz, nicht an den markierten
+# Buchstaben. text-align und line-height waeren wieder freies CSS; deshalb
+# derselbe Weg wie bei den Listenarten: ein Attribut mit einem Wert aus
+# einer festen Liste, und die Stildatei macht daraus die Regel.
+BLOCKTAGS = {"p", "div", "h1", "h2", "h3", "h4", "blockquote", "pre",
+             "li", "ul", "ol"}
+AUSRICHTUNG = {"links", "mitte", "rechts", "block"}
+ABSTAENDE = {"1", "1.15", "1.5", "2", "3"}
+for _tag in BLOCKTAGS:
+    ATTRIBUTE.setdefault(_tag, set()).update({"data-aus", "data-za"})
+
 # Welche Zahl oder welches Zeichen vor den Punkten einer Liste steht. Das
 # waere eigentlich list-style-type, also CSS - und freies CSS nimmt die
 # Ablage nicht an. Deshalb steht hier nur die Art, und die Oberflaeche macht
@@ -247,6 +258,10 @@ class _Reiniger(HTMLParser):
                 continue
             if name == "data-art" and wert not in (LISTENARTEN if tag == "ol"
                                                    else LISTENZEICHEN):
+                continue
+            if name == "data-aus" and wert not in AUSRICHTUNG:
+                continue
+            if name == "data-za" and wert not in ABSTAENDE:
                 continue
             gut.append(f' {name}="{escape(wert, quote=True)}"')
         if tag == "img" and not any(g.startswith(" data-datei=") for g in gut):

@@ -432,11 +432,16 @@ nie. Vorher stand an der Kachel „Das geht nur am eigenen Rechner".
 stecken in keiner dieser Dateien — JLCPCB holt sie über die Bauteilnummer aus
 seiner eigenen Bibliothek.
 
-## Formatieren: die schwebende Leiste und das Rechtsklick-Menü
+## Formatieren: Reiter Start, schwebende Leiste, Rechtsklick-Menü
 
-Markierst du Text, geht eine kleine Leiste darüber auf — zwei Reihen, so wie in
-OneNote: Schriftart, Größe, Formatvorlage, Einzug, Aufgabe und Kategorie oben;
-F K U, Marker, Farbe, Listen, Format übertragen und Löschen unten.
+Alles zum Formatieren steht im Reiter **Start** — in einer Zeile, so wie in
+Word: Zwischenablage (Einfügen, Ausschneiden, Kopieren, Format übertragen),
+Schriftart und Größe, F K U S, hoch- und tiefgestellt, Marker, Farbe,
+Formatierung entfernen, Aufzählung und Nummerierung, Einzug, Ausrichtung,
+Zeilenabstand, Formatvorlage, Aufgabe und Kategorie.
+
+Markierst du Text, geht **dieselbe Leiste** als kleines Fenster darüber auf —
+dort auf zwei Reihen und ohne die Zwischenablage, die steht im Menü darunter.
 
 Dieselbe Leiste steht noch einmal **im Rechtsklick-Menü**, über den vier
 Punkten für die Zwischenablage. Drückst du die rechte Maustaste, verschwindet
@@ -451,14 +456,21 @@ der Liste, und die Oberfläche macht daraus eine `@counter-style`-Regel — frei
 CSS nimmt die Ablage nicht an, und zwei feste Listen sind der Unterschied
 zwischen „Art auswählen" und „irgendetwas hineinschreiben".
 
+**Ausrichtung** und **Zeilenabstand** gelten für die Zeile, nicht für die
+markierten Buchstaben — sie hängen deshalb als `data-aus` und `data-za` am
+Absatz, mit Werten aus einer festen Liste, und die Stildatei macht daraus
+`text-align` und `line-height`. Steht der Text noch nackt im Feld, wird erst
+ein Absatz daraus; sonst hinge die Ausrichtung an nichts und wäre beim
+nächsten Speichern weg.
+
 Drei Sachen gehen bewusst anders als bei OneNote, weil `reinigen.py` nur
 bestimmte Auszeichnungen annimmt: der Marker hat eine Farbe statt fünf, die
 Größen sind die sieben, die `<font size>` kennt, und ein Haken ist ein Zeichen
 im Text — kein Kontrollkästchen, das beim Speichern wieder herausfiele.
 
-Gerechnet wird in der Leiste nichts selbst: sie ruft dieselben Funktionen wie
-das Band. Zwei Stellen, die Fett setzen, wären eine zu viel — eine davon ist
-eines Tages anders.
+Gebaut wird die Leiste einmal und dreimal benutzt — im Band, schwebend und im
+Rechtsklick-Menü. Gerechnet wird darin nichts selbst. Zwei Stellen, die Fett
+setzen, wären eine zu viel — eine davon ist eines Tages anders.
 
 ## Zeichnen
 

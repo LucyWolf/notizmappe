@@ -182,14 +182,17 @@ body { display: flex; flex-direction: column; }
 }
 #titel:focus { outline: 0; border-bottom-color: var(--akzent); }
 #titel:disabled { color: var(--matt); }
-#werkzeuge { display: flex; align-items: center; gap: 2px; }
-#werkzeuge button {
+/* Im Reiter "Start" steht die Formatleiste - dieselbe wie schwebend, nur in
+   einer Zeile und etwas groesser, oben ist Platz. Die alten Knoepfe liegen
+   versteckt in #bandalt; von dort wird die Schriftliste gespiegelt. */
+#werkzeuge { display: block; }
+#bandalt button {
   min-width: 28px; height: 28px; border: 1px solid var(--linie);
   background: var(--papier); color: var(--schrift);
   border-radius: 6px; cursor: pointer;
 }
-#werkzeuge button:hover { border-color: var(--akzent); }
-#werkzeuge .trenner { width: 1px; height: 20px; background: var(--linie); margin: 0 6px; }
+#bandalt button:hover { border-color: var(--akzent); }
+#bandalt .trenner { width: 1px; height: 20px; background: var(--linie); margin: 0 6px; }
 #zoomwert { font-size: 12px; color: var(--matt); min-width: 40px; text-align: center; }
 #zustand { font-size: 12px; color: var(--matt); min-width: 90px; text-align: right; }
 
@@ -355,11 +358,11 @@ body { display: flex; flex-direction: column; }
 #einstellungen .haken input { accent-color: var(--akzent); }
 
 /* --- Schriftauswahl in der Werkzeugleiste --- */
-#werkzeuge select {
+#bandalt select {
   height: 28px; border: 1px solid var(--linie); border-radius: 6px;
   background: var(--papier); color: var(--schrift); font-size: 13px; max-width: 120px;
 }
-#werkzeuge select:hover { border-color: var(--akzent); }
+#bandalt select:hover { border-color: var(--akzent); }
 
 /* --- Menü bei der rechten Maustaste ---
    Die Webansicht im Fenster bringt keins mit; ohne das käme man an Kopieren und
@@ -666,9 +669,33 @@ body { display: flex; flex-direction: column; }
 .fl-weg { opacity: .6; }
 .fl-marker { background: #ffe680; color: #1f1d1a; padding: 0 3px; border-radius: 2px; }
 .fl-buchstabe { border-bottom: 3px solid var(--warnung); line-height: 1.1; }
+.fl-hoch { font-size: 9px; }
 .formatleiste .fl-trenner {
   width: 1px; height: 16px; background: var(--linie); margin: 0 3px;
 }
+
+/* Die Leiste im Band: eine Zeile mit allen Gruppen. Bei schmalem Fenster
+   bricht sie um, statt hinauszulaufen - abgeschnittene Knoepfe sind
+   schlimmer als zwei Zeilen. */
+#werkzeuge .formatleiste { padding: 0; }
+.fl-band .fl-reihe { flex-wrap: wrap; row-gap: 3px; }
+.fl-band .fl-taste { min-width: 28px; height: 28px; }
+.fl-band select { height: 28px; font-size: 13px; }
+.fl-band .fl-art { flex: 0 1 150px; min-width: 110px; max-width: 150px; }
+.fl-band .fl-groesse { width: 62px; }
+.fl-band .fl-trenner { height: 20px; margin: 0 5px; }
+
+/* Ausrichtung und Zeilenabstand. Feste Werte statt freiem style-Attribut -
+   der Reiniger laesst nur diese durch (siehe reinigen.py). */
+.kasten .text [data-aus="links"] { text-align: left; }
+.kasten .text [data-aus="mitte"] { text-align: center; }
+.kasten .text [data-aus="rechts"] { text-align: right; }
+.kasten .text [data-aus="block"] { text-align: justify; }
+.kasten .text [data-za="1"] { line-height: 1; }
+.kasten .text [data-za="1.15"] { line-height: 1.15; }
+.kasten .text [data-za="1.5"] { line-height: 1.5; }
+.kasten .text [data-za="2"] { line-height: 2; }
+.kasten .text [data-za="3"] { line-height: 3; }
 .fl-liste {
   position: absolute; z-index: 60; min-width: 150px; padding: 4px;
   background: var(--leiste); border: 1px solid var(--linie);
