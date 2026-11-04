@@ -771,6 +771,38 @@ body { display: flex; flex-direction: column; }
 }
 .fl-zeichenfeld:hover { background: var(--flaeche); border-color: var(--linie); }
 
+/* --- Formel schreiben --- */
+#formelfenster {
+  position: fixed; inset: 0; z-index: 40; display: flex;
+  align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, .45);
+}
+#formelfenster .tafel { max-width: 560px; width: calc(100vw - 48px); }
+#f-bausteine { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 8px; }
+.f-baustein {
+  min-width: 30px; height: 28px; padding: 0 6px; cursor: pointer;
+  border: 1px solid var(--linie); border-radius: 4px;
+  background: var(--papier); color: var(--schrift); font: inherit; font-size: 14px;
+}
+.f-baustein:hover { border-color: var(--akzent); }
+#f-eingabe {
+  width: 100%; padding: 8px 10px; font-size: 15px;
+  font-family: ui-monospace, monospace;
+  border: 1px solid var(--linie); border-radius: 6px;
+  background: var(--papier); color: var(--schrift);
+}
+#f-eingabe:focus { outline: 0; border-color: var(--akzent); }
+/* Die Vorschau steht immer da, auch leer - sonst springt das Fenster beim
+   ersten Zeichen. */
+#f-vorschau {
+  min-height: 56px; margin: 10px 0; padding: 10px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--linie); border-radius: 6px;
+  background: var(--flaeche); font-size: 20px; overflow-x: auto;
+}
+#f-hilfe { line-height: 1.7; }
+.kasten .text math { font-size: 1.05em; }
+
 /* Symbol und Wort nebeneinander - im Reiter Einfügen steht an jedem Knopf,
    was er tut. */
 .fl-mitwort { padding: 0 8px; gap: 6px; }

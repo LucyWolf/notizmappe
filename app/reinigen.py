@@ -21,6 +21,23 @@ ERLAUBT = {
     # eine aus einer Webseite kopierte kommt als Tabelle an statt als Brei.
     "table", "thead", "tbody", "tfoot", "tr", "td", "th", "caption",
 }
+
+# MathML - damit kann die Webansicht Formeln von sich aus setzen, ohne eine
+# Bibliothek. Auch hier traegt kein Element ein Attribut; von einer Formel
+# bleibt also genau die Formel uebrig.
+#
+# Nicht dabei und auch nicht vergessen: mglyph laedt ein Bild, maction
+# fuehrt beim Klicken etwas aus, annotation-xml nimmt fremdes Markup auf -
+# und mstyle koennte eine Formel ueber die halbe Seite ziehen.
+MATHML = {
+    "math", "mrow", "mi", "mn", "mo", "mtext",
+    "mfrac", "msqrt", "mroot", "msup", "msub", "msubsup",
+    "mover", "munder", "munderover",
+}
+ERLAUBT |= MATHML
+
+# Was samt Inhalt herausfliegt. math stand hier, bis es Formeln gab.
+RAUS = {"script", "style", "iframe", "object", "embed", "svg"}
 LEER = {"br", "img"}
 # Nur das, was der Editor selbst setzt. Kein style, kein class, kein on*.
 # Bilder im Text zeigen nur auf einen eigenen Anhang (data-datei), nie per src
@@ -248,7 +265,7 @@ class _Reiniger(HTMLParser):
         self.weg = 0  # Tiefe innerhalb eines verbotenen Containers
 
     def handle_starttag(self, tag, attrs):
-        if tag in {"script", "style", "iframe", "object", "embed", "svg", "math"}:
+        if tag in RAUS:
             self.weg += 1
             return
         if self.weg or tag not in ERLAUBT:
@@ -290,7 +307,7 @@ class _Reiniger(HTMLParser):
             self.handle_starttag(tag, attrs)
 
     def handle_endtag(self, tag):
-        if tag in {"script", "style", "iframe", "object", "embed", "svg", "math"}:
+        if tag in RAUS:
             self.weg = max(0, self.weg - 1)
             return
         if self.weg or tag not in ERLAUBT or tag in LEER:

@@ -101,6 +101,17 @@ for muster, name in ((r"^function el\(.*?^\}", "el"),
                      (r"^function altKlick\(.*?^\}", "altKlick"),
                      (r"^function dateiWaehlen\(.*?^\}", "dateiWaehlen"),
                      (r"^function textfeldEinfuegen\(.*?^\}", "textfeldEinfuegen"),
+                     (r"^const FORMEL_WORTE = \{.*?^\};", "FORMEL_WORTE"),
+                     (r"^const FORMEL_GROSS = [^;]*;", "FORMEL_GROSS"),
+                     (r"^const FORMEL_ZEICHEN2 = \{.*?\};", "FORMEL_ZEICHEN2"),
+                     (r"^const FORMEL_ZEICHEN1 = [^;]*;", "FORMEL_ZEICHEN1"),
+                     (r"^const FORMEL_STRICH = \[.*?\];", "FORMEL_STRICH"),
+                     (r"^function formelSchutz\(.*?^\}", "formelSchutz"),
+                     (r"^function formelEins\(.*?^\}", "formelEins"),
+                     (r"^function formelTeilen\(.*?^\}", "formelTeilen"),
+                     (r"^function formelLesen\(.*?^\}", "formelLesen"),
+                     (r"^function formelMathML\(.*?^\}", "formelMathML"),
+                     (r"^function formelFensterZeigen\(.*?^\}", "formelFensterZeigen"),
                      (r"^function flWort\(.*?^\}", "flWort"),
                      (r"^function mitWort\(.*?^\}", "mitWort"),
                      (r"^function einfuegeleisteBauen\(.*?^\}", "einfuegeleisteBauen"),
@@ -247,6 +258,9 @@ const zoom = 1;
 const RASTER = 8;
 function kastenNeu(x, y) { befehle.push(['kastenNeu', x + ',' + y]); }
 function linkSetzen() { befehle.push(['linkSetzen', null]); }
+let letzterKasten = null;
+// Das Formelfenster steht in index.html; hier reicht, dass $ nichts findet.
+const $ = (w) => null;
 function aufAuswahl(befehl, wert) { befehle.push([befehl, wert === undefined ? null : wert]); }
 function hervorheben(f) { befehle.push(['hervorheben', f || null]); }
 function hervorhebungWeg() { befehle.push(['hervorhebungWeg', null]); }
@@ -635,6 +649,15 @@ ergebnis.datum = datum.befehle;
 ergebnis.datumgleich = datum.befehle.length
   ? datum.befehle[0][1] === new Date().toLocaleDateString() : false;
 
+/* --- Formeln ------------------------------------------------------------- */
+ergebnis.formeln = {};
+for (const probe of ['x', '1+2', 'a/b', 'x^2', 'x_1', 'x_1^2', 'sqrt(x)',
+                     'root(3)(x)', 'pi', 'alpha+Omega', '(a+b)/2', 'a+b/2',
+                     'sum_(i=1)^n i', 'int_a^b f', 'x <= 3', 'f(x)', '2*3',
+                     '-x', '', 'a)', '<script>']) {
+  ergebnis.formeln[probe] = formelMathML(probe);
+}
+
 console.log = (...a) => process.stdout.write(a.join(' ') + '\n');
 
 /* --- Ausschneiden, Kopieren, Einfuegen ----------------------------------- */
@@ -954,7 +977,8 @@ print("\nDer Reiter Einfügen")
 pruefe("die Knöpfe stehen in dieser Reihenfolge",
        d["einfknoepfe"] == ['Tabelle', 'Schreibbereich einfügen', 'Dateianlage',
                             'Bilder', 'Link', 'Datum und Uhrzeit', 'Symbol',
-                            'Neue Seite', 'Neuer Abschnitt'], d["einfknoepfe"])
+                            'Formel', 'Neue Seite', 'Neuer Abschnitt'],
+       d["einfknoepfe"])
 # Die alten bleiben versteckt stehen: an ihnen hängt die Logik für Anhänge,
 # neue Seiten und Abschnitte, und die soll es nur einmal geben.
 pruefe("die alten Knöpfe stehen versteckt dahinter", d["einfalt"] == 'einfalt',
@@ -964,7 +988,7 @@ pruefe("an jedem Knopf steht das Wort, nicht nur das Symbol",
        all(d["einfworte"]) and d["einftext"] == ['Tabelle▾', 'Schreibbereich einfügen',
                                                  'Dateianlage', 'Bilder', 'Link',
                                                  'Datum und Uhrzeit▾', 'ΩSymbol▾',
-                                                 '＋Seite', '＋Abschnitt'],
+                                                 '∑Formel', '＋Seite', '＋Abschnitt'],
        (d["einfworte"], d["einftext"]))
 pruefe("Dateianlage nimmt alles an",
        d["anlage"] == [["angeklickt", "dateiwahl:"]], d["anlage"])
@@ -1011,6 +1035,71 @@ pruefe("ihre Attribute nicht",
        == '<table><tr><td>a</td></tr></table>',
        reinigen.html('<table style="position:fixed" width="900"><tr>'
                      '<td colspan="9">a</td></tr></table>'))
+
+print("\nFormeln")
+# MathML setzt die Webansicht selbst - ohne Bibliothek, ohne Schriftdateien
+# und am Server ohne ein fremdes Skript, das die CSP ohnehin nicht ließe.
+F = d["formeln"]
+def m(innen):
+    return "<math><mrow>" + innen + "</mrow></math>"
+
+for probe, soll in [
+    ("x", "<mi>x</mi>"),
+    ("1+2", "<mn>1</mn><mo>+</mo><mn>2</mn>"),
+    ("a/b", "<mfrac><mi>a</mi><mi>b</mi></mfrac>"),
+    ("x^2", "<msup><mi>x</mi><mn>2</mn></msup>"),
+    ("x_1", "<msub><mi>x</mi><mn>1</mn></msub>"),
+    ("x_1^2", "<msubsup><mi>x</mi><mn>1</mn><mn>2</mn></msubsup>"),
+    ("sqrt(x)", "<msqrt><mi>x</mi></msqrt>"),
+    ("root(3)(x)", "<mroot><mi>x</mi><mn>3</mn></mroot>"),
+    ("pi", "<mi>\u03c0</mi>"),
+    ("2*3", "<mn>2</mn><mo>\u00b7</mo><mn>3</mn>"),
+    ("f(x)", "<mi>f</mi><mo>(</mo><mi>x</mi><mo>)</mo>"),
+    ("-x", "<mo>\u2212</mo><mi>x</mi>"),
+]:
+    pruefe(f"{probe or 'leer'} wird richtig gesetzt", F[probe] == m(soll), F[probe])
+
+# Punkt vor Strich - sonst würde a+b/2 zu (a+b)/2, und das ist eine andere
+# Zahl.
+pruefe("Klammern gelten: (a+b)/2",
+       F["(a+b)/2"] == m("<mfrac><mrow><mo>(</mo><mrow><mi>a</mi><mo>+</mo>"
+                         "<mi>b</mi></mrow><mo>)</mo></mrow><mn>2</mn></mfrac>"),
+       F["(a+b)/2"])
+pruefe("und ohne Klammern bindet der Bruch enger: a+b/2",
+       F["a+b/2"] == m("<mi>a</mi><mo>+</mo><mfrac><mi>b</mi><mn>2</mn></mfrac>"),
+       F["a+b/2"])
+# An der Summe stehen die Grenzen darüber und darunter, nicht daneben. Das
+# ist der ganze Unterschied zwischen einer Summe und x hoch n.
+pruefe("Summengrenzen stehen über und unter dem Zeichen",
+       "<munderover>" in F["sum_(i=1)^n i"] and "<msubsup>" not in F["sum_(i=1)^n i"],
+       F["sum_(i=1)^n i"])
+pruefe("beim Integral auch", "<munderover>" in F["int_a^b f"], F["int_a^b f"])
+pruefe("<= wird zu \u2264", F["x <= 3"] == m("<mi>x</mi><mo>\u2264</mo><mn>3</mn>"),
+       F["x <= 3"])
+# Eine halbe Formel ist besser als eine rote Meldung: beim Tippen steht sie
+# die meiste Zeit halb da.
+pruefe("nichts getippt, nichts kaputt", F[""] == m(""), F[""])
+pruefe("eine Klammer ohne Gegenstück hängt nicht fest",
+       F["a)"] == m("<mi>a</mi><mo>)</mo>"), F["a)"])
+# Der Vorschaukasten setzt das Ergebnis als HTML ein. Käme da etwas
+# Spitzes durch, wäre das genau die Lücke, die reinigen.py sonst zuhält.
+pruefe("spitze Klammern kommen nicht als Markup durch",
+       "&lt;" in F["<script>"] and "<script>" not in F["<script>"], F["<script>"])
+
+# Und der Reiniger muss MathML durchlassen - sonst ist die Formel beim
+# Speichern weg.
+pruefe("MathML überlebt das Speichern",
+       reinigen.html(m("<mi>x</mi>")) == m("<mi>x</mi>"),
+       reinigen.html(m("<mi>x</mi>")))
+pruefe("Attribute daran nicht",
+       reinigen.html('<math display="block"><mi onclick="x">a</mi></math>')
+       == '<math><mi>a</mi></math>',
+       reinigen.html('<math display="block"><mi onclick="x">a</mi></math>'))
+# mglyph lädt ein Bild, maction führt beim Klicken etwas aus.
+pruefe("mglyph und maction nicht",
+       reinigen.html('<math><maction><mi>a</mi></maction><mglyph/></math>')
+       == '<math><mi>a</mi></math>',
+       reinigen.html('<math><maction><mi>a</mi></maction><mglyph/></math>'))
 
 print("\nBeim Rechtsklick ist die schwebende Leiste zu viel")
 # Sie steht sonst neben dem Menue, das dieselben Knoepfe noch einmal zeigt.

@@ -4195,6 +4195,315 @@ function textfeldEinfuegen() {
   kastenNeu(links, oben);
 }
 
+/* --------------------------------------------------------------- Formeln
+
+   Eine Formel ist MathML. Das setzt die Webansicht von sich aus - ohne
+   Bibliothek, ohne Schriftdateien, und am Server ohne ein fremdes Skript,
+   das die CSP ohnehin nicht liesse.
+
+   Getippt wird aber nicht MathML (das tut sich niemand an), sondern eine
+   kleine Schreibweise: a/b ist ein Bruch, x^2 eine Potenz, x_1 ein Index,
+   sqrt(x) eine Wurzel, pi ist π. Daraus macht der Parser unten das MathML.
+
+   Er kennt absichtlich wenig, und was er nicht kennt, wird ein Bezeichner
+   statt ein Fehler: beim Tippen steht eine Formel die meiste Zeit halb da,
+   und eine halbe Formel ist besser als eine rote Meldung. */
+
+const FORMEL_WORTE = {
+  alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', epsilon: 'ε', zeta: 'ζ',
+  eta: 'η', theta: 'θ', iota: 'ι', kappa: 'κ', lambda: 'λ', mu: 'µ',
+  nu: 'ν', xi: 'ξ', rho: 'ρ', sigma: 'σ', tau: 'τ', phi: 'φ', chi: 'χ',
+  psi: 'ψ', omega: 'ω', pi: 'π',
+  Gamma: 'Γ', Delta: 'Δ', Theta: 'Θ', Lambda: 'Λ', Xi: 'Ξ', Pi: 'Π',
+  Sigma: 'Σ', Phi: 'Φ', Psi: 'Ψ', Omega: 'Ω',
+  inf: '∞', infty: '∞', deg: '°',
+};
+// Die grossen Zeichen: an ihnen stehen Grenzen darueber und darunter, nicht
+// daneben. Genau das ist der Unterschied zwischen einer Summe und x hoch n.
+const FORMEL_GROSS = { sum: '∑', prod: '∏', int: '∫', oint: '∮', lim: 'lim' };
+// Was man tippt und was dastehen soll.
+const FORMEL_ZEICHEN2 = { '<=': '≤', '>=': '≥', '!=': '≠', '+-': '±',
+                          '->': '→', '=>': '⇒', '~~': '≈', '**': '∗' };
+const FORMEL_ZEICHEN1 = { '*': '·', '-': '−' };
+
+function formelSchutz(text) {
+  return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/* Steht da genau ein Element? Dann braucht es kein <mrow> darum. mfrac und
+   msup wollen zwei Kinder, nicht zwei Gruppen - und eine Formel voller
+   ueberfluessiger mrow liest sich spaeter niemand mehr durch. */
+function formelEins(html) {
+  if (!html || html.charAt(0) !== '<') return false;
+  let tiefe = 0;
+  const muster = /<(\/?)[a-z]+[^>]*>/g;
+  let t = muster.exec(html);
+  while (t) {
+    tiefe += t[1] ? -1 : 1;
+    if (tiefe === 0) return muster.lastIndex >= html.length;
+    t = muster.exec(html);
+  }
+  return false;
+}
+
+function formelTeilen(text) {
+  const raus = [];
+  let i = 0;
+  while (i < text.length) {
+    const c = text.charAt(i);
+    if (/\s/.test(c)) { i += 1; continue; }
+    const zwei = text.slice(i, i + 2);
+    if (FORMEL_ZEICHEN2[zwei]) {
+      raus.push({ art: 'op', wert: FORMEL_ZEICHEN2[zwei] });
+      i += 2;
+      continue;
+    }
+    if (/[0-9]/.test(c)) {
+      let j = i;
+      while (j < text.length && /[0-9.,]/.test(text.charAt(j))) j += 1;
+      raus.push({ art: 'zahl', wert: text.slice(i, j) });
+      i = j;
+      continue;
+    }
+    if (/[A-Za-z]/.test(c)) {
+      let j = i;
+      while (j < text.length && /[A-Za-z]/.test(text.charAt(j))) j += 1;
+      raus.push({ art: 'wort', wert: text.slice(i, j) });
+      i = j;
+      continue;
+    }
+    raus.push({ art: 'op', wert: FORMEL_ZEICHEN1[c] || c, roh: c });
+    i += 1;
+  }
+  return raus;
+}
+
+const FORMEL_STRICH = ['+', '−', '=', '<', '>', '≤', '≥', '≠', '±', '→', '⇒',
+                       '≈', ',', ';', '∗'];
+
+/* Vier Ebenen: Strich vor Punkt, Punkt vor Hoch/Tief, Hoch/Tief vor dem
+   Einzelnen. Dieselbe Ordnung wie beim Rechnen - sonst wuerde a+b/2 zu
+   (a+b)/2. */
+function formelLesen(teile) {
+  let i = 0;
+  const schauen = () => teile[i] || null;
+  const ist = (wert) => { const t = schauen(); return t && t.wert === wert; };
+  const mi = (t) => `<mi>${formelSchutz(t)}</mi>`;
+  const mn = (t) => `<mn>${formelSchutz(t)}</mn>`;
+  const mo = (t) => `<mo>${formelSchutz(t)}</mo>`;
+  const reihe = (t) => (formelEins(t) ? t : `<mrow>${t}</mrow>`);
+
+  // Eine Klammer, die zu ist: ihr Inhalt. Eine, die noch offen steht: auch.
+  function klammer() {
+    const auf = schauen();
+    i += 1;                                   // die Klammer selbst
+    const inhalt = strich();
+    const zu = { '(': ')', '[': ']', '{': '}' }[auf.wert];
+    if (ist(zu)) i += 1;
+    return { inhalt, auf: auf.wert, zu };
+  }
+
+  function basis() {
+    const t = schauen();
+    if (!t) return { html: '', gross: false };
+    if (t.art === 'zahl') { i += 1; return { html: mn(t.wert), gross: false }; }
+    if (t.art === 'wort') {
+      i += 1;
+      const w = t.wert;
+      if (w === 'sqrt' && ist('(')) {
+        return { html: `<msqrt>${reihe(klammer().inhalt)}</msqrt>`, gross: false };
+      }
+      if (w === 'root' && ist('(')) {
+        const grad = klammer().inhalt;
+        const was = ist('(') ? klammer().inhalt : hochtief().html;
+        return { html: `<mroot>${reihe(was)}${reihe(grad)}</mroot>`, gross: false };
+      }
+      if (FORMEL_GROSS[w]) return { html: mo(FORMEL_GROSS[w]), gross: true };
+      if (FORMEL_WORTE[w]) return { html: mi(FORMEL_WORTE[w]), gross: false };
+      // Ein Wort vor einer Klammer ist eine Funktion: sin(x), f(x).
+      if (ist('(')) {
+        const k = klammer();
+        return { html: mi(w) + mo('(') + reihe(k.inhalt) + mo(k.zu), gross: false };
+      }
+      return { html: mi(w), gross: false };
+    }
+    if (t.wert === '(' || t.wert === '[' || t.wert === '{') {
+      const k = klammer();
+      return { html: mo(k.auf) + reihe(k.inhalt) + mo(k.zu), gross: false };
+    }
+    if (t.wert === '−' || t.wert === '+') {       // Vorzeichen
+      i += 1;
+      return { html: mo(t.wert) + reihe(basis().html), gross: false };
+    }
+    i += 1;
+    return { html: mo(t.wert), gross: false };
+  }
+
+  function hochtief() {
+    let links = basis();
+    for (;;) {
+      if (ist('^')) {
+        i += 1;
+        const oben = basis().html;
+        links = { html: links.gross ? `<mover>${reihe(links.html)}${reihe(oben)}</mover>`
+                                    : `<msup>${reihe(links.html)}${reihe(oben)}</msup>`,
+                  gross: false };
+      } else if (ist('_')) {
+        i += 1;
+        const unten = basis().html;
+        if (ist('^')) {
+          i += 1;
+          const oben = basis().html;
+          links = { html: links.gross
+            ? `<munderover>${reihe(links.html)}${reihe(unten)}${reihe(oben)}</munderover>`
+            : `<msubsup>${reihe(links.html)}${reihe(unten)}${reihe(oben)}</msubsup>`,
+                    gross: false };
+        } else {
+          links = { html: links.gross ? `<munder>${reihe(links.html)}${reihe(unten)}</munder>`
+                                      : `<msub>${reihe(links.html)}${reihe(unten)}</msub>`,
+                    gross: false };
+        }
+      } else {
+        return links;
+      }
+    }
+  }
+
+  function punkt() {
+    let text = hochtief().html;
+    for (;;) {
+      if (ist('/')) {
+        i += 1;
+        const unten = hochtief().html;
+        text = `<mfrac>${reihe(text)}${reihe(unten)}</mfrac>`;
+      } else if (ist('·') || ist('×')) {
+        const z = schauen().wert;
+        i += 1;
+        text += mo(z) + hochtief().html;
+      } else {
+        return text;
+      }
+    }
+  }
+
+  function strich() {
+    let text = punkt();
+    for (;;) {
+      const t = schauen();
+      if (!t || FORMEL_STRICH.indexOf(t.wert) < 0) return text;
+      i += 1;
+      text += mo(t.wert) + punkt();
+    }
+  }
+
+  let text = '';
+  let wacht = 0;
+  while (i < teile.length && wacht < 400) {
+    const vorher = i;
+    text += strich();
+    // Eine schliessende Klammer ohne oeffnende haengt sonst fuer immer da.
+    if (i === vorher) { text += mo(teile[i].wert); i += 1; }
+    wacht += 1;
+  }
+  return text;
+}
+
+function formelMathML(text) {
+  const inhalt = formelLesen(formelTeilen(String(text || '')));
+  return `<math><mrow>${inhalt}</mrow></math>`;
+}
+
+/* Bausteine: was dazugeschrieben wird und wo der Cursor danach steht. Das
+   Hütchen in der Mitte ist der Punkt, an dem man weiterschreibt - ohne das
+   landet er hinter der Klammer und man klickt sich zurueck. */
+const FORMEL_BAUSTEINE = [
+  ['a/b', 'Bruch', '/'], ['x²', 'Hoch', '^2'], ['x₁', 'Tief', '_1'],
+  ['√', 'Wurzel', 'sqrt(|)'], ['ⁿ√', 'n-te Wurzel', 'root(3)(|)'],
+  ['( )', 'Klammer', '(|)'],
+  ['∑', 'Summe', 'sum_(i=1)^n |'], ['∏', 'Produkt', 'prod_(i=1)^n |'],
+  ['∫', 'Integral', 'int_a^b |'], ['lim', 'Grenzwert', 'lim_(x->0) |'],
+  ['π', 'Pi', 'pi'], ['α', 'Alpha', 'alpha'], ['Δ', 'Delta', 'Delta'],
+  ['∞', 'Unendlich', 'inf'], ['≤', 'Kleiner gleich', '<='],
+  ['≥', 'Größer gleich', '>='], ['≠', 'Ungleich', '!='], ['±', 'Plusminus', '+-'],
+];
+
+let formelZiel = null;        // wohin die Formel geht
+
+function formelFensterZeigen() {
+  const fenster = $('#formelfenster');
+  const feld = $('#f-eingabe');
+  if (!fenster || !feld) return;
+  // Den Kasten merken: der Klick ins Fenster kostet den Fokus, und ohne ihn
+  // weiss insertHTML nachher nicht mehr, wohin.
+  formelZiel = (document.activeElement && document.activeElement.closest('.kasten'))
+    || letzterKasten;
+  fenster.hidden = false;
+  feld.value = '';
+  formelVorschau();
+  feld.focus();
+}
+
+function formelFensterZu() {
+  const fenster = $('#formelfenster');
+  if (fenster) fenster.hidden = true;
+}
+
+function formelVorschau() {
+  const feld = $('#f-eingabe');
+  const schau = $('#f-vorschau');
+  if (!feld || !schau) return;
+  // Kein fremder Text: das MathML entsteht hier und ist durchgehend
+  // geschuetzt (formelSchutz).
+  schau.innerHTML = feld.value.trim() ? formelMathML(feld.value) : '';
+}
+
+function formelEinsetzen(text) {
+  const feld = $('#f-eingabe');
+  if (!feld) return;
+  const stelle = text.indexOf('|');
+  const rein = stelle < 0 ? text : text.replace('|', '');
+  const a = feld.selectionStart === null ? feld.value.length : feld.selectionStart;
+  const b = feld.selectionEnd === null ? feld.value.length : feld.selectionEnd;
+  feld.value = feld.value.slice(0, a) + rein + feld.value.slice(b);
+  const neu = a + (stelle < 0 ? rein.length : stelle);
+  try { feld.setSelectionRange(neu, neu); } catch (f) { /* nicht ueberall */ }
+  feld.focus();
+  formelVorschau();
+}
+
+function formelBauen() {
+  const kasten = $('#f-bausteine');
+  if (!kasten || kasten.children.length) return;
+  for (const [zeichen, name, text] of FORMEL_BAUSTEINE) {
+    const k = el('button', { type: 'button', className: 'f-baustein',
+                             title: name, textContent: zeichen });
+    k.addEventListener('click', function () { formelEinsetzen(text); });
+    kasten.append(k);
+  }
+  $('#f-eingabe').addEventListener('input', formelVorschau);
+  $('#f-eingabe').addEventListener('keydown', function (ev) {
+    if (ev.key === 'Enter') { ev.preventDefault(); formelUebernehmen(); }
+    if (ev.key === 'Escape') { ev.preventDefault(); formelFensterZu(); }
+  });
+  $('#f-ab').addEventListener('click', formelFensterZu);
+  $('#f-ein').addEventListener('click', formelUebernehmen);
+}
+
+function formelUebernehmen() {
+  const feld = $('#f-eingabe');
+  if (!feld || !feld.value.trim()) { formelFensterZu(); return; }
+  const mathml = formelMathML(feld.value);
+  formelFensterZu();
+  // Den Kasten von vorhin wieder nehmen - aufAuswahl() sucht sonst den
+  // aktiven, und das ist gerade noch der Knopf im Fenster.
+  if (formelZiel) {
+    const text = formelZiel.querySelector('.text');
+    if (text) text.focus();
+    letzterKasten = formelZiel;
+  }
+  flBefehl('insertHTML', mathml);
+}
+
 /* Im Reiter Einfügen steht neben jedem Symbol das Wort - so wie in OneNote.
    Oben bei Start waere das eine Leiste ueber zwei Bildschirmbreiten; hier
    sind es neun Knoepfe, und "Schreibbereich einfuegen" errät niemand am
@@ -4234,7 +4543,9 @@ function einfuegeleisteBauen() {
                       function (art) { flBefehl('insertText', datumText(art)); })),
      mitWort(flTafel(wirt, 'Symbol',
                      flWort('<span class="fl-sinn">Ω</span>', 'Symbol'),
-                     flZeichentafel))],
+                     flZeichentafel)),
+     mitWort(flTaste(flWort('<span class="fl-sinn">∑</span>', 'Formel'), 'Formel',
+                     formelFensterZeigen))],
     [mitWort(flTaste(flWort('＋', 'Seite'), 'Neue Seite',
                      function () { altKlick('neue-seite-band'); })),
      mitWort(flTaste(flWort('＋', 'Abschnitt'), 'Neuer Abschnitt',
@@ -4255,6 +4566,7 @@ function einfuegeleisteBauen() {
 function formatleistenBauen() {
   bandleisteUmbauen();
   einfuegeleisteBauen();
+  formelBauen();
   minileisteUmbauen();
   flHakenAnschalten();
   flPinselAnschalten();

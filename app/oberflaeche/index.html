@@ -173,6 +173,27 @@ window.addEventListener('unhandledrejection', function (ev) {
     </div>
   </div>
 
+  <!-- Formel schreiben. Getippt wird eine kleine Schreibweise, dasteht
+       MathML - siehe formelMathML() in mappe.js. -->
+  <div id="formelfenster" hidden>
+    <div class="tafel">
+      <h3>Formel</h3>
+      <div id="f-bausteine"></div>
+      <input type="text" id="f-eingabe" placeholder="(a+b)/2" autocomplete="off" spellcheck="false">
+      <div id="f-vorschau"></div>
+      <p class="hinweis" id="f-hilfe">
+        <b>a/b</b> Bruch · <b>x^2</b> hoch · <b>x_1</b> tief · <b>sqrt(x)</b> Wurzel ·
+        <b>root(3)(x)</b> dritte Wurzel · <b>pi alpha Omega</b> griechisch ·
+        <b>sum int lim</b> mit <b>_</b> und <b>^</b> für die Grenzen ·
+        <b>&lt;= &gt;= != +- -&gt;</b>
+      </p>
+      <p class="knoepfe">
+        <button type="button" id="f-ein">Einfügen</button>
+        <button type="button" id="f-ab">Abbrechen</button>
+      </p>
+    </div>
+  </div>
+
   <div id="minileiste" hidden>
     <select data-befehl="fontName" title="Schriftart">
           <option value="system-ui">Standard</option>

@@ -374,13 +374,40 @@ OneNote:
 **Einfügen** hat: **Tabelle** (Raster bis 8 × 8), **Schreibbereich** (ein neuer
 Textkasten dort, wo du gerade bist), **Dateianlage** und **Bilder**, **Link**,
 **Datum und Uhrzeit** (in der Sprache des Rechners), **Symbol** (60 Zeichen,
-die auf keiner Tastatur liegen) sowie **＋ Seite** und **＋ Abschnitt**.
+die auf keiner Tastatur liegen), **Formel** sowie **＋ Seite** und
+**＋ Abschnitt**.
 
-Nicht dabei sind Bildschirmausschnitt, Audio- und Videoaufnahme, Onlinevideo,
-Formel und Dateiausdruck. Die brauchen entweder Rechte, die eine Webansicht
-nicht hat, oder einen ganzen Apparat (PDF rendern, Formelsatz) — und am Server
-ginge die Hälfte davon ohnehin nicht. Lieber keine Knöpfe als Knöpfe, die nur
-erklären, warum sie nichts tun.
+### Formeln
+
+Eine Formel ist **MathML**. Das setzt die Webansicht von sich aus — ohne
+Bibliothek, ohne Schriftdateien und am Server ohne ein fremdes Skript, das die
+CSP ohnehin nicht ließe.
+
+Getippt wird aber nicht MathML, sondern eine kleine Schreibweise:
+
+| geschrieben | kommt heraus |
+|---|---|
+| `a/b` | Bruch |
+| `x^2`, `x_1`, `x_1^2` | hoch, tief, beides |
+| `sqrt(x)`, `root(3)(x)` | Wurzel, dritte Wurzel |
+| `pi alpha Omega inf` | π α Ω ∞ |
+| `sum_(i=1)^n`, `int_a^b`, `lim_(x->0)` | Grenzen **über und unter** dem Zeichen |
+| `<= >= != +- -> =>` | ≤ ≥ ≠ ± → ⇒ |
+
+Es gilt Punkt vor Strich: `a+b/2` ist etwas anderes als `(a+b)/2`. Was der
+Parser nicht kennt, wird ein Bezeichner statt ein Fehler — beim Tippen steht
+eine Formel die meiste Zeit halb da, und eine halbe Formel ist besser als eine
+rote Meldung.
+
+Im Reiniger ist MathML auf eine kleine Liste beschränkt, und keines der
+Elemente trägt ein Attribut. `mglyph` (lädt ein Bild), `maction` (führt beim
+Klicken etwas aus) und `mstyle` (könnte eine Formel über die halbe Seite
+ziehen) sind bewusst nicht dabei.
+
+Nicht gebaut sind Bildschirmausschnitt, Audio- und Videoaufnahme, Onlinevideo
+und Dateiausdruck. Die brauchen entweder Rechte, die eine Webansicht nicht hat,
+oder einen ganzen Apparat (PDF rendern) — und am Server ginge die Hälfte davon
+ohnehin nicht.
 
 Eine eingefügte Tabelle ist eine `<table>` **ohne jedes Attribut**: kein
 `colspan`, keine Breite, kein `style`. Damit kann sie nichts über die Seite
