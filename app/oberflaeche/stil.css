@@ -744,7 +744,19 @@ body { display: flex; flex-direction: column; }
   border-bottom: 1px solid var(--linie);
   font-size: 11px; font-weight: 600; letter-spacing: .04em;
   text-transform: uppercase; color: var(--matt);
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
 }
+/* Das + an der Ueberschrift legt ein Notizbuch auf genau dieser Seite an.
+   Es steht blass da und wird deutlich, wenn die Maus in der Leiste ist -
+   wie die Knoepfe an den Zeilen darunter. */
+#baum .quelle button {
+  border: 0; background: none; color: var(--matt);
+  cursor: pointer; font-size: 13px; line-height: 1; padding: 0 2px;
+  opacity: 0;
+}
+#baum:hover .quelle button { opacity: 1; }
+#baum .quelle button:hover { color: var(--akzent); }
+#baum .quelle.hier button { color: var(--akzent); }
 #baum .quelle:first-child { margin-top: 2px; }
 #baum .quelle.hier { color: var(--akzent); border-color: var(--akzent); }
 /* Die andere Seite ist zum Hinsehen und Aufmachen da, nicht zum Umbauen. */
@@ -834,3 +846,51 @@ body { display: flex; flex-direction: column; }
   color: var(--schrift); cursor: pointer; font-size: 13px;
 }
 .profilpunkt:hover { background: var(--flaeche); }
+
+/* --- Mein Profil ---------------------------------------------------------
+   Dieselben Regeln wie in der Serverfassung, damit das Fenster dort und
+   hier gleich aussieht. */
+#profilfenster {
+  width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 64px);
+  padding: 0 20px 20px; border: 1px solid var(--linie); border-radius: 12px;
+  background: var(--papier); color: var(--schrift);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, .45);
+}
+#profilfenster::backdrop { background: rgba(0, 0, 0, .5); }
+#profilkopfzeile {
+  position: sticky; top: 0; z-index: 1;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 16px 0 10px; background: var(--papier);
+  border-bottom: 1px solid var(--linie);
+}
+#profilkopfzeile h2 { margin: 0; font-size: 16px; }
+#profilzu {
+  width: 28px; height: 28px; padding: 0; line-height: 1;
+  border: 1px solid var(--linie); border-radius: 50%;
+  background: var(--leiste); color: var(--schrift); cursor: pointer;
+}
+#profilzu:hover { border-color: var(--akzent); }
+#profilteil .ordnerzeile { display: flex; gap: 8px; margin: 10px 0 4px; flex-wrap: wrap; }
+/* Auch das E-Mail-Feld: die Regel galt nur fuer Passwortfelder, und ein
+   weisses Feld in der dunklen Oberflaeche ist genau der Fleck, der hier
+   schon zweimal aufgefallen ist. */
+#profilteil input[type="password"], #profilteil input[type="email"] {
+  flex: 1; min-width: 0; padding: 4px 8px;
+  border: 1px solid var(--linie); border-radius: 6px;
+  background: var(--papier); color: var(--schrift);
+  font: inherit; font-size: 13px;
+}
+#profilteil input:focus { outline: none; border-color: var(--akzent); }
+#profilteil button {
+  border: 1px solid var(--linie); background: var(--leiste); color: var(--schrift);
+  border-radius: 6px; padding: 5px 10px; cursor: pointer; font-size: 13px;
+}
+#profilteil button:hover { border-color: var(--akzent); }
+#profilteil .hinweis { color: var(--matt); font-size: 12px; margin: 8px 0 0; }
+#profilteil select {
+  padding: 4px 8px; min-width: 220px;
+  border: 1px solid var(--linie); border-radius: 6px;
+  background: var(--papier); color: var(--schrift);
+  font: inherit; font-size: 13px; cursor: pointer;
+}
+#profilteil select option { background: var(--papier); color: var(--schrift); }

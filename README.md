@@ -238,6 +238,15 @@ gerade arbeitet, sah klug aus und war unruhig: beim Umschalten sprangen die
 Notizbücher aneinander vorbei. Wo du schreibst, sagt die Überschrift in der
 Akzentfarbe; die andere steht blass da.
 
+An jeder Überschrift steht ein **＋**: das legt ein Notizbuch auf *dieser*
+Seite an. Den Knopf „+ Notizbuch" unten in der Leiste gibt es deshalb nicht
+mehr — er sagte nicht, wo das Buch entsteht, sobald dort zwei Bäume stehen.
+
+Die Knöpfe an den Zeilen (**＋** für Abschnitt und Seite, **🗑** zum Löschen)
+stehen auf **beiden** Seiten. Trifft es die andere, wird vorher dorthin
+gewechselt — sonst legte ein „+ Seite" am eigenen Abschnitt eine Seite am
+Server an. Das passiert genau einmal, und danach sucht man sie.
+
 Ein Klick auf eine Seite drüben **schaltet still um**: Ungespeichertes wird
 noch weggeschrieben, das Fenster stellt um, lädt kurz neu und öffnet genau
 diese Seite. Angelegt, umbenannt und gelöscht wird nur auf der Seite, auf der

@@ -133,7 +133,6 @@ window.addEventListener('unhandledrejection', function (ev) {
     </header>
     <nav id="baum" aria-label="Notizbücher"></nav>
     <footer>
-      <button type="button" id="neues-buch">+ Notizbuch</button>
       <div id="profilmenue" hidden>
         <p id="profilkopf">
           <strong id="profilwer">…</strong>
@@ -220,7 +219,6 @@ window.addEventListener('unhandledrejection', function (ev) {
       <button type="button" class="dateipunkt" data-punkt="exportieren">Exportieren</button>
       <span class="dateitrenner"></span>
       <button type="button" class="dateipunkt" data-punkt="server">Verbinden</button>
-      <button type="button" class="dateipunkt" data-punkt="profil">Profil</button>
       <button type="button" class="dateipunkt" data-punkt="optionen">Optionen</button>
     </div>
     <div id="dateiinhalt">
@@ -344,43 +342,6 @@ window.addEventListener('unhandledrejection', function (ev) {
         </section>
         <p class="hinweis" id="d-server-sonst" hidden>Diese Fassung läuft schon auf
           einem Server — angemeldet bist du, und zu verbinden gibt es nichts.</p>
-      </section>
-
-      <section class="dateiseite" data-punkt="profil" hidden>
-        <h2>Dein Zugang am Server</h2>
-        <p class="hinweis" id="p-nichts" hidden>Ein Profil gibt es nur auf einem
-          Server. Am eigenen Rechner liegen die Notizen in einem Ordner — da
-          gibt es niemanden, bei dem man angemeldet wäre.</p>
-        <div id="p-alles" hidden>
-          <p class="zeile2"><span>Angemeldet als</span><span id="p-ich">…</span></p>
-          <p class="zeile2"><span>Rolle</span><span id="p-rolle">…</span></p>
-          <p class="zeile2"><span>Zweiter Schritt</span><span id="p-zwei">…</span></p>
-
-          <h3>Mailadresse</h3>
-          <p class="hinweis">Freiwillig, und mit genau einem Zweck: ohne sie
-            gibt es keinen Link zum Zurücksetzen, wenn das Passwort weg ist.</p>
-          <p class="ordnerzeile">
-            <input type="email" id="p-email" placeholder="noch keine hinterlegt"
-                   autocomplete="email" spellcheck="false">
-            <button type="button" id="p-email-setzen">Übernehmen</button>
-          </p>
-
-          <h3>Passwort ändern</h3>
-          <p class="hinweis">Das bisherige gehört dazu — sonst könnte jemand an
-            einem offen stehenden Fenster den Zugang in zwei Klicks übernehmen.
-            Danach sind alle anderen Sitzungen abgemeldet.</p>
-          <p class="ordnerzeile">
-            <input type="password" id="p-alt" placeholder="bisheriges Passwort"
-                   autocomplete="current-password">
-            <input type="password" id="p-neu" placeholder="neues Passwort"
-                   autocomplete="new-password">
-            <button type="button" id="p-passwort-setzen">Ändern</button>
-          </p>
-          <p class="hinweis" id="p-hinweis"></p>
-
-          <h3>Verwaltung</h3>
-          <p class="hinweis" id="p-verwaltung">…</p>
-        </div>
       </section>
 
       <section class="dateiseite" data-punkt="optionen" hidden>

@@ -263,6 +263,16 @@ function ordnerZeigen(e) {
       $('#profilbild').textContent = (wer || '?').slice(0, 1).toUpperCase();
       $('#profilwer').textContent = wer || '…';
       $('#profilrolle').textContent = profilRolle;
+      // Die Rolle steht nur im Profil am Server - einmal holen, dann steht
+      // sie im Menue, ohne bei jedem Aufklappen zu fragen.
+      if (!profilRolle) {
+        serverHol('GET', '/profil').then((d) => {
+          profilRolle = (d && d.rolle) || '';
+          $('#profilrolle').textContent = profilRolle;
+        }).catch(() => { /* dann eben ohne Rolle */ });
+      }
+    } else {
+      profilRolle = '';
     }
   }
 }
@@ -288,10 +298,17 @@ function baumZeichnen() {
     // Notizbuecher von hier und von dort ununterscheidbar untereinander.
     if (buch.quelle && buch.quelle !== letzteQuelle) {
       letzteQuelle = buch.quelle;
+      const welche = buch.quelle;
       const kopf = document.createElement('div');
-      kopf.className = 'quelle' + (buch.quelle === baumSeite ? ' hier' : '');
-      kopf.textContent = buch.quelle === 'server' ? baumMappe : 'Eigener Ordner';
-      kopf.title = buch.quelle === baumSeite
+      kopf.className = 'quelle' + (welche === baumSeite ? ' hier' : '');
+      kopf.append(Object.assign(document.createElement('span'),
+                                { textContent: welche === 'server' ? baumMappe : 'Eigener Ordner' }));
+      const mehr = Object.assign(document.createElement('button'),
+                                 { type: 'button', textContent: '＋',
+                                   title: 'Neues Notizbuch hier' });
+      mehr.addEventListener('click', () => notizbuchAnlegen(welche));
+      kopf.append(mehr);
+      kopf.title = welche === baumSeite
         ? 'Hier schreibst du gerade'
         : 'Ein Klick auf eine Seite wechselt hierher';
       baum.append(kopf);
@@ -299,37 +316,41 @@ function baumZeichnen() {
     const bd = document.createElement('div');
     const klappschluessel = (buch.quelle ? buch.quelle + '/' : '') + buch.name;
     bd.className = 'buch' + (zugeklappt.has(klappschluessel) ? ' eingeklappt' : '');
-    // Die andere Seite steht zum Hinsehen und Aufmachen da - angelegt und
-    // geloescht wird dort nicht. Ein "+ Seite" wuerde sonst auf der Seite
-    // landen, auf der man gerade steht, und nicht dort, wo man geklickt hat.
+    // Auch auf der anderen Seite stehen die Knoepfe - sie wechseln vorher
+    // dorthin. Ohne das legt ein "+ Seite" am eigenen Abschnitt eine Seite am
+    // Server an; das passiert genau einmal, und danach sucht man sie.
     const fremd = !!buch.quelle && buch.quelle !== baumSeite;
+    const hier = buch.quelle;
     if (fremd) bd.classList.add('drueben');
-    bd.append(zeile(buch.name, fremd ? [] : [
-      ['+ Abschnitt', '＋', async () => {
+    bd.append(zeile(buch.name, [
+      ['+ Abschnitt', '＋', () => aufSeite(hier, async () => {
         const n = prompt('Name des Abschnitts:'); if (!n) return;
         await api('/api/abschnitt', 'POST', { notizbuch: buch.name, name: n });
         zugeklappt.delete(klappschluessel); await baumLaden();
-      }],
-      ['Notizbuch loeschen', '🗑', () => loeschen('notizbuch', [buch.name], buch.name)],
+      })],
+      ['Notizbuch loeschen', '🗑',
+       () => aufSeite(hier, () => loeschen('notizbuch', [buch.name], buch.name))],
     ], () => klappen(bd, klappschluessel), zugeklappt.has(klappschluessel)));
 
     for (const ab of buch.abschnitte) {
       const schluessel = klappschluessel + '/' + ab.name;
       const ad = document.createElement('div');
       ad.className = 'abschnitt' + (zugeklappt.has(schluessel) ? ' eingeklappt' : '');
-      ad.append(zeile(ab.name, fremd ? [] : [
-        ['+ Seite', '＋', async () => {
+      ad.append(zeile(ab.name, [
+        ['+ Seite', '＋', () => aufSeite(hier, async () => {
           const r = await api('/api/seite', 'POST', { notizbuch: buch.name, abschnitt: ab.name, titel: 'Neue Seite' });
           zugeklappt.delete(schluessel); await baumLaden();
           await seiteOeffnen(buch.name, ab.name, r.name);
           $('#titel').select();
-        }],
-        ['Abschnitt loeschen', '🗑', () => loeschen('abschnitt', [buch.name, ab.name], ab.name)],
+        })],
+        ['Abschnitt loeschen', '🗑',
+         () => aufSeite(hier, () => loeschen('abschnitt', [buch.name, ab.name], ab.name))],
       ], () => klappen(ad, schluessel), zugeklappt.has(schluessel)));
 
       for (const s of ab.seiten) {
-        const sd = zeile(s.titel, fremd ? [] : [
-          ['Seite loeschen', '🗑', () => loeschen('seite', [buch.name, ab.name, s.name], s.titel)],
+        const sd = zeile(s.titel, [
+          ['Seite loeschen', '🗑',
+           () => aufSeite(hier, () => loeschen('seite', [buch.name, ab.name, s.name], s.titel))],
         ]);
         sd.classList.add('seite');
         if (s.konflikt) sd.classList.add('konflikt');
@@ -1535,12 +1556,27 @@ $('#titel').addEventListener('change', async () => {
   await baumLaden();
 });
 
-$('#neues-buch').addEventListener('click', async () => {
+/* Ein neues Notizbuch - auf der Seite, auf der man es angeklickt hat.
+ * Frueher hing das an einem Knopf unten in der Leiste; der sagte aber nicht,
+ * wo das Buch entsteht, sobald dort zwei Baeume stehen. */
+async function notizbuchAnlegen(quelle) {
   const n = prompt('Name des Notizbuchs:');
   if (!n) return;
-  await api('/api/notizbuch', 'POST', { name: n });
-  await baumLaden();
-});
+  await aufSeite(quelle, async () => {
+    await api('/api/notizbuch', 'POST', { name: n });
+    await baumLaden();
+  });
+}
+
+/* Etwas auf der anderen Seite tun: erst dorthin wechseln, dann tun. Sonst
+ * legt ein "+ Seite" am eigenen Abschnitt eine Seite am Server an - das
+ * passiert genau einmal, und danach sucht man sie. */
+async function aufSeite(quelle, tun) {
+  if (quelle && baumSeite && quelle !== baumSeite) {
+    await seitenwechsel(quelle === 'server', null);
+  }
+  await tun();
+}
 
 window.addEventListener('beforeunload', (ev) => {
   if (!schmutzig) return;
@@ -2761,7 +2797,6 @@ function dateiPunkt(punkt) {
   }
   if (punkt === 'info') dateiInfoFuellen();
   if (punkt === 'server') dateiServerFuellen();
-  if (punkt === 'profil') profilFuellen();
   // "Installiert", die Update-Knoepfe und die beiden Haken stehen in
   // #einstellungen-oben, und das liegt auf der Informationen-Seite. Gefuellt
   // werden sie aber von einstellungenLaden() - wer die Datei-Ebene ueber das
@@ -2823,56 +2858,6 @@ function zuDenEinstellungen(punkt) {
   }, 80);
 }
 
-/* Das eigene Konto am Server - im Fenster, nicht nur im Browser. Verbunden
- * steht unten in der Leiste, als wer man dort angemeldet ist; ein Klick
- * fuehrt hierher. Oertlich gibt es nichts einzustellen: dann steht das auch
- * so da, statt eine leere Seite zu zeigen. */
-async function profilFuellen() {
-  const e = await api('/api/einstellungen').catch(() => null);
-  const fern = !!(e && e.ferne && e.ferne.aktiv);
-  $('#p-nichts').hidden = fern;
-  $('#p-alles').hidden = !fern;
-  if (!fern) return;
-  $('#p-hinweis').textContent = '';
-  let d;
-  try {
-    d = await api('/api/server', 'POST', { art: 'GET', weg: '/profil' });
-  } catch (f) { $('#p-hinweis').textContent = f.message; return; }
-  $('#p-ich').textContent = d.ich || '?';
-  $('#p-rolle').textContent = d.rolle || '?';
-  profilRolle = d.rolle || '';
-  $('#profilrolle').textContent = profilRolle;
-  $('#p-zwei').textContent = d.zwei ? 'eingeschaltet' : 'aus';
-  if (document.activeElement !== $('#p-email')) $('#p-email').value = d.email || '';
-  $('#p-verwaltung').textContent = d.darf_verwalten
-    ? 'Du darfst dort Benutzer und Projekte verwalten. Das geht im Browser: '
-      + 'die Mappe am Server aufrufen, dann Einstellungen.'
-    : 'Benutzer und Projekte verwaltet dort jemand anderes.';
-}
-
-$('#p-email-setzen').addEventListener('click', async () => {
-  try {
-    const r = await api('/api/server', 'POST',
-                        { art: 'POST', weg: '/profil/email',
-                          rumpf: { email: $('#p-email').value } });
-    $('#p-hinweis').textContent = r.hinweis || 'Übernommen.';
-    profilFuellen();
-  } catch (f) { $('#p-hinweis').textContent = f.message; }
-});
-
-$('#p-passwort-setzen').addEventListener('click', async () => {
-  const alt = $('#p-alt').value;
-  const neu = $('#p-neu').value;
-  if (!alt || !neu) { $('#p-hinweis').textContent = 'Beide Felder ausfüllen.'; return; }
-  try {
-    const r = await api('/api/server', 'POST',
-                        { art: 'POST', weg: '/profil/passwort', rumpf: { alt, neu } });
-    $('#p-alt').value = '';
-    $('#p-neu').value = '';
-    $('#p-hinweis').textContent = r.hinweis || 'Passwort geändert.';
-  } catch (f) { $('#p-hinweis').textContent = f.message; }
-});
-
 /* Die Rolle steht im Profil am Server; gemerkt, damit das Menue sie zeigen
  * kann, ohne bei jedem Aufklappen zu fragen. */
 let profilRolle = '';
@@ -2890,8 +2875,8 @@ document.addEventListener('keydown', (ev) => {
 });
 $('#profil-oeffnen').addEventListener('click', () => {
   $('#profilmenue').hidden = true;
-  dateiZeigen(true);
-  dateiPunkt('profil');
+  profilBearbeitenBauen();
+  profilOeffnen();
 });
 $('#profil-abmelden').addEventListener('click', async () => {
   $('#profilmenue').hidden = true;
@@ -2907,7 +2892,7 @@ $('#profil-abmelden').addEventListener('click', async () => {
 $('#d-server').addEventListener('click', () => dateiPunkt('server'));
 $('#d-ordner-waehlen').addEventListener('click', () => zuDenEinstellungen('e-ordnerwahl'));
 $('#d-onenote').addEventListener('click', () => zuDenEinstellungen('e-onenote'));
-$('#d-neu-buch').addEventListener('click', () => { dateiZeigen(false); $('#neues-buch').click(); });
+$('#d-neu-buch').addEventListener('click', () => { dateiZeigen(false); notizbuchAnlegen(baumSeite); });
 $('#d-neu-abschnitt').addEventListener('click', () => { dateiZeigen(false); $('#neuer-abschnitt-band').click(); });
 $('#d-neu-seite').addEventListener('click', () => { dateiZeigen(false); $('#neue-seite-band').click(); });
 $('#d-drucken').addEventListener('click', () => { dateiZeigen(false); setTimeout(() => window.print(), 150); });
@@ -5473,6 +5458,192 @@ function modelleBauen() {
   // mit - contenteditable aendert dabei staendig Knoten.
   const beobachter = new MutationObserver(modelleNachsehen);
   beobachter.observe(flaeche || document.body, { childList: true });
+}
+
+
+/* ============================================== Mein Profil (am Server)
+ *
+ * Eins zu eins aus der Serverfassung uebernommen, damit es im Fenster
+ * genauso aussieht: ein Fenster ueber allem, mit Zugang, Mailadresse,
+ * Passwort und Abmelden. Zwei Stellen sind anders und muessen es sein -
+ * "Abmelden" loest hier die Verbindung statt eine Adresse aufzurufen, und
+ * das Aussehen steht nicht drin: dafuer gibt es im Fenster die Optionen,
+ * und zwei Stellen fuer dieselbe Farbe waeren eine zu viel.
+ */
+
+/* Eine Seite des Servers aufrufen. Drueben ist das hol(); hier geht es ueber
+ * die Bruecke, die eine feste Liste erlaubter Seiten hat. */
+async function serverHol(art, weg, rumpf) {
+  return api('/api/server', 'POST', { art: art, weg: weg, rumpf: rumpf || {} });
+}
+
+function fensterZu() {
+  const f = document.getElementById('profilfenster');
+  if (f && typeof f.close === 'function') f.close();
+}
+
+function profilfenster() {
+  const vorhanden = document.getElementById('profilfenster');
+  if (vorhanden) return vorhanden;
+
+  const zu = el('button', { type: 'button', id: 'profilzu', title: 'Schließen',
+                            textContent: '✕' });
+  const fenster = el('dialog', { id: 'profilfenster' }, [
+    el('div', { id: 'profilkopfzeile' }, [el('h2', { textContent: 'Mein Profil' }), zu]),
+  ]);
+  zu.addEventListener('click', () => fenster.close());
+  // Klick auf den dunklen Rand schliesst auch - das Fenster selbst faengt
+  // seine eigenen Klicks ab.
+  fenster.addEventListener('click', function (ev) {
+    if (ev.target === fenster) fenster.close();
+  });
+  document.body.append(fenster);
+  return fenster;
+}
+
+function profilOeffnen() {
+  const fenster = profilfenster();
+  if (!fenster) return;
+  profilDatenLaden();
+  if (typeof fenster.showModal === 'function') fenster.showModal();
+  else fenster.setAttribute('open', 'open');
+}
+
+/* -------------------------------------------------------------- Mein Profil
+
+   Getrennt von der Verwaltung, weil es zwei verschiedene Dinge sind: dort
+   geht es um andere Leute, hier um einen selbst. Wer kein Verwalter ist,
+   hatte bisher ueberhaupt keine Stelle, an der er sein eigenes Passwort
+   aendern konnte. */
+
+function profilBearbeitenBauen() {
+  const seite = profilfenster();
+  if (!seite || document.getElementById('profilteil')) return;
+
+  const wer = el('p', { className: 'zeile2' }, [
+    el('span', { textContent: 'Angemeldet als' }),
+    el('code', { id: 'p-ich', textContent: '…' }),
+  ]);
+  const rolle = el('p', { className: 'zeile2' }, [
+    el('span', { textContent: 'Rolle' }),
+    el('span', { id: 'p-rolle', textContent: '…' }),
+  ]);
+  const zwei = el('p', { className: 'zeile2' }, [
+    el('span', { textContent: 'Zwei Schritte beim Anmelden' }),
+    el('span', { id: 'p-zwei', textContent: '…' }),
+  ]);
+
+  const alt = el('input', { type: 'password', id: 'p-alt',
+                            placeholder: 'Bisheriges Passwort' });
+  const neu1 = el('input', { type: 'password', id: 'p-neu',
+                             placeholder: 'Neues Passwort (mind. 8 Zeichen)' });
+  const neu2 = el('input', { type: 'password', id: 'p-neu2',
+                             placeholder: 'Noch einmal' });
+  const hinweis = el('p', { className: 'hinweis', id: 'p-hinweis' });
+  const aendern = el('button', { type: 'button', textContent: 'Passwort ändern' });
+  aendern.addEventListener('click', async () => {
+    if (neu1.value !== neu2.value) {
+      hinweis.textContent = 'Die beiden neuen Passwörter sind nicht gleich.';
+      return;
+    }
+    hinweis.textContent = 'wird geändert …';
+    try {
+      const d = await serverHol('POST', '/profil/passwort', { alt: alt.value, neu: neu1.value });
+      hinweis.textContent = d.hinweis || 'Geändert.';
+      alt.value = neu1.value = neu2.value = '';
+    } catch (f) { hinweis.textContent = f.message; }
+  });
+
+  /* Die eigene Adresse. Freiwillig und mit genau einem Zweck - deshalb
+     steht der Zweck auch daneben: wer nicht weiss, wofuer eine Adresse
+     gebraucht wird, traegt zu Recht keine ein. */
+  const email = el('input', { type: 'email', id: 'p-email',
+                              placeholder: 'name@beispiel.de', autocomplete: 'email' });
+  const emailHinweis = el('p', { className: 'hinweis', id: 'p-emailhinweis' });
+  const emailSichern = el('button', { type: 'button', textContent: 'Adresse speichern' });
+  emailSichern.addEventListener('click', async () => {
+    emailHinweis.textContent = 'wird gespeichert …';
+    try {
+      const d = await serverHol('POST', '/profil/email', { email: email.value });
+      emailHinweis.textContent = d.hinweis || '';
+    } catch (f) { emailHinweis.textContent = f.message; }
+  });
+
+  /* Bescheid, wenn jemand an der eigenen Tuer ruettelt. Hoechstens eine
+     Nachricht je Viertelstunde - sonst wird daraus Spam, und Spam klickt
+     man weg, auch den echten Einbruch. */
+  const melde = el('select', { id: 'p-melde' });
+  for (const [wert, text] of [['fehler', 'nur bei fehlgeschlagenen Versuchen'],
+                              ['alle', 'bei jeder Anmeldung'],
+                              ['aus', 'gar nicht']]) {
+    melde.append(el('option', { value: wert, textContent: text }));
+  }
+  melde.addEventListener('change', async () => {
+    emailHinweis.textContent = 'wird gespeichert …';
+    try {
+      const d = await serverHol('POST', '/profil/meldung', { art: melde.value });
+      emailHinweis.textContent = d.hinweis || '';
+    } catch (f) { emailHinweis.textContent = f.message; }
+  });
+
+  const abmelden = el('button', { type: 'button', textContent: 'Abmelden' });
+  abmelden.addEventListener('click', async function () {
+    fensterZu();
+    try {
+      await api('/api/ferne/abmelden', 'POST', {});
+      merker.legen('zuletzt', 'null');
+      sagen('Vom Server abgemeldet.', 0);
+      await wiederAufbauen();
+    } catch (f) { melden(f.message); }
+  });
+
+  seite.append(el('section', { id: 'profilteil' }, [
+    wer, rolle, zwei,
+    el('h3', { textContent: 'E-Mail', style: 'margin-top:14px' }),
+    el('p', { className: 'hinweis', id: 'p-emailzweck', textContent:
+      'Nur dafür da, ein vergessenes Passwort zurückzusetzen. Ohne Adresse '
+      + 'geht das nicht - dann hilft nur ein Verwalter.' }),
+    el('p', { className: 'ordnerzeile' }, [email, emailSichern]),
+    el('p', { className: 'zeile2' }, [
+      el('span', { textContent: 'Nachricht bei Anmeldeversuchen' }), melde]),
+    emailHinweis,
+    el('h3', { textContent: 'Passwort ändern', style: 'margin-top:14px' }),
+    el('p', { className: 'hinweis', textContent:
+      'Das bisherige Passwort wird abgefragt - sonst könnte jemand an einem '
+      + 'offen stehenden Rechner in zwei Klicks den Zugang übernehmen. Danach '
+      + 'sind alle anderen Sitzungen abgemeldet.' }),
+    el('p', { className: 'ordnerzeile' }, [alt]),
+    el('p', { className: 'ordnerzeile' }, [neu1, neu2]),
+    el('p', { className: 'knoepfe' }, [aendern]),
+    hinweis,
+    el('h3', { textContent: 'Sitzung', style: 'margin-top:14px' }),
+    el('p', { className: 'knoepfe' }, [abmelden]),
+  ]));
+}
+
+async function profilDatenLaden() {
+  let d;
+  try { d = await serverHol('GET', '/profil'); } catch (f) { return; }
+  const setz = (id, wert) => {
+    const k = document.getElementById(id);
+    if (k) k.textContent = wert;
+  };
+  setz('p-ich', d.ich);
+  setz('p-rolle', d.rolle);
+  setz('p-zwei', d.zwei ? 'eingeschaltet' : 'aus');
+  const email = document.getElementById('p-email');
+  if (email) email.value = d.email || '';
+  const melde = document.getElementById('p-melde');
+  if (melde) melde.value = d.melde || 'fehler';
+  const zweck = document.getElementById('p-emailzweck');
+  // Ohne eingerichteten Mailversand waere die Adresse ein Feld, das nichts
+  // tut. Dann lieber sagen, woran es liegt.
+  if (zweck && !d.post_an) {
+    zweck.textContent = 'Auf diesem Server ist noch kein Mailversand eingerichtet - '
+      + 'bis dahin kann auch mit Adresse nichts zurückgesetzt werden. '
+      + (d.darf_verwalten ? 'Einrichten lässt sich das unter Optionen.'
+                          : 'Das kann nur ein Verwalter einrichten.');
+  }
 }
 
 (async () => {
