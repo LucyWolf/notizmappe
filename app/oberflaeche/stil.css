@@ -403,6 +403,17 @@ body { display: flex; flex-direction: column; }
 }
 #minileiste #farben button:hover { outline: 2px solid var(--akzent); outline-offset: 1px; }
 
+/* Tabellen im Text. Ohne Rahmen sieht man keine Zelle, und eine Tabelle
+   ohne sichtbare Zellen ist nur schief gesetzter Text. */
+.kasten .text table {
+  border-collapse: collapse; margin: .3em 0; max-width: 100%;
+}
+.kasten .text td, .kasten .text th {
+  border: 1px solid var(--linie); padding: 2px 6px;
+  min-width: 2.5em; vertical-align: top;
+}
+.kasten .text th { background: color-mix(in srgb, var(--linie) 30%, transparent); }
+
 /* Hervorhebung und Farben in den Kästen.
    Gelb steht ohne data-farbe da - so bleiben Notizen von früher, als es nur
    diese eine Farbe gab, unverändert. */
@@ -742,6 +753,23 @@ body { display: flex; flex-direction: column; }
 .fl-knr { min-width: 18px; text-align: right; }
 .fl-kstrich { flex: 1; height: 1px; background: var(--schrift); opacity: .5; }
 .fl-keine { font-size: 12px; text-align: center; }
+
+/* Das Tabellenraster im Reiter Einfügen: darüberfahren wählt, darunter
+   steht, was es würde. Ohne die Anzeige zählt man Kästchen. */
+.fl-tabraster { display: grid; grid-template-columns: repeat(8, 18px); gap: 2px; }
+.fl-rasterfeld {
+  width: 18px; height: 18px; padding: 0; cursor: pointer;
+  border: 1px solid var(--linie); border-radius: 2px; background: var(--papier);
+}
+.fl-rasterfeld.an { background: var(--akzent); border-color: var(--akzent); }
+.fl-tabmass { margin: 6px 0 0; text-align: center; }
+.fl-zeichengitter { display: grid; grid-template-columns: repeat(12, 26px); gap: 2px; }
+.fl-zeichenfeld {
+  width: 26px; height: 26px; padding: 0; cursor: pointer;
+  border: 1px solid transparent; border-radius: 3px; background: none;
+  color: var(--schrift); font: inherit; font-size: 15px; line-height: 1;
+}
+.fl-zeichenfeld:hover { background: var(--flaeche); border-color: var(--linie); }
 .fl-geteilt { display: inline-flex; align-items: center; }
 .fl-geteilt .fl-taste { border-radius: 3px 0 0 3px; }
 .fl-geteilt .fl-nurpfeil {

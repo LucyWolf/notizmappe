@@ -3722,13 +3722,7 @@ function flGalerie(wirt, titel, inhalt, arten, tun, bauen) {
     wirt.append(kasten);
     // Das Gitter ist breiter als die Leiste. Es darf ueber ihren Rand
     // hinausragen, nur nicht aus dem Fenster.
-    const k2 = k.getBoundingClientRect();
-    const w = wirt.getBoundingClientRect();
-    const b = kasten.getBoundingClientRect();
-    const links = Math.max(8, Math.min(k2.left, window.innerWidth - b.width - 8));
-    const oben = Math.max(8, Math.min(k2.bottom + 2, window.innerHeight - b.height - 8));
-    kasten.style.left = (links - w.left) + 'px';
-    kasten.style.top = (oben - w.top) + 'px';
+    flTafelStellen(kasten, k, wirt);
   });
   knopf.classList.add('fl-mitpfeil');
   return knopf;
@@ -3995,8 +3989,214 @@ function bandleisteUmbauen() {
   });
 }
 
+/* --------------------------------------------- Der Reiter "Einfügen"
+
+   Dort standen drei Knoepfe: Anhang, Seite, Abschnitt. In OneNote ist das
+   die Leiste mit Tabelle, Schreibbereich, Dateianlage, Bild, Link, Datum,
+   Symbol und ein paar Aufnahmesachen.
+
+   Gebaut ist, was hier wirklich geht. Nicht dabei sind Bildschirmausschnitt,
+   Audio- und Videoaufnahme, Onlinevideo, Formel und Dateiausdruck: die
+   brauchen entweder Rechte, die eine Webansicht nicht hat, oder einen
+   ganzen Apparat (PDF rendern, Rechnen setzen) - und am Server ginge die
+   Haelfte davon ohnehin nicht. Lieber keine Knoepfe als Knoepfe, die nur
+   erklaeren, warum sie nichts tun.
+
+   Die alten Knoepfe bleiben versteckt stehen und werden angeklickt: an
+   ihnen haengt die Logik fuer Anhaenge, neue Seiten und Abschnitte, und
+   die soll es nur einmal geben. */
+
+// Zeilen und Spalten, die das Raster anbietet.
+const FL_TABELLE_MAX = 8;
+// Zeichen, die man im Text braucht und auf keiner Tastatur findet. Nur
+// solche aus der Grundebene - ein Emoji faellt in Schriften aus, die es
+// nicht haben, und dann steht ein Kaestchen im Text.
+const FL_SYMBOLE = [
+  '€', '£', '¥', '¢', '§', '©', '®', '™', '°', '±', '×', '÷',
+  '≈', '≠', '≤', '≥', '∞', '√', '∑', '∏', '∫', 'µ', 'Ω', 'π',
+  '→', '←', '↑', '↓', '↔', '⇒', '⇔', '•', '·', '…', '–', '—',
+  '½', '¼', '¾', '‰', '†', '‡', '«', '»', '„', '“', '”', '‘',
+  'α', 'β', 'γ', 'δ', 'λ', 'φ', 'ψ', 'ω', 'Δ', '☐', '☑', '★',
+];
+
+const FL_TABELLE = flBild('<rect x="1.5" y="2.5" width="13" height="11" rx="1"/>'
+                          + '<path d="M1.5 6.5h13M1.5 10h13M6 2.5v11M10.5 2.5v11"/>');
+const FL_TEXTFELD = flBild('<rect x="1.5" y="3.5" width="13" height="9" rx="1"/>'
+                           + '<path d="M4.5 6.5h7M4.5 9.5h4"/>');
+const FL_BILD = flBild('<rect x="1.5" y="3" width="13" height="10" rx="1"/>'
+                       + '<circle cx="5.5" cy="6.5" r="1.2"/>'
+                       + '<path d="M2 11.5 6 8l2.5 2.3L11 8l3 3.2"/>');
+const FL_KETTE = flBild('<path d="M6.5 9.5 9.5 6.5"/>'
+                        + '<path d="M7.5 4.5 9 3a2.8 2.8 0 0 1 4 4l-1.5 1.5"/>'
+                        + '<path d="M8.5 11.5 7 13a2.8 2.8 0 0 1-4-4l1.5-1.5"/>');
+const FL_KALENDER = flBild('<rect x="1.5" y="3" width="13" height="11" rx="1"/>'
+                           + '<path d="M1.5 6.5h13M5 1.8v2.4M11 1.8v2.4"/>');
+
+/* Eine Klappe mit freiem Inhalt. flGalerie macht Kacheln; hier braucht es
+   ein Raster, ueber das man faehrt, und ein dichtes Gitter aus Zeichen. */
+function flTafel(wirt, titel, inhalt, bauen) {
+  const knopf = flTaste(inhalt + '<span class="fl-pfeil">▾</span>', titel, function (k) {
+    const alte = wirt.querySelector('.fl-liste');
+    if (alte) {
+      alte.remove();
+      if (alte.dataset.von === titel) return;      // derselbe Knopf: zu
+    }
+    const kasten = el('div', { className: 'fl-liste fl-galerie' });
+    kasten.dataset.von = titel;
+    kasten.append(el('p', { className: 'fl-galkopf', textContent: titel }));
+    kasten.append(bauen(function () { kasten.remove(); }));
+    wirt.append(kasten);
+    flTafelStellen(kasten, k, wirt);
+  });
+  knopf.classList.add('fl-mitpfeil');
+  return knopf;
+}
+
+/* Die Tafel darf ueber den Rand der Leiste hinausragen, nur nicht aus dem
+   Fenster. */
+function flTafelStellen(kasten, knopf, wirt) {
+  const k = knopf.getBoundingClientRect();
+  const w = wirt.getBoundingClientRect();
+  const b = kasten.getBoundingClientRect();
+  const links = Math.max(8, Math.min(k.left, window.innerWidth - b.width - 8));
+  const oben = Math.max(8, Math.min(k.bottom + 2, window.innerHeight - b.height - 8));
+  kasten.style.left = (links - w.left) + 'px';
+  kasten.style.top = (oben - w.top) + 'px';
+}
+
+function tabelleEinfuegen(zeilen, spalten) {
+  let html = '<table>';
+  for (let z = 0; z < zeilen; z++) {
+    html += '<tr>';
+    // Ohne <br> ist die Zelle null Pixel hoch und man trifft sie nicht.
+    for (let s = 0; s < spalten; s++) html += '<td><br></td>';
+    html += '</tr>';
+  }
+  // Ein Absatz dahinter, sonst kommt man unter der Tabelle nicht mehr heraus.
+  flBefehl('insertHTML', html + '</table><p><br></p>');
+}
+
+/* Das Raster zum Ziehen: 8 x 8, und darunter steht, was gerade gewaehlt
+   waere. Ohne die Anzeige zaehlt man Kaestchen. */
+function flTabellenraster(zu) {
+  const gitter = el('div', { className: 'fl-tabraster' });
+  const schild = el('p', { className: 'fl-galkopf fl-tabmass' });
+  const felder = [];
+  const malen = (z, s) => {
+    schild.textContent = z + ' × ' + s;
+    for (const f of felder) {
+      f.classList.toggle('an', Number(f.dataset.z) <= z && Number(f.dataset.s) <= s);
+    }
+  };
+  for (let z = 1; z <= FL_TABELLE_MAX; z++) {
+    for (let s = 1; s <= FL_TABELLE_MAX; s++) {
+      const f = el('button', { type: 'button', className: 'fl-rasterfeld' });
+      f.dataset.z = String(z);
+      f.dataset.s = String(s);
+      f.addEventListener('mouseover', function () { malen(z, s); });
+      f.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        zu();
+        tabelleEinfuegen(z, s);
+      });
+      felder.push(f);
+      gitter.append(f);
+    }
+  }
+  malen(1, 1);
+  return el('div', { className: 'fl-tabtafel' }, [gitter, schild]);
+}
+
+function flZeichentafel(zu) {
+  const gitter = el('div', { className: 'fl-zeichengitter' });
+  for (const z of FL_SYMBOLE) {
+    const k = el('button', { type: 'button', className: 'fl-zeichenfeld', textContent: z });
+    k.title = z;
+    k.addEventListener('click', function (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      zu();
+      flBefehl('insertText', z);
+    });
+    gitter.append(k);
+  }
+  return gitter;
+}
+
+/* Datum und Uhrzeit in der Sprache des Rechners - nicht selbst
+   zusammengesetzt, sonst steht in jedem Land dasselbe deutsche Format da. */
+function datumText(art) {
+  const d = new Date();
+  const tag = d.toLocaleDateString();
+  const zeit = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (art === 'datum') return tag;
+  if (art === 'zeit') return zeit;
+  return tag + ' ' + zeit;
+}
+
+/* Den versteckten Knopf von drueben anklicken - die Logik steht dort und
+   soll es nur einmal geben. */
+function altKlick(id) {
+  const k = document.getElementById(id);
+  if (k) k.click();
+}
+
+function dateiWaehlen(nurBilder) {
+  const feld = document.getElementById('dateiwahl');
+  if (!feld) return;
+  // accept gilt nur fuer diesen einen Griff; danach darf wieder alles.
+  feld.accept = nurBilder ? 'image/*' : '';
+  feld.click();
+}
+
+function textfeldEinfuegen() {
+  if (typeof kastenNeu !== 'function') return;
+  const links = Math.round((buehne.scrollLeft + 80) / zoom / RASTER) * RASTER;
+  const oben = Math.round((buehne.scrollTop + 80) / zoom / RASTER) * RASTER;
+  kastenNeu(links, oben);
+}
+
+function einfuegeleisteBauen() {
+  const leiste = document.getElementById('einfuegen');
+  if (!leiste || leiste.querySelector('.formatleiste')) return;
+  const alt = el('div', { id: 'einfalt', hidden: true });
+  while (leiste.firstChild) alt.append(leiste.firstChild);
+
+  const wirt = el('div', { className: 'formatleiste fl-band' });
+  const trenner = () => el('span', { className: 'fl-trenner' });
+  const gruppen = [
+    [flTafel(wirt, 'Tabelle', FL_TABELLE, flTabellenraster)],
+    [flTaste(FL_TEXTFELD, 'Schreibbereich einfügen', textfeldEinfuegen)],
+    [flTaste(FL_KLEMME, 'Dateianlage', function () { dateiWaehlen(false); }),
+     flTaste(FL_BILD, 'Bilder', function () { dateiWaehlen(true); })],
+    [flTaste(FL_KETTE, 'Link', function () {
+      try { if (typeof linkSetzen === 'function') linkSetzen(); } catch (f) { /* egal */ }
+    }),
+     flKlappe(wirt, 'Datum und Uhrzeit', FL_KALENDER,
+              [['datum', 'Datum', ''], ['zeit', 'Uhrzeit', ''],
+               ['beides', 'Datum und Uhrzeit', '']],
+              function (art) { flBefehl('insertText', datumText(art)); }),
+     flTafel(wirt, 'Symbol', '<span class="fl-sinn">Ω</span>', flZeichentafel)],
+    [flTaste('＋ Seite', 'Neue Seite', function () { altKlick('neue-seite-band'); }),
+     flTaste('＋ Abschnitt', 'Neuer Abschnitt',
+             function () { altKlick('neuer-abschnitt-band'); })],
+  ];
+  const reihe = el('div', { className: 'fl-reihe' });
+  gruppen.forEach(function (g, i) {
+    if (i) reihe.append(trenner());
+    for (const k of g) reihe.append(k);
+  });
+  wirt.append(reihe);
+  wirt.addEventListener('mousedown', function (ev) {
+    if (ev.target.tagName !== 'SELECT') ev.preventDefault();
+  });
+  leiste.append(alt, wirt);
+}
+
 function formatleistenBauen() {
   bandleisteUmbauen();
+  einfuegeleisteBauen();
   minileisteUmbauen();
   flHakenAnschalten();
   flPinselAnschalten();

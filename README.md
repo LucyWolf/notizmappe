@@ -371,6 +371,22 @@ OneNote:
 
 `Datei · Start · Einfügen · Zeichnen · Verlauf · Ansicht · Hilfe`
 
+**Einfügen** hat: **Tabelle** (Raster bis 8 × 8), **Schreibbereich** (ein neuer
+Textkasten dort, wo du gerade bist), **Dateianlage** und **Bilder**, **Link**,
+**Datum und Uhrzeit** (in der Sprache des Rechners), **Symbol** (60 Zeichen,
+die auf keiner Tastatur liegen) sowie **＋ Seite** und **＋ Abschnitt**.
+
+Nicht dabei sind Bildschirmausschnitt, Audio- und Videoaufnahme, Onlinevideo,
+Formel und Dateiausdruck. Die brauchen entweder Rechte, die eine Webansicht
+nicht hat, oder einen ganzen Apparat (PDF rendern, Formelsatz) — und am Server
+ginge die Hälfte davon ohnehin nicht. Lieber keine Knöpfe als Knöpfe, die nur
+erklären, warum sie nichts tun.
+
+Eine eingefügte Tabelle ist eine `<table>` **ohne jedes Attribut**: kein
+`colspan`, keine Breite, kein `style`. Damit kann sie nichts über die Seite
+legen — und eine aus einer Webseite kopierte Tabelle kommt jetzt als Tabelle
+an statt als Brei.
+
 **Datei** ist kein Reiter mit Werkzeugen, sondern eine Ebene darüber: eine
 ganzseitige Übersicht mit **Informationen**, **Neu**, **Öffnen** (anderer
 Ordner, Server, OneNote), **Drucken**, **Exportieren**, **Verbinden** und

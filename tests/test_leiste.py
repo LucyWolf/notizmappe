@@ -84,7 +84,24 @@ for muster, name in ((r"^function el\(.*?^\}", "el"),
                      (r"^function nrKachel\(.*?^\}", "nrKachel"),
                      (r"^function azKachel\(.*?^\}", "azKachel"),
                      (r"^function flGeteilt\(.*?^\}", "flGeteilt"),
+                     (r"^function flTafelStellen\(.*?^\}", "flTafelStellen"),
                      (r"^function flGalerie\(.*?^\}", "flGalerie"),
+                     (r"^const FL_TABELLE_MAX = [^;]*;", "FL_TABELLE_MAX"),
+                     (r"^const FL_SYMBOLE = \[.*?\];", "FL_SYMBOLE"),
+                     (r"^const FL_TABELLE = [^;]*;", "FL_TABELLE"),
+                     (r"^const FL_TEXTFELD = [^;]*;", "FL_TEXTFELD"),
+                     (r"^const FL_BILD = [^;]*;", "FL_BILD"),
+                     (r"^const FL_KETTE = [^;]*;", "FL_KETTE"),
+                     (r"^const FL_KALENDER = [^;]*;", "FL_KALENDER"),
+                     (r"^function flTafel\(.*?^\}", "flTafel"),
+                     (r"^function tabelleEinfuegen\(.*?^\}", "tabelleEinfuegen"),
+                     (r"^function flTabellenraster\(.*?^\}", "flTabellenraster"),
+                     (r"^function flZeichentafel\(.*?^\}", "flZeichentafel"),
+                     (r"^function datumText\(.*?^\}", "datumText"),
+                     (r"^function altKlick\(.*?^\}", "altKlick"),
+                     (r"^function dateiWaehlen\(.*?^\}", "dateiWaehlen"),
+                     (r"^function textfeldEinfuegen\(.*?^\}", "textfeldEinfuegen"),
+                     (r"^function einfuegeleisteBauen\(.*?^\}", "einfuegeleisteBauen"),
                      (r"^function formatleisteBauen\(.*?^\}", "formatleisteBauen"),
                      (r"^function formatleisteFrischen\(.*?^\}", "formatleisteFrischen")):
     treffer = re.search(muster, mappe, re.S | re.M)
@@ -217,8 +234,17 @@ const document = {
   queryCommandState: (b) => stand[b] === true,
   queryCommandValue: (b) => stand[b] || '',
   addEventListener: () => {},
+  // Fuer die Einfuegen-Leiste: sie klickt die alten, versteckten Knoepfe an.
+  getElementById: (id) => bekannt[id] || null,
 };
 let stand = {};
+const bekannt = {};
+// Die Flaeche, auf der ein Schreibbereich landet.
+const buehne = { scrollLeft: 0, scrollTop: 0 };
+const zoom = 1;
+const RASTER = 8;
+function kastenNeu(x, y) { befehle.push(['kastenNeu', x + ',' + y]); }
+function linkSetzen() { befehle.push(['linkSetzen', null]); }
 function aufAuswahl(befehl, wert) { befehle.push([befehl, wert === undefined ? null : wert]); }
 function hervorheben(f) { befehle.push(['hervorheben', f || null]); }
 function hervorhebungWeg() { befehle.push(['hervorhebungWeg', null]); }
@@ -542,6 +568,68 @@ ergebnis.ohne_block_gesetzt = feld3.kinder.length
   ? (feld3.kinder[0].merkmale['data-aus'] || null) : null;
 aufAuswahl = alterBefehl2;
 
+/* --- Der Reiter "Einfügen" ----------------------------------------------- */
+const einfkasten = new Knoten('div');
+einfkasten.id = 'einfuegen';
+bekannt.einfuegen = einfkasten;
+for (const id of ['dateiwahl', 'neue-seite-band', 'neuer-abschnitt-band']) {
+  const k = new Knoten('button');
+  k.id = id;
+  // Die Leiste klickt die alten Knoepfe an - die Logik steht dort.
+  k.click = function () { befehle.push(['angeklickt', id + ':' + (this.accept || '')]); };
+  bekannt[id] = k;
+}
+einfuegeleisteBauen();
+const einfleiste = einfkasten.kinder.find((k) => k.klassen.has('formatleiste'));
+const einftasten = einfleiste.alle().filter((k) => k.klassen.has('fl-taste'));
+ergebnis.einfknoepfe = einftasten.map((k) => k.title);
+ergebnis.einfalt = einfkasten.kinder[0].id;
+
+function einfKlick(titel) {
+  befehle.length = 0;
+  const k = einftasten.find((t) => t.title === titel);
+  if (!k) return ['KEIN KNOPF ' + titel];
+  k.klick();
+  return befehle.slice();
+}
+
+ergebnis.anlage = einfKlick('Dateianlage');
+ergebnis.bilder = einfKlick('Bilder');
+ergebnis.schreibbereich = einfKlick('Schreibbereich einfügen');
+ergebnis.link = einfKlick('Link');
+ergebnis.neueseite = einfKlick('Neue Seite');
+ergebnis.neuerabschnitt = einfKlick('Neuer Abschnitt');
+
+/* Das Tabellenraster: darüberfahren wählt, der Klick fügt ein */
+befehle.length = 0;
+einftasten.find((t) => t.title === 'Tabelle').klick();
+const tafel = einfleiste.querySelector('.fl-liste');
+const felder = tafel.alle().filter((k) => k.klassen.has('fl-rasterfeld'));
+ergebnis.rasterfelder = felder.length;
+const zweiDrei = felder.find((f) => f.dataset.z === '2' && f.dataset.s === '3');
+zweiDrei.zuhoerer.mouseover[0]();
+ergebnis.rastermass = tafel.alle().find((k) => k.klassen.has('fl-tabmass')).textContent;
+ergebnis.rasterhell = felder.filter((f) => f.klassen.has('an')).length;
+zweiDrei.klick();
+ergebnis.tabelle = befehle.slice();
+ergebnis.tafelweg = !einfleiste.querySelector('.fl-liste');
+
+/* Die Zeichentafel */
+befehle.length = 0;
+einftasten.find((t) => t.title === 'Symbol').klick();
+const ztafel = einfleiste.querySelector('.fl-liste');
+const zfelder = ztafel.alle().filter((k) => k.klassen.has('fl-zeichenfeld'));
+ergebnis.zeichenzahl = zfelder.length;
+zfelder.find((z) => z.textContent === '§').klick();
+ergebnis.zeichen = befehle.slice();
+
+/* Datum und Uhrzeit */
+const datum = klappe('Datum und Uhrzeit', 0, einfleiste, einftasten);
+ergebnis.datumwahl = datum.eintraege;
+ergebnis.datum = datum.befehle;
+ergebnis.datumgleich = datum.befehle.length
+  ? datum.befehle[0][1] === new Date().toLocaleDateString() : false;
+
 console.log = (...a) => process.stdout.write(a.join(' ') + '\n');
 
 /* --- Ausschneiden, Kopieren, Einfuegen ----------------------------------- */
@@ -852,6 +940,65 @@ pruefe("darf die Ansicht nicht an die Ablage, steht der Tastenweg da",
        d["einfuegen_verboten"])
 pruefe("und Kopieren fällt auf den alten Befehl zurück",
        d["kopieren_alt"] == [["execCommand", "copy", None]], d["kopieren_alt"])
+
+print("\nDer Reiter Einfügen")
+# Vorher standen dort drei Knöpfe. Nicht dabei sind Bildschirmausschnitt,
+# Audio, Video, Onlinevideo, Formel und Dateiausdruck: die brauchen Rechte,
+# die eine Webansicht nicht hat, oder einen ganzen Apparat - und am Server
+# ginge die Hälfte ohnehin nicht.
+pruefe("die Knöpfe stehen in dieser Reihenfolge",
+       d["einfknoepfe"] == ['Tabelle', 'Schreibbereich einfügen', 'Dateianlage',
+                            'Bilder', 'Link', 'Datum und Uhrzeit', 'Symbol',
+                            'Neue Seite', 'Neuer Abschnitt'], d["einfknoepfe"])
+# Die alten bleiben versteckt stehen: an ihnen hängt die Logik für Anhänge,
+# neue Seiten und Abschnitte, und die soll es nur einmal geben.
+pruefe("die alten Knöpfe stehen versteckt dahinter", d["einfalt"] == 'einfalt',
+       d["einfalt"])
+pruefe("Dateianlage nimmt alles an",
+       d["anlage"] == [["angeklickt", "dateiwahl:"]], d["anlage"])
+pruefe("Bilder nur Bilder",
+       d["bilder"] == [["angeklickt", "dateiwahl:image/*"]], d["bilder"])
+pruefe("der Schreibbereich wird dort angelegt, wo man gerade ist",
+       d["schreibbereich"] == [["kastenNeu", "80,80"]], d["schreibbereich"])
+pruefe("Link fragt nach der Adresse", d["link"] == [["linkSetzen", None]], d["link"])
+pruefe("Seite und Abschnitt klicken die alten Knöpfe an",
+       d["neueseite"] == [["angeklickt", "neue-seite-band:"]]
+       and d["neuerabschnitt"] == [["angeklickt", "neuer-abschnitt-band:"]],
+       (d["neueseite"], d["neuerabschnitt"]))
+
+print("\nDas Tabellenraster")
+pruefe("8 × 8 zur Wahl", d["rasterfelder"] == 64, d["rasterfelder"])
+pruefe("darüberfahren zeigt das Maß an", d["rastermass"] == '2 × 3', d["rastermass"])
+pruefe("und hebt genau diese Felder hervor", d["rasterhell"] == 6, d["rasterhell"])
+# Ohne <br> ist die Zelle null Pixel hoch und man trifft sie nicht; ohne den
+# Absatz dahinter kommt man unter der Tabelle nicht mehr heraus.
+pruefe("der Klick fügt 2 Zeilen zu 3 Spalten ein",
+       d["tabelle"] == [["insertHTML",
+                         "<table><tr><td><br></td><td><br></td><td><br></td></tr>"
+                         "<tr><td><br></td><td><br></td><td><br></td></tr>"
+                         "</table><p><br></p>"]], d["tabelle"])
+pruefe("und die Tafel geht dabei zu", d["tafelweg"])
+
+print("\nSymbol, Datum und Uhrzeit")
+pruefe("60 Zeichen zur Wahl", d["zeichenzahl"] == 60, d["zeichenzahl"])
+pruefe("ein Klick schreibt das Zeichen in den Text",
+       d["zeichen"] == [["insertText", "§"]], d["zeichen"])
+pruefe("Datum, Uhrzeit, beides",
+       d["datumwahl"] == ['Datum', 'Uhrzeit', 'Datum und Uhrzeit'], d["datumwahl"])
+# In der Sprache des Rechners, nicht selbst zusammengesetzt - sonst stünde
+# in jedem Land dasselbe deutsche Format da.
+pruefe("und es kommt das heutige Datum heraus", d["datumgleich"], d["datum"])
+
+# Gegenprobe: eine Tabelle muss den Reiniger überleben, ihre Attribute nicht.
+pruefe("Tabellen überleben das Speichern",
+       reinigen.html('<table><tr><td>a</td></tr></table>')
+       == '<table><tr><td>a</td></tr></table>')
+pruefe("ihre Attribute nicht",
+       reinigen.html('<table style="position:fixed" width="900"><tr>'
+                     '<td colspan="9">a</td></tr></table>')
+       == '<table><tr><td>a</td></tr></table>',
+       reinigen.html('<table style="position:fixed" width="900"><tr>'
+                     '<td colspan="9">a</td></tr></table>'))
 
 print("\nBeim Rechtsklick ist die schwebende Leiste zu viel")
 # Sie steht sonst neben dem Menue, das dieselben Knoepfe noch einmal zeigt.

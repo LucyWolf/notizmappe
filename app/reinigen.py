@@ -16,6 +16,10 @@ ERLAUBT = {
     "ul", "ol", "li", "h1", "h2", "h3", "h4", "blockquote", "code", "pre", "a",
     "font", "mark", "sub", "sup",
     "img",
+    # Tabellen ohne jedes Attribut: kein colspan, keine Breite, kein style.
+    # Damit kann eine eingefuegte Tabelle nichts ueber die Seite legen, und
+    # eine aus einer Webseite kopierte kommt als Tabelle an statt als Brei.
+    "table", "thead", "tbody", "tfoot", "tr", "td", "th", "caption",
 }
 LEER = {"br", "img"}
 # Nur das, was der Editor selbst setzt. Kein style, kein class, kein on*.
