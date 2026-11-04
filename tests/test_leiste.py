@@ -338,7 +338,7 @@ function druecke(titel) {
 ergebnis.fett = druecke('Fett (Strg+B)');
 ergebnis.kursiv = druecke('Kursiv (Strg+I)');
 ergebnis.unterstrichen = druecke('Unterstrichen (Strg+U)');
-ergebnis.durch = druecke('Durchgestrichen');
+
 ergebnis.marker = druecke('Hervorheben');
 ergebnis.liste = druecke('Aufzählung');
 ergebnis.nummern = druecke('Nummerierung');
@@ -494,6 +494,9 @@ const bandtasten = bandleiste.alle().filter((k) => k.klassen.has('fl-taste'));
 ergebnis.bandreihen = bandleiste.kinder.filter((k) => k.klassen.has('fl-reihe')).length;
 ergebnis.bandknoepfe = bandtasten.map((k) => k.title);
 ergebnis.bandklasse = bandleiste.klassen.has('fl-band');
+befehle.length = 0;
+bandtasten.find((t) => t.title === 'Durchgestrichen').klick();
+ergebnis.banddurch = befehle.slice();
 
 /* --- Die beiden Farbknoepfe: Balken zeigt, was ein Klick nimmt ----------- */
 const markerknopf = bandtasten.find((t) => t.title === 'Hervorheben');
@@ -738,9 +741,11 @@ ABLAGE = ['Einfügen (Strg+V)', 'Ausschneiden (Strg+X)', 'Kopieren (Strg+C)',
           'Format übertragen']
 # Die schwebende Leiste bleibt, wie sie war - Wort fuer Wort dieselbe Liste
 # wie vor dem Umbau des Bands.
+# Ohne "Durchgestrichen": das steht oben im Band. Hier ist es der Knopf,
+# den man am seltensten trifft, und er macht die Leiste eine Breite länger.
 ERWARTET = ['Formatvorlage', 'Einzug verkleinern', 'Einzug vergrößern',
             'Aufgabe (zum Abhaken)', 'Kategorie', 'Fett (Strg+B)', 'Kursiv (Strg+I)',
-            'Unterstrichen (Strg+U)', 'Durchgestrichen',
+            'Unterstrichen (Strg+U)',
             'Hervorheben', 'Andere Farbe zum Hervorheben',
             'Schriftfarbe', 'Andere Schriftfarbe',
             'Aufzählung', 'Aufzählungszeichenbibliothek', 'Nummerierung',
@@ -750,13 +755,15 @@ pruefe("alle Knöpfe, in dieser Reihenfolge", d["knoepfe"] == ERWARTET, d["knoep
 pruefe("und keiner der neuen Knöpfe steht schwebend mit drin",
        not [k for k in d["knoepfe"]
             if k in [*ABLAGE[:3], 'Hochgestellt', 'Tiefgestellt',
-                     *AUSRICHTEN, 'Zeilenabstand']], d["knoepfe"])
+                     'Durchgestrichen', *AUSRICHTEN, 'Zeilenabstand']], d["knoepfe"])
 
 print("\nDie Leiste oben im Reiter Start")
 # Vorher standen dort vier Knöpfe; alles andere gab es nur, wenn man etwas
 # markierte und die schwebende Leiste aufging.
 pruefe("eine Reihe statt zwei", d["bandreihen"] == 1, d["bandreihen"])
 pruefe("und sie weiß, dass sie im Band steht", d["bandklasse"])
+pruefe("und Durchgestrichen tut dort, was draufsteht",
+       d["banddurch"] == [["strikeThrough", None]], d["banddurch"])
 pruefe("dort steht alles: Zwischenablage, hoch/tief, Ausrichtung, Abstand",
        d["bandknoepfe"] == [*ABLAGE, *ZEICHEN, *FARBEN, *LISTEN, *ABSATZ, *VORLAGEN],
        d["bandknoepfe"])
@@ -764,7 +771,6 @@ pruefe("dort steht alles: Zwischenablage, hoch/tief, Ausrichtung, Abstand",
 print("\nWas unten ankommt")
 for was, soll in (("fett", [["bold", None]]), ("kursiv", [["italic", None]]),
                   ("unterstrichen", [["underline", None]]),
-                  ("durch", [["strikeThrough", None]]),
                   ("marker", [["hervorheben", "gelb"]]),
                   ("liste", [["insertUnorderedList", None]]),
                   ("nummern", [["insertOrderedList", None]]),

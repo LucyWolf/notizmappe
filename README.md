@@ -483,11 +483,12 @@ Schriftart und Größe, F K U S, hoch- und tiefgestellt, Marker, Farbe,
 Formatierung entfernen, Aufzählung und Nummerierung, Einzug, Ausrichtung,
 Zeilenabstand, Formatvorlage, Aufgabe und Kategorie.
 
-Markierst du Text, geht wie bisher die **kleine Leiste** darüber auf — zwei
-Reihen, unverändert: Schriftart, Größe, Formatvorlage, Einzug, Aufgabe und
-Kategorie oben; F K U S, Marker, Farbe, Listen, Format übertragen und Löschen
-unten. Was oben dazugekommen ist, steht bewusst nur dort: eine Palette, die
-beim Markieren aufgeht, darf nicht breiter werden als der Text darunter.
+Markierst du Text, geht die **kleine Leiste** darüber auf — zwei Reihen:
+Schriftart, Größe, Formatvorlage, Einzug, Aufgabe und Kategorie oben; F K U,
+Marker, Farbe, Listen, Format übertragen und Löschen unten. Alles andere steht
+bewusst nur im Band: eine Palette, die beim Markieren aufgeht, darf nicht
+breiter werden als der Text darunter. Deshalb fehlt dort auch das
+Durchgestrichen.
 
 Dieselbe Leiste steht noch einmal **im Rechtsklick-Menü**, über den vier
 Punkten für die Zwischenablage. Drückst du die rechte Maustaste, verschwindet

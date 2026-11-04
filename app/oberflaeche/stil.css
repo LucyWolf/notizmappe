@@ -688,8 +688,14 @@ body { display: flex; flex-direction: column; }
 .fl-pfeil { font-size: 9px; opacity: .7; }
 .fl-sinn { font-size: 13px; }
 .fl-bild { display: block; }
+/* Farbe an den Symbolen, die eine tragen sollen: der Haken und die Listen
+   in der Akzentfarbe, das Löschen in der Warnfarbe. Eine Leiste, in der
+   alles gleich grau ist, muss man lesen statt zu sehen. */
 .fl-haken { color: var(--akzent); font-size: 13px; }
-.fl-weg { opacity: .6; }
+.fl-weg { color: var(--warnung); }
+/* Nicht die Farbtasten: deren Zeichen bleibt in Schriftfarbe, die Farbe
+   steht im Balken darunter. */
+.fl-geteilt .fl-taste:not(.fl-farbtaste) .fl-bild { color: var(--akzent); }
 /* Schriftfarbe und Textmarker wie in Word: das Zeichen, darunter ein Balken
    in der Farbe, die ein Klick nimmt - und daneben der Pfeil für die Wahl.
    Ohne den Balken sagt der Knopf nicht, welche Farbe er gerade setzt. */

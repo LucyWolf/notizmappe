@@ -3925,8 +3925,11 @@ function formatleisteBauen(wie) {
     // derselben Reihenfolge wie vorher. Sie war so in Ordnung, und eine
     // Leiste, die beim Markieren aufgeht, darf nicht breiter sein als der
     // Text darunter.
+    // F K U - ohne das S. Durchgestrichen steht oben im Band; hier ist es
+    // der Knopf, den man am seltensten trifft und der die Leiste um eine
+    // Breite laenger macht.
     wirt.append(reihe([schrift, [vorlagen[0], ...absatz.slice(0, 2)], vorlagen.slice(1)]),
-                reihe([zeichen.slice(0, 4), farben.slice(0, 2), listen,
+                reihe([zeichen.slice(0, 3), farben.slice(0, 2), listen,
                        [ablage[3], farben[2]]]));
   }
   flSchriftenSpiegeln(wirt);      // gleich, nicht erst beim ersten Auffrischen
