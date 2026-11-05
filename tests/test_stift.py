@@ -162,13 +162,34 @@ for muster, name in ((r"^const LINEAL_LAENGE = [^;]*;", "LINEAL_LAENGE"),
                      (r"^function linealAbstand\(.*?^\}", "linealAbstand"),
                      (r"^function linealPunkt\(.*?^\}", "linealPunkt"),
                      (r"^function aufLineal\(.*?^\}", "aufLineal"),
-                     (r"^function formPunkte\(.*?^\}", "formPunkte")):
+                     (r"^function formPunkte\(.*?^\}", "formPunkte"),
+                     (r"^function strichGrenzen\(.*?^\}", "strichGrenzen"),
+                     (r"^function rahmenMalen\(.*?^\}", "rahmenMalen"),
+                     (r"^function strichMalen\(.*?^\}", "strichMalen")):
     treffer = re.search(muster, js, re.S | re.M)
     pruefe(f"{name} steht in mappe.js", bool(treffer))
     if treffer:
         teile.append(treffer.group(0))
 
-PRUEFJS = "let lineal = { x: 100, y: 100, w: 0 };\n" + "\n".join(teile) + r"""
+# Ein Zeichenstift, der nichts malt, sondern mitschreibt, was auf ihm
+# getan wird. Am fertigen Bild sieht man den Unterschied zwischen einem
+# Zug und vierzig Teilstrichen nur als Ringe - hier sieht man ihn direkt.
+KONTEXT = """
+let lineal = { x: 100, y: 100, w: 0 };
+const spur = [];
+const TUT = ['save', 'restore', 'beginPath', 'stroke', 'fill', 'moveTo',
+             'lineTo', 'arc', 'setLineDash', 'strokeRect'];
+const malstift = new Proxy({}, {
+  get(_z, name) {
+    if (TUT.indexOf(name) >= 0) {
+      return function () { spur.push([name].concat(Array.from(arguments))); };
+    }
+    return undefined;
+  },
+  set(_z, name, wert) { spur.push(['=' + name, wert]); return true; },
+});
+"""
+PRUEFJS = KONTEXT + "\n".join(teile) + r"""
 const aus = {};
 aus.rechteck = formPunkte('rechteck', 10, 20, 50, 60);
 aus.ellipse = formPunkte('ellipse', 0, 0, 100, 40);
@@ -181,6 +202,16 @@ aus.drauf = [aufLineal(100, 100), aufLineal(500, 100), aufLineal(560, 100),
              aufLineal(100, 160)];
 lineal = { x: 100, y: 100, w: Math.PI / 2 };
 aus.gedreht = linealPunkt(180, 150);
+
+// Ein Markerstrich mit fuenf Punkten und ein Stiftstrich mit denselben.
+const punkte = [0, 0, .5, 10, 0, .5, 20, 0, .5, 30, 0, .5, 40, 0, .5];
+spur.length = 0;
+strichMalen({ f: '#ffd84d', d: 22, a: 'marker', p: punkte }, false);
+aus.marker = spur.slice();
+spur.length = 0;
+strichMalen({ f: '#1d1d1f', d: 4, a: 'stift', p: punkte }, false);
+aus.stift = spur.slice();
+
 process.stdout.write(JSON.stringify(aus) + '\n');
 """
 ordner = Path(tempfile.mkdtemp(prefix="stift-"))
@@ -233,6 +264,28 @@ if befehl:
                d["drauf"] == [True, True, False, False], d["drauf"])
         # Gedreht muss es senkrecht projizieren - sonst steht das Lineal
         # schräg da und malt waagerecht.
+        # Der Marker ist durchscheinend. Teilstrich für Teilstrich gemalt
+        # legt sich an jeder Überlappung 35 % auf 35 % - genau das sah man
+        # als Kette dunkler Ringe. Ein Pfad, ein stroke.
+        def zaehl(spur, was):
+            return sum(1 for z in spur if z[0] == was)
+        pruefe("Der Marker wird in einem Zug gemalt",
+               zaehl(d["marker"], "beginPath") == 1 and zaehl(d["marker"], "stroke") == 1,
+               [z[0] for z in d["marker"]])
+        pruefe("und besucht trotzdem jeden Punkt",
+               zaehl(d["marker"], "lineTo") == 4 and zaehl(d["marker"], "moveTo") == 1,
+               [z[0] for z in d["marker"]])
+        pruefe("durchscheinend, sonst wäre es Farbe",
+               ["=globalAlpha", 0.35] in d["marker"], d["marker"])
+        pruefe("und überall gleich dick",
+               [z for z in d["marker"] if z[0] == "=lineWidth"] == [["=lineWidth", 22]],
+               [z for z in d["marker"] if z[0] == "=lineWidth"])
+        # Der Stift dagegen muss Teilstrich für Teilstrich: seine Dicke hängt
+        # am Druck und ändert sich von Punkt zu Punkt.
+        pruefe("Der Stift malt weiter Teilstrich für Teilstrich",
+               zaehl(d["stift"], "stroke") == 4, [z[0] for z in d["stift"]])
+        pruefe("und ist deckend", ["=globalAlpha", 1] in d["stift"], d["stift"])
+
         pruefe("Gedreht liegt die Mittellinie senkrecht",
                abs(d["gedreht"]["x"] - 100) < 0.01 and abs(d["gedreht"]["y"] - 150) < 0.01,
                d["gedreht"])

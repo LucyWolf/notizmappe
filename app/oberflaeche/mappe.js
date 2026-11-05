@@ -2073,11 +2073,26 @@ function strichMalen(st, hervor) {
     if (hervor) rahmenMalen(st);
     return;
   }
+  if (st.a === 'marker') {
+    // Der Marker in einem Zug. Teilstrich für Teilstrich gezeichnet legt
+    // sich an jeder Überlappung 35 % auf 35 % - bei runden Enden und dicht
+    // beieinanderliegenden Punkten wird daraus eine Kette dunkler Ringe.
+    // Ein einziger Pfad bekommt die Deckkraft genau einmal.
+    // Der Druck zählt hier ohnehin nicht: ein Marker ist überall gleich dick.
+    malstift.lineWidth = st.d;
+    malstift.beginPath();
+    malstift.moveTo(p[0], p[1]);
+    for (let i = 3; i < p.length; i += 3) malstift.lineTo(p[i], p[i + 1]);
+    malstift.stroke();
+    malstift.restore();
+    if (hervor) rahmenMalen(st);
+    return;
+  }
   for (let i = 3; i < p.length; i += 3) {
     // Druck des Stifts: dünner, wenn leicht aufgesetzt wird. Eine Maus meldet
     // 0.5, damit sieht ein Mausstrich aus wie ein normaler Strich.
     const druck = p[i + 2] == null ? 0.5 : p[i + 2];
-    malstift.lineWidth = st.a === 'marker' ? st.d : Math.max(0.4, st.d * (0.45 + druck));
+    malstift.lineWidth = Math.max(0.4, st.d * (0.45 + druck));
     malstift.beginPath();
     malstift.moveTo(p[i - 3], p[i - 2]);
     malstift.lineTo(p[i], p[i + 1]);
