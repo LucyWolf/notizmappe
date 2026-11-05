@@ -764,9 +764,21 @@ pruefe("eine Reihe statt zwei", d["bandreihen"] == 1, d["bandreihen"])
 pruefe("und sie weiß, dass sie im Band steht", d["bandklasse"])
 pruefe("und Durchgestrichen tut dort, was draufsteht",
        d["banddurch"] == [["strikeThrough", None]], d["banddurch"])
-pruefe("dort steht alles: Zwischenablage, hoch/tief, Ausrichtung, Abstand",
-       d["bandknoepfe"] == [*ABLAGE, *ZEICHEN, *FARBEN, *LISTEN, *ABSATZ, *VORLAGEN],
-       d["bandknoepfe"])
+# Vier Gruppen wie in Word: Zwischenablage, dann alles zur Schrift, dann
+# alles zum Absatz, dann die Marken und die Formatvorlage. Vorher standen
+# Schrift und Zeichen getrennt und die Listen vor dem Einzug - zwei
+# Trenner, die quer zu dem lagen, was zusammengehört.
+BAND = [
+    *ABLAGE,
+    'Fett (Strg+B)', 'Kursiv (Strg+I)', 'Unterstrichen (Strg+U)', 'Durchgestrichen',
+    'Schriftfarbe', 'Andere Schriftfarbe',
+    'Hervorheben', 'Andere Farbe zum Hervorheben',
+    'Hochgestellt', 'Tiefgestellt', 'Formatierung entfernen',
+    *LISTEN, 'Einzug verkleinern', 'Einzug vergrößern', *AUSRICHTEN, 'Zeilenabstand',
+    'Aufgabe (zum Abhaken)', 'Kategorie', 'Formatvorlage',
+]
+pruefe("dort steht alles, in der Reihenfolge aus dem Band",
+       d["bandknoepfe"] == BAND, d["bandknoepfe"])
 
 print("\nWas unten ankommt")
 for was, soll in (("fett", [["bold", None]]), ("kursiv", [["italic", None]]),

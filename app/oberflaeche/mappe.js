@@ -3811,27 +3811,26 @@ function formatleisteBauen(wie) {
   // darf nicht breiter werden als der Text darunter. Die Zwischenablage,
   // hoch- und tiefgestellt, Ausrichtung und Zeilenabstand gibt es deshalb
   // nur oben im Band.
-  const ablage = [
-    flTaste(FL_KLEMME, 'Einfügen (Strg+V)', function () { flAblage('einfuegen'); }),
-    flTaste(FL_SCHERE, 'Ausschneiden (Strg+X)', function () { flAblage('ausschneiden'); }),
-    flTaste(FL_KOPIE, 'Kopieren (Strg+C)', function () { flAblage('kopieren'); }),
-    flTaste(FL_PINSEL, 'Format übertragen', flPinselNehmen, 'pinsel'),
-  ];
+  const kEinfuegen = flTaste(FL_KLEMME, 'Einfügen (Strg+V)',
+                             function () { flAblage('einfuegen'); });
+  const kAusschneiden = flTaste(FL_SCHERE, 'Ausschneiden (Strg+X)',
+                                function () { flAblage('ausschneiden'); });
+  const kKopieren = flTaste(FL_KOPIE, 'Kopieren (Strg+C)',
+                            function () { flAblage('kopieren'); });
+  const kPinsel = flTaste(FL_PINSEL, 'Format übertragen', flPinselNehmen, 'pinsel');
 
-  const schrift = [art, groesse];
-
-  const zeichen = [
-    flTaste('<b>F</b>', 'Fett (Strg+B)', function () { flBefehl('bold'); }, 'bold'),
-    flTaste('<i>K</i>', 'Kursiv (Strg+I)', function () { flBefehl('italic'); }, 'italic'),
-    flTaste('<u>U</u>', 'Unterstrichen (Strg+U)',
-            function () { flBefehl('underline'); }, 'underline'),
-    flTaste('<s>S</s>', 'Durchgestrichen',
-            function () { flBefehl('strikeThrough'); }, 'strikeThrough'),
-    flTaste('x<sup class="fl-hoch">2</sup>', 'Hochgestellt',
-            function () { flBefehl('superscript'); }, 'superscript'),
-    flTaste('x<sub class="fl-hoch">2</sub>', 'Tiefgestellt',
-            function () { flBefehl('subscript'); }, 'subscript'),
-  ];
+  const kFett = flTaste('<b>F</b>', 'Fett (Strg+B)',
+                        function () { flBefehl('bold'); }, 'bold');
+  const kKursiv = flTaste('<i>K</i>', 'Kursiv (Strg+I)',
+                          function () { flBefehl('italic'); }, 'italic');
+  const kUnter = flTaste('<u>U</u>', 'Unterstrichen (Strg+U)',
+                         function () { flBefehl('underline'); }, 'underline');
+  const kDurch = flTaste('<s>S</s>', 'Durchgestrichen',
+                         function () { flBefehl('strikeThrough'); }, 'strikeThrough');
+  const kHoch = flTaste('x<sup class="fl-hoch">2</sup>', 'Hochgestellt',
+                        function () { flBefehl('superscript'); }, 'superscript');
+  const kTief = flTaste('x<sub class="fl-hoch">2</sub>', 'Tiefgestellt',
+                        function () { flBefehl('subscript'); }, 'subscript');
 
   // Beide Farbknoepfe wie in Word: links die Farbe von eben, rechts der
   // Pfeil fuer eine andere. Der Balken darunter zieht mit und sagt, was
@@ -3861,50 +3860,43 @@ function formatleisteBauen(wie) {
       flBefehl('foreColor', farbe);
     }));
 
-  const farben = [
-    kMarker,
-    kFarbe,
-    flTaste('<span class="fl-weg">✕</span>', 'Formatierung entfernen', function () {
-      flBefehl('removeFormat');
-      try { if (typeof hervorhebungWeg === 'function') hervorhebungWeg(); } catch (f) { /* egal */ }
-    }),
-  ];
+  const kWeg = flTaste('<span class="fl-weg">✕</span>', 'Formatierung entfernen',
+                       function () {
+                         flBefehl('removeFormat');
+                         try {
+                           if (typeof hervorhebungWeg === 'function') hervorhebungWeg();
+                         } catch (f) { /* egal */ }
+                       });
 
-  const listen = [
-    flGeteilt(
-      flTaste(FL_PUNKTLISTE, 'Aufzählung',
-              function () { flBefehl('insertUnorderedList'); }, 'insertUnorderedList'),
-      flGalerie(wirt, 'Aufzählungszeichenbibliothek', '',
-                FL_ZEICHEN, flPunktSetzen, azKachel)),
-    flGeteilt(
-      flTaste(FL_NUMMERNLISTE, 'Nummerierung',
-              function () { flBefehl('insertOrderedList'); }, 'insertOrderedList'),
-      flGalerie(wirt, 'Nummerierungsbibliothek', '',
-                FL_NUMMERN, flNummerSetzen, nrKachel)),
-  ];
+  const kPunkte = flGeteilt(
+    flTaste(FL_PUNKTLISTE, 'Aufzählung',
+            function () { flBefehl('insertUnorderedList'); }, 'insertUnorderedList'),
+    flGalerie(wirt, 'Aufzählungszeichenbibliothek', '',
+              FL_ZEICHEN, flPunktSetzen, azKachel));
+  const kNummern = flGeteilt(
+    flTaste(FL_NUMMERNLISTE, 'Nummerierung',
+            function () { flBefehl('insertOrderedList'); }, 'insertOrderedList'),
+    flGalerie(wirt, 'Nummerierungsbibliothek', '',
+              FL_NUMMERN, flNummerSetzen, nrKachel));
 
-  const absatz = [
-    flTaste(FL_EINZUG_RAUS, 'Einzug verkleinern',
-            function () { flBefehl('outdent'); }),
-    flTaste(FL_EINZUG_REIN, 'Einzug vergrößern',
-            function () { flBefehl('indent'); }),
-    ...FL_AUSRICHTUNG.map(([w, n]) => flTaste(flAusBild(w), n,
-                                              function () { flAusrichten(w); })),
-    flKlappe(wirt, 'Zeilenabstand', FL_ABSTANDBILD,
-             FL_ABSTAENDE.map(([w, n]) => [w, n, '']),
-             function (w) { flAbstand(w); }),
-  ];
+  const kEinzugRaus = flTaste(FL_EINZUG_RAUS, 'Einzug verkleinern',
+                              function () { flBefehl('outdent'); });
+  const kEinzugRein = flTaste(FL_EINZUG_REIN, 'Einzug vergrößern',
+                              function () { flBefehl('indent'); });
+  const kAusrichten = FL_AUSRICHTUNG.map(
+    ([w, n]) => flTaste(flAusBild(w), n, function () { flAusrichten(w); }));
+  const kAbstand = flKlappe(wirt, 'Zeilenabstand', FL_ABSTANDBILD,
+                            FL_ABSTAENDE.map(([w, n]) => [w, n, '']),
+                            function (w) { flAbstand(w); });
 
-  const vorlagen = [
-    flKlappe(wirt, 'Formatvorlage', '<span class="fl-sinn">¶</span>',
-             FL_VORLAGEN.map(([w, n]) => [w, n, '']),
-             function (w) { flBefehl('formatBlock', w); }),
-    flTaste('<span class="fl-haken">☑</span>', 'Aufgabe (zum Abhaken)',
-            function () { flZeichenSetzen('☐'); }),
-    flKlappe(wirt, 'Kategorie', FL_SCHILD,
-             FL_KATEGORIEN.map(([z, n]) => [z, n, z]),
-             function (z) { flZeichenSetzen(z); }),
-  ];
+  const kVorlage = flKlappe(wirt, 'Formatvorlage', '<span class="fl-sinn">¶</span>',
+                            FL_VORLAGEN.map(([w, n]) => [w, n, '']),
+                            function (w) { flBefehl('formatBlock', w); });
+  const kAufgabe = flTaste('<span class="fl-haken">☑</span>', 'Aufgabe (zum Abhaken)',
+                           function () { flZeichenSetzen('☐'); });
+  const kKategorie = flKlappe(wirt, 'Kategorie', FL_SCHILD,
+                              FL_KATEGORIEN.map(([z, n]) => [z, n, z]),
+                              function (z) { flZeichenSetzen(z); });
 
   const reihe = (gruppen) => {
     const r = el('div', { className: 'fl-reihe' });
@@ -3919,7 +3911,21 @@ function formatleisteBauen(wie) {
     // Oben ist Platz fuer alles auf einmal - und wer auf Start geht, will
     // nicht erst noch irgendwo aufklappen. Nur hier gibt es deshalb die
     // Zwischenablage, hoch- und tiefgestellt, Ausrichtung und Zeilenabstand.
-    wirt.append(reihe([ablage, schrift, zeichen, farben, listen, absatz, vorlagen]));
+    //
+    // Vier Gruppen, so wie in Word: Zwischenablage, dann alles zur Schrift
+    // in einer Gruppe (Art, Groesse, F K U S, Farben, hoch/tief, Loeschen),
+    // dann alles zum Absatz (Listen, Einzug, Ausrichtung, Zeilenabstand),
+    // dann die Marken und die Formatvorlage. Vorher standen Schrift und
+    // Zeichen getrennt und die Listen vor dem Einzug - zwei Trenner, die
+    // quer zu dem lagen, was zusammengehoert.
+    wirt.append(reihe([
+      [kEinfuegen, kAusschneiden, kKopieren, kPinsel],
+      [art, groesse, kFett, kKursiv, kUnter, kDurch,
+       kFarbe, kMarker, kHoch, kTief, kWeg],
+      [kPunkte, kNummern, kEinzugRaus, kEinzugRein, ...kAusrichten, kAbstand],
+      [kAufgabe, kKategorie],
+      [kVorlage],
+    ]));
   } else {
     // Schwebend und im Rechtsklick-Menue: unveraendert, zwei Reihen in
     // derselben Reihenfolge wie vorher. Sie war so in Ordnung, und eine
@@ -3928,9 +3934,10 @@ function formatleisteBauen(wie) {
     // F K U - ohne das S. Durchgestrichen steht oben im Band; hier ist es
     // der Knopf, den man am seltensten trifft und der die Leiste um eine
     // Breite laenger macht.
-    wirt.append(reihe([schrift, [vorlagen[0], ...absatz.slice(0, 2)], vorlagen.slice(1)]),
-                reihe([zeichen.slice(0, 3), farben.slice(0, 2), listen,
-                       [ablage[3], farben[2]]]));
+    wirt.append(reihe([[art, groesse], [kVorlage, kEinzugRaus, kEinzugRein],
+                       [kAufgabe, kKategorie]]),
+                reihe([[kFett, kKursiv, kUnter], [kMarker, kFarbe],
+                       [kPunkte, kNummern], [kPinsel, kWeg]]));
   }
   flSchriftenSpiegeln(wirt);      // gleich, nicht erst beim ersten Auffrischen
   // Ein Klick in die Leiste darf die Markierung nicht kosten - sonst

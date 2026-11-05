@@ -478,11 +478,15 @@ seiner eigenen Bibliothek.
 
 ## Formatieren: Reiter Start, schwebende Leiste, Rechtsklick-Menü
 
-Alles zum Formatieren steht im Reiter **Start** — in einer Zeile, so wie in
-Word: Zwischenablage (Einfügen, Ausschneiden, Kopieren, Format übertragen),
-Schriftart und Größe, F K U S, hoch- und tiefgestellt, Marker, Farbe,
-Formatierung entfernen, Aufzählung und Nummerierung, Einzug, Ausrichtung,
-Zeilenabstand, Formatvorlage, Aufgabe und Kategorie.
+Alles zum Formatieren steht im Reiter **Start** — in einer Zeile, in vier
+Gruppen wie in Word:
+
+1. **Zwischenablage**: Einfügen, Ausschneiden, Kopieren, Format übertragen
+2. **Schrift**: Art, Größe, F K U S, Schriftfarbe, Marker, hoch- und
+   tiefgestellt, Formatierung entfernen
+3. **Absatz**: Aufzählung, Nummerierung, Einzug, die vier Ausrichtungen,
+   Zeilenabstand
+4. **Marken und Vorlagen**: Aufgabe, Kategorie, Formatvorlage
 
 Markierst du Text, geht die **kleine Leiste** darüber auf — zwei Reihen:
 Schriftart, Größe, Formatvorlage, Einzug, Aufgabe und Kategorie oben; F K U,
