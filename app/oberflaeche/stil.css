@@ -718,6 +718,13 @@ body { display: flex; flex-direction: column; }
    unter den Pfeil am Ende. Ein Band, das bei schmalem Fenster drei Zeilen
    hoch wird, nimmt der Seite den Platz, um den es geht. */
 .fl-band .fl-reihe { flex-wrap: nowrap; overflow: hidden; min-width: 0; }
+/* Unter Einfuegen steht die Leiste in einem Flex-Behaelter. Dort ist sie
+   ohne das nie schmaler als ihr Inhalt - die Reihe lief dann nie ueber,
+   der Pfeil kam nie, und rechts schnitt das Fenster einfach ab. */
+.bandleiste > .fl-band { flex: 1 1 0; min-width: 0; }
+/* Und die Knoepfe duerfen nicht schrumpfen: sonst quetscht die Reihe sie
+   zusammen, die Messung findet "passt", und vom Wort bleibt "Audi". */
+.fl-band .fl-reihe > * { flex-shrink: 0; }
 .fl-mehr { flex: 0 0 auto; }
 .fl-topf {
   position: absolute; z-index: 62; max-width: min(360px, calc(100vw - 32px));
