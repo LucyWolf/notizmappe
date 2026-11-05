@@ -848,8 +848,12 @@ function ziehen(handgriff, bewegen, startWerte) {
   });
 }
 
-function kastenNeu(x, y) {
-  const e = { id: Math.random().toString(36).slice(2, 12), typ: 'text', x, y, b: 420, html: '' };
+function kastenNeu(x, y, inhalt) {
+  // Mit Inhalt: dann geht er denselben Weg wie jeder andere Seiteninhalt -
+  // kastenBauen() setzt e.html, und beim Speichern reinigt ihn derselbe
+  // Reiniger. Eine zweite Stelle, die innerHTML setzt, waere eine zu viel.
+  const e = { id: Math.random().toString(36).slice(2, 12), typ: 'text', x, y, b: 420,
+              html: inhalt || '' };
   elemente.push(e);
   const k = kastenBauen(e);
   flaeche.append(k);
@@ -4559,13 +4563,8 @@ async function vorlagenseite(name) {
     await baumLaden();
     await seiteOeffnen(buch, ab, r.name);
     if (vorlage[1]) {
-      const e = kastenNeu(40, 40);
-      const k = flaeche.querySelector(`.kasten[data-id="${e.id}"] .text`);
-      if (k) {
-        k.innerHTML = vorlage[1];
-        e.html = k.innerHTML;
-        angefasst();
-      }
+      kastenNeu(40, 40, vorlage[1]);
+      angefasst();
     }
     $('#titel').select();
   } catch (f) {

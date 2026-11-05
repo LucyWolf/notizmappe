@@ -279,9 +279,9 @@ const bekannt = {};
 const buehne = { scrollLeft: 0, scrollTop: 0 };
 const zoom = 1;
 const RASTER = 8;
-function kastenNeu(x, y) {
-  befehle.push(['kastenNeu', x + ',' + y]);
-  return { id: 'neu', html: '' };
+function kastenNeu(x, y, inhalt) {
+  befehle.push(['kastenNeu', x + ',' + y + ',' + (inhalt ? inhalt.length : 0)]);
+  return { id: 'neu', html: inhalt || '' };
 }
 function linkSetzen() { befehle.push(['linkSetzen', null]); }
 let letzterKasten = null;
@@ -1087,7 +1087,7 @@ pruefe("Dateianlage nimmt alles an",
 pruefe("Bilder nur Bilder",
        d["bilder"] == [["angeklickt", "dateiwahl:image/*"]], d["bilder"])
 pruefe("der Schreibbereich wird dort angelegt, wo man gerade ist",
-       d["schreibbereich"] == [["kastenNeu", "80,80"]], d["schreibbereich"])
+       d["schreibbereich"] == [["kastenNeu", "80,80,0"]], d["schreibbereich"])
 pruefe("Link fragt nach der Adresse", d["link"] == [["linkSetzen", None]], d["link"])
 pruefe("Seite und Abschnitt klicken die alten Knöpfe an",
        d["neueseite"] == [["angeklickt", "neue-seite-band:"]]
@@ -1139,8 +1139,11 @@ pruefe("sie legt eine Seite an und öffnet sie",
        any(b[0] == "api" and "POST /api/seite" in b[1] for b in d["vorlage_gebaut"])
        and any(b[0] == "seiteOeffnen" for b in d["vorlage_gebaut"]),
        d["vorlage_gebaut"])
+# Nicht per innerHTML: der Inhalt geht denselben Weg wie jeder andere
+# Seiteninhalt und damit beim Speichern durch denselben Reiniger.
 pruefe("und setzt einen Kasten mit dem Inhalt hinein",
-       any(b[0] == "kastenNeu" for b in d["vorlage_gebaut"]), d["vorlage_gebaut"])
+       any(b[0] == "kastenNeu" and b[1].split(",")[2] != "0"
+           for b in d["vorlage_gebaut"]), d["vorlage_gebaut"])
 
 print("\nDas Tabellenraster")
 pruefe("8 × 8 zur Wahl", d["rasterfelder"] == 64, d["rasterfelder"])
