@@ -93,6 +93,29 @@ for muster, name in ((r"^function el\(.*?^\}", "el"),
                      (r"^const FL_BILD = [^;]*;", "FL_BILD"),
                      (r"^const FL_KETTE = [^;]*;", "FL_KETTE"),
                      (r"^const FL_KALENDER = [^;]*;", "FL_KALENDER"),
+                     (r"^const FL_SCHIRM = [^;]*;", "FL_SCHIRM"),
+                     (r"^const FL_SEITEN = [^;]*;", "FL_SEITEN"),
+                     (r"^const FL_MIKRO = [^;]*;", "FL_MIKRO"),
+                     (r"^const FL_KAMERA = [^;]*;", "FL_KAMERA"),
+                     (r"^const FL_DIKTAT = [^;]*;", "FL_DIKTAT"),
+                     (r"^const FL_NETZVIDEO = [^;]*;", "FL_NETZVIDEO"),
+                     (r"^const FL_VORLAGENSEITEN = \[.*?^\];", "FL_VORLAGENSEITEN"),
+                     (r"^function medienDa\(.*?^\}", "medienDa"),
+                     (r"^function stromAus\(.*?^\}", "stromAus"),
+                     (r"^function zeitname\(.*?^\}", "zeitname"),
+                     (r"^function anhangStelle\(.*?^\}", "anhangStelle"),
+                     (r"^function blattAlsDatei\(.*?^\}", "blattAlsDatei"),
+                     (r"^async function bildAusStrom\(.*?^\}", "bildAusStrom"),
+                     (r"^async function bildschirmAusschnitt\(.*?^\}", "bildschirmAusschnitt"),
+                     (r"^async function aufnehmen\(.*?^\}", "aufnehmen"),
+                     (r"^function aufnahmeStoppen\(.*?^\}", "aufnahmeStoppen"),
+                     (r"^function aufnahmeFensterZeigen\(.*?^\}", "aufnahmeFensterZeigen"),
+                     (r"^function aufnahmeFensterZu\(.*?^\}", "aufnahmeFensterZu"),
+                     (r"^function diktieren\(.*?^\}", "diktieren"),
+                     (r"^function onlinevideo\(.*?^\}", "onlinevideo"),
+                     (r"^async function vorlagenseite\(.*?^\}", "vorlagenseite"),
+                     (r"^let aufnahme = [^;]*;", "aufnahme"),
+                     (r"^let diktat = [^;]*;", "diktat"),
                      (r"^function flTafel\(.*?^\}", "flTafel"),
                      (r"^function tabelleEinfuegen\(.*?^\}", "tabelleEinfuegen"),
                      (r"^function flTabellenraster\(.*?^\}", "flTabellenraster"),
@@ -256,9 +279,24 @@ const bekannt = {};
 const buehne = { scrollLeft: 0, scrollTop: 0 };
 const zoom = 1;
 const RASTER = 8;
-function kastenNeu(x, y) { befehle.push(['kastenNeu', x + ',' + y]); }
+function kastenNeu(x, y) {
+  befehle.push(['kastenNeu', x + ',' + y]);
+  return { id: 'neu', html: '' };
+}
 function linkSetzen() { befehle.push(['linkSetzen', null]); }
 let letzterKasten = null;
+// Was vorlagenseite() drueben benutzt - hier nur so viel, dass sich
+// nachsehen laesst, womit sie gerufen wird.
+let offen = null;
+const flaeche = { querySelector: () => null };
+function erstesSeitchen() { return ['Buch', 'Allgemein', 'Seite']; }
+async function baumLaden() {}
+async function seiteOeffnen(b, a, n) { befehle.push(['seiteOeffnen', b + '/' + a + '/' + n]); }
+function angefasst() {}
+async function api(weg, art, rumpf) {
+  befehle.push(['api', art + ' ' + weg + ' ' + JSON.stringify(rumpf || {})]);
+  return { name: 'neue-seite' };
+}
 // Das Formelfenster steht in index.html; hier reicht, dass $ nichts findet.
 const $ = (w) => null;
 function aufAuswahl(befehl, wert) { befehle.push([befehl, wert === undefined ? null : wert]); }
@@ -270,11 +308,16 @@ let auswahl = null;
 const console = { error: () => {} };
 function sagen(text) { befehle.push(['sagen', text]); }
 function melden(text) { befehle.push(['melden', text]); }
+let antwortPrompt = null;
+function prompt() { return antwortPrompt; }
 // Die Zwischenablage des Systems. Darf sie nicht, faellt die Leiste auf den
 // alten Befehl zurueck - genau das soll hier pruefbar sein.
 let ablageDarf = true;
 let ablageInhalt = 'aus der Ablage';
 const navigator = {
+  // Keine Medien im Harnisch: medienDa() muss damit klarkommen, ohne zu
+  // werfen - sonst stuerzt die ganze Leiste beim Bauen ab.
+  mediaDevices: null,
   clipboard: {
     writeText(t) {
       if (!ablageDarf) return Promise.reject(new Error('nein'));
@@ -607,6 +650,25 @@ ergebnis.einfalt = einfkasten.kinder[0].id;
 ergebnis.einfworte = einftasten.map((k) => k.klassen.has('fl-mitwort'));
 ergebnis.einftext = einftasten.map((k) => k.innerHTML);
 
+/* Ohne Medien in der Ansicht: die Knöpfe muessen das sagen, nicht werfen. */
+ergebnis.medien = { schirm: medienDa('schirm'), aufnahme: medienDa('aufnahme'),
+                    sprache: medienDa('sprache') };
+ergebnis.schirm_ohne = einfKlick('Bildschirmausschnitt');
+ergebnis.audio_ohne = einfKlick('Audio aufzeichnen');
+ergebnis.diktat_ohne = einfKlick('Diktieren');
+ergebnis.zeitname = zeitname('Ausschnitt', 'png');
+ergebnis.stelle = anhangStelle();
+
+/* Onlinevideo: ein Link, kein Rahmen - und nur http(s). */
+antwortPrompt = 'https://videos.example/x';
+ergebnis.video_gut = einfKlick('Onlinevideo');
+antwortPrompt = 'javascript:alert(1)';
+ergebnis.video_boese = einfKlick('Onlinevideo');
+antwortPrompt = '"><img src=x onerror=alert(1)>';
+ergebnis.video_spitz = einfKlick('Onlinevideo');
+antwortPrompt = null;
+
+
 function einfKlick(titel) {
   befehle.length = 0;
   const k = einftasten.find((t) => t.title === titel);
@@ -693,6 +755,14 @@ const ruhe = () => new Promise((f) => setTimeout(f, 0));
   await ruhe();
   ergebnis.kopieren_alt = befehle.slice();
   ablageDarf = true;
+
+  /* Seitenvorlagen: die Klappe ruft eine async-Funktion, also abwarten. */
+  const seitenvorlage = klappe('Seitenvorlagen', 1, einfleiste, einftasten);
+  ergebnis.vorlagen_namen = seitenvorlage.eintraege;
+  ergebnis.vorlagen_inhalt = FL_VORLAGENSEITEN.map(([n, h]) => [n, h.length]);
+  await ruhe();
+  await ruhe();
+  ergebnis.vorlage_gebaut = befehle.slice();
 
   process.stdout.write(JSON.stringify(ergebnis) + '\n');
 })();
@@ -992,21 +1062,25 @@ print("\nDer Reiter Einfügen")
 # Audio, Video, Onlinevideo, Formel und Dateiausdruck: die brauchen Rechte,
 # die eine Webansicht nicht hat, oder einen ganzen Apparat - und am Server
 # ginge die Hälfte ohnehin nicht.
+EINFUEGEN = ['Tabelle', 'Schreibbereich einfügen',
+             'Dateianlage', 'Bildschirmausschnitt', 'Bilder', 'Seitenvorlagen',
+             'Link', 'Datum und Uhrzeit', 'Symbol', 'Formel',
+             'Diktieren', 'Audio aufzeichnen', 'Video aufzeichnen', 'Onlinevideo',
+             'Neue Seite', 'Neuer Abschnitt']
 pruefe("die Knöpfe stehen in dieser Reihenfolge",
-       d["einfknoepfe"] == ['Tabelle', 'Schreibbereich einfügen', 'Dateianlage',
-                            'Bilder', 'Link', 'Datum und Uhrzeit', 'Symbol',
-                            'Formel', 'Neue Seite', 'Neuer Abschnitt'],
-       d["einfknoepfe"])
+       d["einfknoepfe"] == EINFUEGEN, d["einfknoepfe"])
 # Die alten bleiben versteckt stehen: an ihnen hängt die Logik für Anhänge,
 # neue Seiten und Abschnitte, und die soll es nur einmal geben.
 pruefe("die alten Knöpfe stehen versteckt dahinter", d["einfalt"] == 'einfalt',
        d["einfalt"])
 # "Schreibbereich einfügen" errät niemand am Bildchen.
 pruefe("an jedem Knopf steht das Wort, nicht nur das Symbol",
-       all(d["einfworte"]) and d["einftext"] == ['Tabelle▾', 'Schreibbereich einfügen',
-                                                 'Dateianlage', 'Bilder', 'Link',
-                                                 'Datum und Uhrzeit▾', 'ΩSymbol▾',
-                                                 '∑Formel', '＋Seite', '＋Abschnitt'],
+       all(d["einfworte"])
+       and d["einftext"] == ['Tabelle▾', 'Schreibbereich einfügen', 'Dateianlage',
+                             'Bildschirmausschnitt', 'Bilder', 'Seitenvorlagen▾',
+                             'Link', 'Datum und Uhrzeit▾', 'ΩSymbol▾', '∑Formel',
+                             'Diktieren', 'Audio aufzeichnen', 'Video aufzeichnen',
+                             'Onlinevideo', '＋Seite', '＋Abschnitt'],
        (d["einfworte"], d["einftext"]))
 pruefe("Dateianlage nimmt alles an",
        d["anlage"] == [["angeklickt", "dateiwahl:"]], d["anlage"])
@@ -1019,6 +1093,54 @@ pruefe("Seite und Abschnitt klicken die alten Knöpfe an",
        d["neueseite"] == [["angeklickt", "neue-seite-band:"]]
        and d["neuerabschnitt"] == [["angeklickt", "neuer-abschnitt-band:"]],
        (d["neueseite"], d["neuerabschnitt"]))
+
+print("\nBildschirm, Aufnahme, Diktat")
+# Diese Ansicht hat keine Medien - genau der Fall, in dem ein Knopf still
+# nichts täte. Er muss sagen, woran es liegt.
+pruefe("ohne Medien meldet medienDa() überall nein",
+       d["medien"] == {"schirm": False, "aufnahme": False, "sprache": False},
+       d["medien"])
+pruefe("Bildschirmausschnitt sagt es",
+       d["schirm_ohne"] and d["schirm_ohne"][0][0] == "melden"
+       and "Bildschirm nicht aufnehmen" in d["schirm_ohne"][0][1], d["schirm_ohne"])
+pruefe("Audio auch",
+       d["audio_ohne"] and d["audio_ohne"][0][0] == "melden", d["audio_ohne"])
+pruefe("und das Diktat auch",
+       d["diktat_ohne"] and d["diktat_ohne"][0][0] == "melden"
+       and "Spracherkennung" in d["diktat_ohne"][0][1], d["diktat_ohne"])
+# Der Name trägt den Zeitpunkt: zwei Ausschnitte auf einer Seite hießen
+# sonst gleich, und der zweite überschriebe den ersten.
+pruefe("der Dateiname trägt Datum und Uhrzeit",
+       bool(re.match(r"^Ausschnitt-\d{8}-\d{6}\.png$", d["zeitname"])), d["zeitname"])
+pruefe("und der Anhang landet dort, wo man hinsieht", d["stelle"] == [80, 80],
+       d["stelle"])
+
+print("\nOnlinevideo")
+# Ein Link, kein <iframe>: eine fremde Seite in der eigenen Notiz sähe
+# alles, was darin steht. Die Ablage nimmt iframe ohnehin nicht an.
+pruefe("eine Adresse wird ein Link",
+       d["video_gut"] == [["insertHTML",
+                           '<a href="https://videos.example/x">https://videos.example/x</a>']],
+       d["video_gut"])
+pruefe("javascript: nicht",
+       d["video_boese"] and d["video_boese"][0][0] == "melden", d["video_boese"])
+pruefe("und spitze Klammern kommen nicht als Markup durch",
+       d["video_spitz"] and d["video_spitz"][0][0] == "melden", d["video_spitz"])
+
+print("\nSeitenvorlagen")
+pruefe("fünf Vorlagen zur Wahl",
+       d["vorlagen_namen"] == ['Leer', 'Besprechung', 'Aufgabenliste',
+                               'Tagesnotiz', 'Projekt'], d["vorlagen_namen"])
+pruefe("und nur 'Leer' ist wirklich leer",
+       [n for n, laenge in d["vorlagen_inhalt"] if not laenge] == ['Leer'],
+       d["vorlagen_inhalt"])
+# Die Vorlage legt eine Seite an, öffnet sie und schreibt den Inhalt hinein.
+pruefe("sie legt eine Seite an und öffnet sie",
+       any(b[0] == "api" and "POST /api/seite" in b[1] for b in d["vorlage_gebaut"])
+       and any(b[0] == "seiteOeffnen" for b in d["vorlage_gebaut"]),
+       d["vorlage_gebaut"])
+pruefe("und setzt einen Kasten mit dem Inhalt hinein",
+       any(b[0] == "kastenNeu" for b in d["vorlage_gebaut"]), d["vorlage_gebaut"])
 
 print("\nDas Tabellenraster")
 pruefe("8 × 8 zur Wahl", d["rasterfelder"] == 64, d["rasterfelder"])

@@ -372,11 +372,31 @@ OneNote:
 
 `Datei · Start · Einfügen · Zeichnen · Verlauf · Ansicht · Hilfe`
 
-**Einfügen** hat: **Tabelle** (Raster bis 8 × 8), **Schreibbereich** (ein neuer
-Textkasten dort, wo du gerade bist), **Dateianlage** und **Bilder**, **Link**,
-**Datum und Uhrzeit** (in der Sprache des Rechners), **Symbol** (60 Zeichen,
-die auf keiner Tastatur liegen), **Formel** sowie **＋ Seite** und
-**＋ Abschnitt**.
+**Einfügen** hat, in der Reihenfolge aus OneNote:
+
+* **Tabelle** (Raster bis 8 × 8) und **Schreibbereich einfügen** (ein neuer
+  Textkasten dort, wo du gerade bist)
+* **Dateianlage**, **Bildschirmausschnitt**, **Bilder**, **Seitenvorlagen**
+  (Leer, Besprechung, Aufgabenliste, Tagesnotiz, Projekt)
+* **Link**, **Datum und Uhrzeit** (in der Sprache des Rechners), **Symbol**
+  (60 Zeichen, die auf keiner Tastatur liegen), **Formel**
+* **Diktieren**, **Audio aufzeichnen**, **Video aufzeichnen**, **Onlinevideo**
+* **＋ Seite** und **＋ Abschnitt**
+
+Bildschirmausschnitt, die beiden Aufnahmen und das Diktat laufen über das, was
+die Webansicht selbst mitbringt — `getDisplayMedia`, `getUserMedia` mit
+`MediaRecorder` und `SpeechRecognition`. Keine Bibliothek, kein Dienst von
+außen, und damit in beiden Fassungen dasselbe. Im Browser braucht das eine
+Adresse mit `https`; was eine Ansicht nicht kann, sagt der Knopf beim Drücken.
+
+Der Bildschirmausschnitt nimmt auf, was du im Dialog auswählst, zeigt das
+Standbild und lässt dich ein Rechteck darauf ziehen. Aufnahmen landen als
+Anhang auf der Seite, mit Datum und Uhrzeit im Dateinamen — zwei Ausschnitte
+auf einer Seite hießen sonst gleich.
+
+**Onlinevideo** fügt einen **Link** ein, keinen eingebetteten Rahmen. `<iframe>`
+nimmt die Ablage nicht an, und das ist richtig so: eine fremde Seite in der
+eigenen Notiz sähe alles, was darin steht.
 
 ### Formeln
 
@@ -405,10 +425,9 @@ Elemente trägt ein Attribut. `mglyph` (lädt ein Bild), `maction` (führt beim
 Klicken etwas aus) und `mstyle` (könnte eine Formel über die halbe Seite
 ziehen) sind bewusst nicht dabei.
 
-Nicht gebaut sind Bildschirmausschnitt, Audio- und Videoaufnahme, Onlinevideo
-und Dateiausdruck. Die brauchen entweder Rechte, die eine Webansicht nicht hat,
-oder einen ganzen Apparat (PDF rendern) — und am Server ginge die Hälfte davon
-ohnehin nicht.
+Noch nicht gebaut ist **Dateiausdruck**: dafür müssten PDF-Seiten als Bild
+gerendert werden, und das kann keine Webansicht von sich aus. Das braucht
+pdf.js im Paket — der nächste Schritt.
 
 Eine eingefügte Tabelle ist eine `<table>` **ohne jedes Attribut**: kein
 `colspan`, keine Breite, kein `style`. Damit kann sie nichts über die Seite

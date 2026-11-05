@@ -4090,6 +4090,18 @@ const FL_KETTE = flBild('<path d="M6.5 9.5 9.5 6.5"/>'
                         + '<path d="M8.5 11.5 7 13a2.8 2.8 0 0 1-4-4l1.5-1.5"/>');
 const FL_KALENDER = flBild('<rect x="1.5" y="3" width="13" height="11" rx="1"/>'
                            + '<path d="M1.5 6.5h13M5 1.8v2.4M11 1.8v2.4"/>');
+const FL_SCHIRM = flBild('<rect x="1.5" y="3" width="13" height="9" rx="1"/>'
+                         + '<path d="M5.5 14.5h5"/>'
+                         + '<path d="M4.5 5.5h4v4" stroke-dasharray="1.6 1.4"/>');
+const FL_SEITEN = flBild('<rect x="2.5" y="1.5" width="11" height="13" rx="1"/>'
+                         + '<path d="M2.5 5h11M6.5 5v9.5"/>');
+const FL_MIKRO = flBild('<rect x="6" y="1.5" width="4" height="7.5" rx="2"/>'
+                        + '<path d="M3.5 8a4.5 4.5 0 0 0 9 0M8 12.5v2"/>');
+const FL_KAMERA = flBild('<rect x="1.5" y="4" width="9" height="8" rx="1.5"/>'
+                         + '<path d="M10.5 7.5 14.5 5v6l-4-2.5z"/>');
+const FL_DIKTAT = flBild('<path d="M2 6v4M5 4v8M8 2.5v11M11 4.5v7M14 6.5v3"/>');
+const FL_NETZVIDEO = flBild('<rect x="1.5" y="3" width="13" height="10" rx="1.5"/>'
+                            + '<path d="M6.5 6.2 10.5 8l-4 1.8z" fill="currentColor"/>');
 
 /* Eine Klappe mit freiem Inhalt. flGalerie macht Kacheln; hier braucht es
    ein Raster, ueber das man faehrt, und ein dichtes Gitter aus Zeichen. */
@@ -4207,6 +4219,358 @@ function dateiWaehlen(nurBilder) {
   // accept gilt nur fuer diesen einen Griff; danach darf wieder alles.
   feld.accept = nurBilder ? 'image/*' : '';
   feld.click();
+}
+
+/* --- Bildschirmausschnitt, Aufnahmen, Vorlagen ----------------------------
+
+   Alles ueber das, was die Webansicht selbst mitbringt: getDisplayMedia
+   fuer den Bildschirm, getUserMedia und MediaRecorder fuer Ton und Bild,
+   SpeechRecognition fuer das Diktat. Keine Bibliothek, kein Dienst - und
+   damit laeuft es in beiden Fassungen gleich.
+
+   Was eine Ansicht nicht kann, sagt der Knopf beim Druecken. Vorher gab es
+   diese Knoepfe gar nicht; ein Knopf, der einmal erklaert, warum er hier
+   nicht geht, ist besser als einer, den es nie gab. */
+
+function medienDa(was) {
+  const m = navigator.mediaDevices;
+  if (was === 'schirm') return !!(m && m.getDisplayMedia);
+  if (was === 'aufnahme') return !!(m && m.getUserMedia && window.MediaRecorder);
+  return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+}
+
+function stromAus(strom) {
+  if (!strom) return;
+  for (const spur of strom.getTracks()) {
+    try { spur.stop(); } catch (f) { /* egal */ }
+  }
+}
+
+/* Ein Bild aus einem Strom holen: anzeigen, ein Vollbild abgreifen, Strom
+   wieder zu. Laenger laufen lassen waere eine Kamera, die an bleibt. */
+async function bildAusStrom(strom) {
+  const schirm = document.createElement('video');
+  schirm.srcObject = strom;
+  schirm.muted = true;
+  await schirm.play();
+  // Ein Bild abwarten: direkt nach play() ist die Breite noch 0.
+  await new Promise((fertig) => {
+    if (schirm.videoWidth) { fertig(); return; }
+    schirm.addEventListener('loadedmetadata', fertig, { once: true });
+    setTimeout(fertig, 1500);
+  });
+  const blatt = document.createElement('canvas');
+  blatt.width = schirm.videoWidth || 1280;
+  blatt.height = schirm.videoHeight || 720;
+  blatt.getContext('2d').drawImage(schirm, 0, 0, blatt.width, blatt.height);
+  schirm.pause();
+  schirm.srcObject = null;
+  return blatt;
+}
+
+function blattAlsDatei(blatt, name) {
+  return new Promise((fertig) => {
+    blatt.toBlob(function (brocken) {
+      fertig(brocken ? new File([brocken], name, { type: 'image/png' }) : null);
+    }, 'image/png');
+  });
+}
+
+/* Wohin ein neuer Anhang kommt: dorthin, wo man gerade hinsieht. */
+function anhangStelle() {
+  return [Math.round((buehne.scrollLeft + 80) / zoom / RASTER) * RASTER,
+          Math.round((buehne.scrollTop + 80) / zoom / RASTER) * RASTER];
+}
+
+function zeitname(vorne, endung) {
+  const d = new Date();
+  const zwei = (n) => String(n).padStart(2, '0');
+  return `${vorne}-${d.getFullYear()}${zwei(d.getMonth() + 1)}${zwei(d.getDate())}`
+       + `-${zwei(d.getHours())}${zwei(d.getMinutes())}${zwei(d.getSeconds())}.${endung}`;
+}
+
+async function bildschirmAusschnitt() {
+  if (!medienDa('schirm')) {
+    melden('Diese Ansicht kann den Bildschirm nicht aufnehmen. '
+         + 'Im Fenster braucht es dafür WebView2, im Browser eine Adresse mit https.');
+    return;
+  }
+  let strom = null;
+  try {
+    strom = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+  } catch (f) {
+    return;                 // abgebrochen - das ist keine Meldung wert
+  }
+  let blatt;
+  try {
+    blatt = await bildAusStrom(strom);
+  } catch (f) {
+    melden('Das Bild ließ sich nicht holen: ' + f.message);
+    return;
+  } finally {
+    stromAus(strom);
+  }
+  // Jetzt der Ausschnitt: das Standbild zeigen und ein Rechteck darauf
+  // ziehen lassen. Ohne das waere es ein Bildschirmfoto, kein Ausschnitt.
+  const teil = await ausschnittWaehlen(blatt);
+  if (!teil) return;
+  const datei = await blattAlsDatei(teil, zeitname('Ausschnitt', 'png'));
+  if (!datei) { melden('Das Bild ließ sich nicht ablegen.'); return; }
+  const [x, y] = anhangStelle();
+  await dateienAnnehmen([datei], x, y);
+}
+
+/* Das Standbild bildschirmfuellend zeigen, Rechteck ziehen, zuschneiden.
+   Ohne Zug kommt das ganze Bild - wer nur den Bildschirm wollte, soll
+   nicht erst ein Rechteck um alles ziehen muessen. */
+function ausschnittWaehlen(blatt) {
+  return new Promise((fertig) => {
+    const schirm = $('#schnittfenster');
+    const flaeche2 = $('#s-bild');
+    if (!schirm || !flaeche2) { fertig(blatt); return; }
+    flaeche2.width = blatt.width;
+    flaeche2.height = blatt.height;
+    flaeche2.getContext('2d').drawImage(blatt, 0, 0);
+    const rahmen = $('#s-rahmen');
+    schirm.hidden = false;
+    let zieht2 = null;
+    const stelle = (ev) => {
+      const r = flaeche2.getBoundingClientRect();
+      return [(ev.clientX - r.left) / r.width * blatt.width,
+              (ev.clientY - r.top) / r.height * blatt.height, r];
+    };
+    const malen = () => {
+      if (!zieht2) { rahmen.hidden = true; return; }
+      const r = zieht2.r;
+      const f = r.width / blatt.width;
+      rahmen.hidden = false;
+      rahmen.style.left = (r.left + Math.min(zieht2.x0, zieht2.x1) * f) + 'px';
+      rahmen.style.top = (r.top + Math.min(zieht2.y0, zieht2.y1) * f) + 'px';
+      rahmen.style.width = (Math.abs(zieht2.x1 - zieht2.x0) * f) + 'px';
+      rahmen.style.height = (Math.abs(zieht2.y1 - zieht2.y0) * f) + 'px';
+    };
+    const schluss = (was) => {
+      schirm.hidden = true;
+      rahmen.hidden = true;
+      flaeche2.onpointerdown = flaeche2.onpointermove = flaeche2.onpointerup = null;
+      document.removeEventListener('keydown', taste);
+      fertig(was);
+    };
+    const taste = (ev) => { if (ev.key === 'Escape') schluss(null); };
+    document.addEventListener('keydown', taste);
+    $('#s-ganz').onclick = () => schluss(blatt);
+    $('#s-ab').onclick = () => schluss(null);
+    flaeche2.onpointerdown = (ev) => {
+      const [x, y, r] = stelle(ev);
+      zieht2 = { x0: x, y0: y, x1: x, y1: y, r };
+      flaeche2.setPointerCapture(ev.pointerId);
+      malen();
+    };
+    flaeche2.onpointermove = (ev) => {
+      if (!zieht2) return;
+      const [x, y] = stelle(ev);
+      zieht2.x1 = x;
+      zieht2.y1 = y;
+      malen();
+    };
+    flaeche2.onpointerup = () => {
+      if (!zieht2) return;
+      const b = Math.abs(zieht2.x1 - zieht2.x0);
+      const h = Math.abs(zieht2.y1 - zieht2.y0);
+      const z = zieht2;
+      zieht2 = null;
+      // Ein Klick ohne Zug ist kein Ausschnitt - dann weiter warten.
+      if (b < 8 || h < 8) { malen(); return; }
+      const teil = document.createElement('canvas');
+      teil.width = Math.round(b);
+      teil.height = Math.round(h);
+      teil.getContext('2d').drawImage(blatt, Math.round(Math.min(z.x0, z.x1)),
+                                      Math.round(Math.min(z.y0, z.y1)),
+                                      teil.width, teil.height,
+                                      0, 0, teil.width, teil.height);
+      schluss(teil);
+    };
+  });
+}
+
+let aufnahme = null;        // {recorder, strom, brocken, uhr}
+
+async function aufnehmen(art) {
+  if (aufnahme) { aufnahmeStoppen(); return; }
+  if (!medienDa('aufnahme')) {
+    melden('Diese Ansicht kann nichts aufnehmen. '
+         + 'Im Browser braucht es dafür eine Adresse mit https.');
+    return;
+  }
+  let strom;
+  try {
+    strom = await navigator.mediaDevices.getUserMedia(
+      art === 'video' ? { video: true, audio: true } : { audio: true });
+  } catch (f) {
+    melden('Mikrofon oder Kamera ließen sich nicht öffnen: ' + f.message);
+    return;
+  }
+  let recorder;
+  try {
+    recorder = new MediaRecorder(strom);
+  } catch (f) {
+    stromAus(strom);
+    melden('Aufnehmen ging nicht: ' + f.message);
+    return;
+  }
+  const brocken = [];
+  recorder.addEventListener('dataavailable', (ev) => {
+    if (ev.data && ev.data.size) brocken.push(ev.data);
+  });
+  recorder.addEventListener('stop', async () => {
+    stromAus(strom);
+    clearInterval(aufnahme && aufnahme.uhr);
+    aufnahme = null;
+    aufnahmeFensterZu();
+    if (!brocken.length) return;
+    const typ = brocken[0].type || (art === 'video' ? 'video/webm' : 'audio/webm');
+    const endung = typ.indexOf('mp4') >= 0 ? 'mp4' : (art === 'video' ? 'webm' : 'webm');
+    const datei = new File(brocken, zeitname(art === 'video' ? 'Video' : 'Ton', endung),
+                           { type: typ });
+    const [x, y] = anhangStelle();
+    await dateienAnnehmen([datei], x, y);
+  });
+  const begonnen = Date.now();
+  aufnahme = { recorder, strom, brocken, uhr: null };
+  aufnahme.uhr = setInterval(function () {
+    const s = Math.round((Date.now() - begonnen) / 1000);
+    const z = $('#a-zeit');
+    if (z) z.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  }, 500);
+  aufnahmeFensterZeigen(art === 'video' ? 'Video aufzeichnen' : 'Audio aufzeichnen',
+                        art === 'video' ? strom : null);
+  recorder.start();
+}
+
+function aufnahmeStoppen() {
+  if (!aufnahme) return;
+  try { aufnahme.recorder.stop(); } catch (f) { /* egal */ }
+}
+
+function aufnahmeFensterZeigen(titel, strom) {
+  const fenster = $('#aufnahmefenster');
+  if (!fenster) return;
+  $('#a-titel').textContent = titel;
+  $('#a-zeit').textContent = '0:00';
+  const schau = $('#a-schau');
+  if (schau) {
+    schau.hidden = !strom;
+    if (strom) {
+      schau.srcObject = strom;
+      schau.muted = true;
+      schau.play().catch(() => {});
+    }
+  }
+  fenster.hidden = false;
+}
+
+function aufnahmeFensterZu() {
+  const fenster = $('#aufnahmefenster');
+  if (!fenster) return;
+  fenster.hidden = true;
+  const schau = $('#a-schau');
+  if (schau) { schau.pause(); schau.srcObject = null; }
+}
+
+/* Diktieren: was die Ansicht erkennt, wandert in den Text. Das laeuft
+   ueber die Spracherkennung des Browsers - in Chromium ueber einen Dienst
+   von Google, und genau das gehoert gesagt, bevor jemand hineinspricht. */
+let diktat = null;
+
+function diktieren() {
+  if (diktat) { try { diktat.stop(); } catch (f) { /* egal */ } return; }
+  const Erkennung = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Erkennung) {
+    melden('Diese Ansicht bringt keine Spracherkennung mit.');
+    return;
+  }
+  const e = new Erkennung();
+  e.lang = navigator.language || 'de-DE';
+  e.continuous = true;
+  e.interimResults = false;
+  e.addEventListener('result', (ev) => {
+    let text = '';
+    for (let i = ev.resultIndex; i < ev.results.length; i += 1) {
+      if (ev.results[i].isFinal) text += ev.results[i][0].transcript;
+    }
+    if (text) flBefehl('insertText', text);
+  });
+  e.addEventListener('error', (ev) => {
+    melden('Die Spracherkennung meldet: ' + (ev.error || 'unbekannt'));
+  });
+  e.addEventListener('end', () => {
+    diktat = null;
+    sagen('Diktat beendet', 1500);
+  });
+  diktat = e;
+  try {
+    e.start();
+    sagen('Diktat läuft - noch einmal drücken beendet es', 3000);
+  } catch (f) {
+    diktat = null;
+    melden('Diktat ging nicht: ' + f.message);
+  }
+}
+
+/* Onlinevideo: ein Link, kein eingebetteter Rahmen. <iframe> nimmt die
+   Ablage nicht an, und das ist richtig so - eine fremde Seite in der
+   eigenen Notiz sieht alles, was darin steht. */
+function onlinevideo() {
+  const adresse = prompt('Adresse des Videos:', 'https://');
+  if (!adresse) return;
+  if (!/^https?:\/\//i.test(adresse)) {
+    melden('Nur http:// und https:// - anderes wird beim Speichern verworfen.');
+    return;
+  }
+  flBefehl('insertHTML',
+           `<a href="${formelSchutz(adresse)}">${formelSchutz(adresse)}</a>`);
+}
+
+/* Seitenvorlagen: eine neue Seite, die nicht leer anfaengt. Der Inhalt
+   steht hier als festes Markup - er geht durch dieselbe Reinigung wie
+   alles andere, es ist also nichts erlaubt, was sonst verboten waere. */
+const FL_VORLAGENSEITEN = [
+  ['Leer', ''],
+  ['Besprechung', '<h1>Besprechung</h1><p><b>Wann:</b> </p><p><b>Wer:</b> </p>'
+    + '<h2>Themen</h2><ul><li></li></ul><h2>Beschlüsse</h2><ul><li></li></ul>'
+    + '<h2>Aufgaben</h2><ul><li>☐ </li></ul>'],
+  ['Aufgabenliste', '<h1>Aufgaben</h1><ul><li>☐ </li><li>☐ </li><li>☐ </li></ul>'],
+  ['Tagesnotiz', '<h1>Heute</h1><h2>Gemacht</h2><ul><li></li></ul>'
+    + '<h2>Offen</h2><ul><li>☐ </li></ul><h2>Notizen</h2><p></p>'],
+  ['Projekt', '<h1>Projekt</h1><p><b>Ziel:</b> </p><p><b>Stand:</b> </p>'
+    + '<h2>Schritte</h2><ol><li></li></ol><h2>Offene Fragen</h2><ul><li></li></ul>'],
+];
+
+async function vorlagenseite(name) {
+  const vorlage = FL_VORLAGENSEITEN.find((v) => v[0] === name);
+  if (!vorlage) return;
+  const erste = erstesSeitchen();
+  const buch = offen ? offen.notizbuch : (erste && erste[0]);
+  const ab = offen ? offen.abschnitt : (erste && erste[1]);
+  if (!buch || !ab) { melden('Erst ein Notizbuch und einen Abschnitt anlegen.'); return; }
+  try {
+    const r = await api('/api/seite', 'POST',
+                        { notizbuch: buch, abschnitt: ab, titel: name });
+    await baumLaden();
+    await seiteOeffnen(buch, ab, r.name);
+    if (vorlage[1]) {
+      const e = kastenNeu(40, 40);
+      const k = flaeche.querySelector(`.kasten[data-id="${e.id}"] .text`);
+      if (k) {
+        k.innerHTML = vorlage[1];
+        e.html = k.innerHTML;
+        angefasst();
+      }
+    }
+    $('#titel').select();
+  } catch (f) {
+    melden(f.message);
+  }
 }
 
 function textfeldEinfuegen() {
@@ -4508,6 +4872,8 @@ function formelBauen() {
   });
   $('#f-ab').addEventListener('click', formelFensterZu);
   $('#f-ein').addEventListener('click', formelUebernehmen);
+  const stopp = $('#a-stopp');
+  if (stopp) stopp.addEventListener('click', aufnahmeStoppen);
 }
 
 function formelUebernehmen() {
@@ -4546,14 +4912,23 @@ function einfuegeleisteBauen() {
 
   const wirt = el('div', { className: 'formatleiste fl-band' });
   const trenner = () => el('span', { className: 'fl-trenner' });
+  // Die Reihenfolge ist die aus OneNote: erst die beiden grossen Sachen,
+  // dann alles, was von aussen hereinkommt, dann alles, was im Text
+  // landet, dann die Aufnahmen - und am Ende Seite und Abschnitt, die es
+  // dort nicht gibt.
   const gruppen = [
     [mitWort(flTafel(wirt, 'Tabelle', flWort(FL_TABELLE, 'Tabelle'), flTabellenraster))],
     [mitWort(flTaste(flWort(FL_TEXTFELD, 'Schreibbereich einfügen'),
                      'Schreibbereich einfügen', textfeldEinfuegen))],
     [mitWort(flTaste(flWort(FL_KLEMME, 'Dateianlage'), 'Dateianlage',
                      function () { dateiWaehlen(false); })),
+     mitWort(flTaste(flWort(FL_SCHIRM, 'Bildschirmausschnitt'), 'Bildschirmausschnitt',
+                     bildschirmAusschnitt)),
      mitWort(flTaste(flWort(FL_BILD, 'Bilder'), 'Bilder',
-                     function () { dateiWaehlen(true); }))],
+                     function () { dateiWaehlen(true); })),
+     mitWort(flKlappe(wirt, 'Seitenvorlagen', flWort(FL_SEITEN, 'Seitenvorlagen'),
+                      FL_VORLAGENSEITEN.map(([n]) => [n, n, '']),
+                      vorlagenseite))],
     [mitWort(flTaste(flWort(FL_KETTE, 'Link'), 'Link', function () {
       try { if (typeof linkSetzen === 'function') linkSetzen(); } catch (f) { /* egal */ }
     })),
@@ -4567,6 +4942,12 @@ function einfuegeleisteBauen() {
                      flZeichentafel)),
      mitWort(flTaste(flWort('<span class="fl-sinn">∑</span>', 'Formel'), 'Formel',
                      formelFensterZeigen))],
+    [mitWort(flTaste(flWort(FL_DIKTAT, 'Diktieren'), 'Diktieren', diktieren)),
+     mitWort(flTaste(flWort(FL_MIKRO, 'Audio aufzeichnen'), 'Audio aufzeichnen',
+                     function () { aufnehmen('audio'); })),
+     mitWort(flTaste(flWort(FL_KAMERA, 'Video aufzeichnen'), 'Video aufzeichnen',
+                     function () { aufnehmen('video'); })),
+     mitWort(flTaste(flWort(FL_NETZVIDEO, 'Onlinevideo'), 'Onlinevideo', onlinevideo))],
     [mitWort(flTaste(flWort('＋', 'Seite'), 'Neue Seite',
                      function () { altKlick('neue-seite-band'); })),
      mitWort(flTaste(flWort('＋', 'Abschnitt'), 'Neuer Abschnitt',

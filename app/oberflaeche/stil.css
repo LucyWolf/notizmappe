@@ -777,6 +777,45 @@ body { display: flex; flex-direction: column; }
 }
 .fl-zeichenfeld:hover { background: var(--flaeche); border-color: var(--linie); }
 
+/* --- Bildschirmausschnitt ---
+   Das Standbild liegt über allem, damit man das Rechteck darauf zieht und
+   nicht versehentlich in die Notiz malt. */
+#schnittfenster {
+  position: fixed; inset: 0; z-index: 70; display: flex;
+  flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  background: rgba(0, 0, 0, .75);
+}
+#s-hinweis { margin: 0; color: #fff; font-size: 13px; }
+#s-bild {
+  max-width: calc(100vw - 48px); max-height: calc(100vh - 120px);
+  cursor: crosshair; border: 1px solid var(--linie); background: #000;
+}
+#s-rahmen {
+  position: fixed; z-index: 71; pointer-events: none;
+  border: 1px solid #fff; background: rgba(255, 255, 255, .18);
+}
+#schnittfenster .knoepfe { margin: 0; }
+#schnittfenster button {
+  border: 1px solid var(--linie); background: var(--leiste); color: var(--schrift);
+  border-radius: 6px; padding: 6px 12px; cursor: pointer; font: inherit; font-size: 13px;
+}
+
+/* --- Aufnahme läuft --- */
+#aufnahmefenster {
+  position: fixed; inset: 0; z-index: 70; display: flex;
+  align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, .45);
+}
+#aufnahmefenster .tafel { text-align: center; }
+#a-schau {
+  width: 100%; max-width: 420px; border-radius: 8px; background: #000;
+}
+/* Die Zeit ist das, worauf man dabei sieht - also groß genug dafür. */
+#a-zeit {
+  margin: 10px 0 4px; font-size: 28px;
+  font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums;
+}
+
 /* --- Formel schreiben --- */
 #formelfenster {
   position: fixed; inset: 0; z-index: 40; display: flex;

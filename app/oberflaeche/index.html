@@ -173,6 +173,28 @@ window.addEventListener('unhandledrejection', function (ev) {
     </div>
   </div>
 
+  <!-- Bildschirmausschnitt: das Standbild, auf das man ein Rechteck zieht. -->
+  <div id="schnittfenster" hidden>
+    <p id="s-hinweis">Rechteck ziehen – oder den ganzen Bildschirm nehmen.</p>
+    <canvas id="s-bild"></canvas>
+    <div id="s-rahmen" hidden></div>
+    <p class="knoepfe">
+      <button type="button" id="s-ganz">Ganzes Bild</button>
+      <button type="button" id="s-ab">Abbrechen</button>
+    </p>
+  </div>
+
+  <!-- Läuft eine Aufnahme, steht hier die Zeit und der Knopf zum Beenden. -->
+  <div id="aufnahmefenster" hidden>
+    <div class="tafel">
+      <h3 id="a-titel">Aufnahme</h3>
+      <video id="a-schau" hidden playsinline></video>
+      <p id="a-zeit">0:00</p>
+      <p class="hinweis">Die Aufnahme landet als Anhang auf dieser Seite.</p>
+      <p class="knoepfe"><button type="button" id="a-stopp">Beenden</button></p>
+    </div>
+  </div>
+
   <!-- Formel schreiben. Getippt wird eine kleine Schreibweise, dasteht
        MathML - siehe formelMathML() in mappe.js. -->
   <div id="formelfenster" hidden>
