@@ -25,7 +25,12 @@ from pathlib import Path
 HIER = Path(__file__).resolve().parent
 ORDNER = HIER.parent                      # Installationsordner (oder Quellordner)
 QUELLE = os.environ.get("NOTIZMAPPE_QUELLE", "https://api.github.com/repos/LucyWolf/notizmappe")
-FRIST = 3600                              # Sekunden, die eine Antwort gilt
+# Vier Minuten. Eine Stunde war zu lang: die Oberflaeche sieht alle fuenf
+# Minuten nach, bekaeme aber bis zu einer Stunde lang die alte Antwort - und
+# waehrend dieser Stunde erfaehrt niemand von einer neuen Fassung. Der Server
+# haelt es genauso. Bei GitHub sind das hoechstens 15 Anfragen je Stunde, die
+# Grenze ohne Anmeldung liegt bei 60.
+FRIST = 240                               # Sekunden, die eine Antwort gilt
 NOTIZ = ORDNER / ".update-stand.json"     # letzte Antwort, damit nicht jeder Aufruf fragt
 def _eigener_ort() -> Path:
     """Wo Protokoll und Einstellungen liegen.
@@ -205,7 +210,7 @@ def _httpfehler(f) -> str:
 
 
 def pruefen(frisch: bool = False) -> dict:
-    """Stand melden. Antworten werden eine Stunde lang wiederverwendet, damit nicht
+    """Stand melden. Antworten werden FRIST lang wiederverwendet, damit nicht
     jeder Seitenaufruf bei GitHub anklopft (und in die Bremse laeuft)."""
     jetzt = time.time()
     try:
