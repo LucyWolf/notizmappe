@@ -41,7 +41,9 @@ for muster, name in ((r"^function el\(.*?^\}", "el"),
                      (r"^function bandAnwenden\(.*?^\}", "bandAnwenden"),
                      (r"^function bandTafelZu\(.*?^\}", "bandTafelZu"),
                      (r"^function bandTafelZeigen\(.*?^\}", "bandTafelZeigen"),
-                     (r"^function bandMenueBauen\(.*?^\}", "bandMenueBauen")):
+                     (r"^function bandMenueBauen\(.*?^\}", "bandMenueBauen"),
+                     (r"^function flTaste\(.*?^\}", "flTaste"),
+                     (r"^function ueberlaufEinrichten\(.*?^\}", "ueberlaufEinrichten")):
     treffer = re.search(muster, mappe, re.S | re.M)
     pruefe(f"{name} steht in mappe.js", bool(treffer))
     if treffer:
@@ -55,6 +57,7 @@ class Knoten {
     this.art = art; this.kinder = []; this.zuhoerer = {};
     this.id = ''; this.title = ''; this.eigenerText = ''; this.eltern = null;
     this.hidden = false; this.style = {}; this.klassen = new Set();
+    this.dataset = {};
     const selbst = this;
     this.classList = {
       add: (c) => selbst.klassen.add(c),
@@ -92,7 +95,12 @@ class Knoten {
   getBoundingClientRect() { return { left: 900, right: 980, top: 10, bottom: 32,
                                      width: 240, height: 180 }; }
   alle() { return this.kinder.reduce((a, k) => a.concat(k.alle()), [this]); }
+  get children() { return this.kinder; }
+  get childNodes() { return this.kinder; }
+  get firstChild() { return this.kinder[0] || null; }
+  get parentNode() { return this.eltern; }
   passt(w) {
+    if (w === '.fl-reihe') return this.klassen.has('fl-reihe');
     if (w === '.fl-wort') return this.klassen.has('fl-wort');
     if (w === '.fl-pfeil') return this.klassen.has('fl-pfeil');
     if (w === '.fl-taste') return this.klassen.has('fl-taste');
@@ -132,6 +140,17 @@ taste('Fett (Strg+B)', false);
 taste('Kategorie', true);
 body.append(leiste);
 
+/* Eine Leiste, deren Breite sich steuern laesst: jedes Kind ist 50 breit,
+   der Platz kommt von aussen. So laesst sich "das Fenster wird schmaler"
+   nachstellen, ohne ein Fenster zu haben. */
+const KNOPFBREIT = 50;
+let platz = 1000;
+class Reihe extends Knoten {
+  get clientWidth() { return platz; }
+  get scrollWidth() {
+    return this.kinder.filter((k) => !k.hidden).length * KNOPFBREIT;
+  }
+}
 const tasten = [];
 const document = {
   createElement: (a) => new Knoten(a),
@@ -145,7 +164,13 @@ function $(w) {
   if (w === '#bandraus') return body.alle().slice(1).find((k) => k.id === 'bandraus') || null;
   return null;
 }
-const window = { innerWidth: 1200, innerHeight: 800 };
+let messer = null;
+class ResizeObserver {
+  constructor(f) { messer = f; }
+  observe() {}
+}
+function messenJetzt() { if (messer) messer(); }
+const window = { innerWidth: 1200, innerHeight: 800, ResizeObserver };
 const merkzettel = {};
 const merker = {
   holen: (k, standard) => (k in merkzettel ? merkzettel[k] : standard),
@@ -171,6 +196,50 @@ function waehlen(name) {
 
 bandMenueBauen();
 ergebnis.anfang = klassen();
+
+/* --- Der Ueberlauf bei schmalem Fenster --------------------------------- */
+const bandleiste = new Knoten('div');
+bandleiste.className = 'formatleiste fl-band';
+const bandreihe = new Reihe('div');
+bandreihe.className = 'fl-reihe';
+const namen = ['Fett', 'Kursiv', 'Unterstrichen', 'Trenner', 'Liste', 'Nummern'];
+for (const n of namen) {
+  const k = new Knoten('button');
+  k.className = n === 'Trenner' ? 'fl-trenner' : 'fl-taste';
+  k.title = n;
+  bandreihe.append(k);
+}
+bandleiste.append(bandreihe);
+ueberlaufEinrichten(bandleiste);
+const mehr = bandreihe.kinder.find((k) => k.klassen.has('fl-mehr'));
+const topf = bandleiste.kinder.find((k) => k.klassen.has('fl-topf'));
+function stand() {
+  return { reihe: bandreihe.kinder.filter((k) => k !== mehr).map((k) => k.title),
+           topf: topf.kinder.map((k) => k.title),
+           mehr: !mehr.hidden };
+}
+// So breit, dass alles passt (7 x 50 = 350 mit dem Pfeil)
+platz = 1000;
+messenJetzt();
+ergebnis.breit = stand();
+// Jetzt schmal: nur noch vier Plaetze
+platz = 200;
+messenJetzt();
+ergebnis.schmal = stand();
+// Noch schmaler
+platz = 100;
+messenJetzt();
+ergebnis.sehrschmal = stand();
+// Und wieder breit - alles muss zurueck, in der alten Reihenfolge
+platz = 1000;
+messenJetzt();
+ergebnis.wiederbreit = stand();
+// Unsichtbar (Breite 0) darf nichts verschoben werden
+platz = 0;
+messenJetzt();
+ergebnis.unsichtbar = stand();
+platz = 1000;
+messenJetzt();
 ergebnis.raus_anfangs_weg = $('#bandraus') ? $('#bandraus').hidden : null;
 
 /* Die Tafel: was drinsteht und wo der Haken sitzt */
@@ -285,6 +354,38 @@ pruefe("Esc holt zurück",
 pruefe("und der Rückweg verschwindet wieder", d["raus_wieder_weg"] is True,
        d["raus_wieder_weg"])
 pruefe("der Knopf tut dasselbe", 'band-voll' not in d["nach_knopf"], d["nach_knopf"])
+
+print("\nWenn das Fenster schmaler wird")
+# Vorher brach die Leiste um; bei einem schmalen Fenster wurde das Band
+# drei- und vierzeilig und nahm der Seite den Platz, um den es geht.
+pruefe("breit ist alles in der Reihe",
+       d["breit"]["reihe"] == ['Fett', 'Kursiv', 'Unterstrichen', 'Trenner',
+                               'Liste', 'Nummern']
+       and not d["breit"]["topf"] and not d["breit"]["mehr"], d["breit"])
+pruefe("schmal wandert das Letzte unter den Pfeil",
+       d["schmal"]["mehr"] and d["schmal"]["topf"]
+       and d["schmal"]["reihe"][0] == 'Fett', d["schmal"])
+# Die Reihenfolge muss stimmen: was zuletzt wegfiel, steht im Topf vorn.
+pruefe("und zwar von hinten, in der richtigen Reihenfolge",
+       d["schmal"]["topf"] == sorted(d["schmal"]["topf"],
+                                     key=lambda n: ['Fett', 'Kursiv', 'Unterstrichen',
+                                                    'Trenner', 'Liste',
+                                                    'Nummern'].index(n)),
+       d["schmal"])
+pruefe("noch schmaler wandert mehr hinein",
+       len(d["sehrschmal"]["topf"]) > len(d["schmal"]["topf"]),
+       (d["schmal"]["topf"], d["sehrschmal"]["topf"]))
+# Ein Trenner am Anfang des Topfes trennt nichts mehr.
+pruefe("ein Trenner steht nicht vorn im Topf",
+       not d["sehrschmal"]["topf"] or d["sehrschmal"]["topf"][0] != 'Trenner',
+       d["sehrschmal"])
+# Das ist der Teil, der bei so etwas schiefgeht: zurück muss auch gehen.
+pruefe("wieder breit holt alles zurück, in der alten Reihenfolge",
+       d["wiederbreit"] == d["breit"], d["wiederbreit"])
+# Die Leiste des nicht gewählten Reiters ist 0 breit - dann darf nichts
+# wandern, sonst steht sie beim Hinwechseln leer da.
+pruefe("unsichtbar wird nichts verschoben", d["unsichtbar"] == d["breit"],
+       d["unsichtbar"])
 
 print("\nGemerkt")
 # Wer das Band wegklappt, will es beim nächsten Start nicht wieder vorfinden.

@@ -714,7 +714,22 @@ body { display: flex; flex-direction: column; }
    bricht sie um, statt hinauszulaufen - abgeschnittene Knoepfe sind
    schlimmer als zwei Zeilen. */
 #werkzeuge .formatleiste { padding: 0; }
-.fl-band .fl-reihe { flex-wrap: wrap; row-gap: 3px; }
+/* Nicht umbrechen, sondern überlaufen: was nicht mehr passt, wandert
+   unter den Pfeil am Ende. Ein Band, das bei schmalem Fenster drei Zeilen
+   hoch wird, nimmt der Seite den Platz, um den es geht. */
+.fl-band .fl-reihe { flex-wrap: nowrap; overflow: hidden; min-width: 0; }
+.fl-mehr { flex: 0 0 auto; }
+.fl-topf {
+  position: absolute; z-index: 62; max-width: min(360px, calc(100vw - 32px));
+  display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 6px;
+  background: var(--leiste); border: 1px solid var(--linie);
+  border-radius: 6px; box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
+}
+/* Im Topf steht an jedem Knopf das Wort - dort ist Platz dafür, und ohne
+   das sucht man in einem Haufen gleich großer Bildchen. Die Regel muss
+   stärker sein als die, die im vereinfachten Band die Wörter wegnimmt. */
+body #werkzeuge .fl-topf .fl-wort, .fl-topf .fl-wort { display: inline; }
+.fl-topf .fl-trenner { display: none; }
 .fl-band .fl-taste { min-width: 28px; height: 28px; }
 .fl-band select { height: 28px; font-size: 13px; }
 .fl-band .fl-art { flex: 0 1 150px; min-width: 110px; max-width: 150px; }

@@ -383,6 +383,12 @@ Ganz rechts im Band sitzt ein **Pfeil** mit dem Menü dazu:
   Registerkarten* (das Band klappt beim Klick auf einen Reiter auf und beim
   Klick in die Seite wieder zu) oder *immer anzeigen*.
 
+**Wird das Fenster schmaler**, bricht die Leiste nicht um — alles, was nicht
+mehr hineinpasst, wandert unter einen zweiten Pfeil am Ende der Leiste. Dort
+steht an jedem Knopf das Wort, auch im vereinfachten Band. Verschoben werden
+die echten Knöpfe, nicht Kopien: an ihnen hängen die Zuhörer, der Pinsel und
+die Farbbalken.
+
 Beides wird gemerkt. Im Vollbild ist auch der Pfeil weg — deshalb steht oben
 rechts ein kleiner Knopf, und `Esc` tut dasselbe. Ohne einen sichtbaren Rückweg
 wäre es eine Falle.

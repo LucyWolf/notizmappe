@@ -2349,6 +2349,9 @@ function reiterSetzen(name) {
     document.body.classList.add('band-auf');
   }
   if (name === 'hilfe') hilfeStandZeigen();
+  // Die Leiste des neuen Reiters war bis eben 0 breit - jetzt kann sie
+  // nachsehen, was hineinpasst.
+  document.dispatchEvent(new Event('notizmappe-reiter'));
   // Beim Verlassen des Reiters nicht weitermalen: sonst fängt der nächste Klick
   // in den Text einen Strich an.
   werkzeugSetzen(name === 'zeichnen' ? (werkzeug === 'auswahl' ? 'stift' : werkzeug) : 'auswahl',
@@ -4058,6 +4061,7 @@ function bandleisteUmbauen() {
   while (leiste.firstChild) alt.append(leiste.firstChild);
   const neu = formatleisteBauen({ band: true });
   leiste.append(alt, neu);
+  ueberlaufEinrichten(neu);
   document.addEventListener('selectionchange', function () {
     if (!leiste.hidden) formatleisteFrischen(neu);
   });
@@ -4973,6 +4977,83 @@ function einfuegeleisteBauen() {
     if (ev.target.tagName !== 'SELECT') ev.preventDefault();
   });
   leiste.append(alt, wirt);
+  ueberlaufEinrichten(wirt);
+}
+
+/* ----------------------------------------- Wenn das Band zu schmal wird
+
+   Vorher brach die Leiste um und das Band wurde zweizeilig; bei einem
+   schmalen Fenster drei- und vierzeilig. Jetzt wandert alles, was nicht
+   mehr passt, unter einen Pfeil am Ende.
+
+   Verschoben werden die echten Knoepfe, nicht Kopien: an ihnen haengen die
+   Zuhoerer, der Pinselzustand und die Farbbalken. Eine Kopie waere ein
+   zweiter Knopf, der anders aussieht und anders tut. */
+
+function ueberlaufEinrichten(leiste) {
+  if (!leiste || leiste.dataset.ueberlauf === 'ja') return;
+  leiste.dataset.ueberlauf = 'ja';
+  const reihe = leiste.querySelector('.fl-reihe');
+  if (!reihe) return;
+  // Die Reihenfolge von Anfang an merken: beim Zurueckschieben muss alles
+  // wieder dorthin, wo es war.
+  const ordnung = Array.from(reihe.children);
+  const topf = el('div', { className: 'fl-topf', hidden: true });
+  const mehr = flTaste('<span class="fl-pfeil">⌄</span>', 'Mehr',
+                       function () { topf.hidden = !topf.hidden; stellen(); });
+  mehr.classList.add('fl-mehr');
+  mehr.hidden = true;
+  reihe.append(mehr);
+  leiste.append(topf);
+
+  function stellen() {
+    if (topf.hidden) return;
+    const r = mehr.getBoundingClientRect();
+    const w = leiste.getBoundingClientRect();
+    const b = topf.getBoundingClientRect();
+    topf.style.left = Math.max(8 - w.left,
+                               Math.min(r.right - w.left - b.width,
+                                        window.innerWidth - w.left - b.width - 8)) + 'px';
+    topf.style.top = (r.bottom - w.top + 2) + 'px';
+  }
+
+  function messen() {
+    // Unsichtbar misst sich nichts: die Leiste des gerade nicht gewaehlten
+    // Reiters ist 0 breit, und dann wanderte alles in den Topf.
+    if (!reihe.clientWidth) return;
+    for (const k of ordnung) {
+      if (k.parentNode !== reihe) reihe.insertBefore(k, mehr);
+    }
+    mehr.hidden = true;
+    topf.textContent = '';
+    if (reihe.scrollWidth <= reihe.clientWidth) { topf.hidden = true; return; }
+    mehr.hidden = false;
+    // Von hinten wegnehmen, bis es passt. Der Pfeil selbst braucht auch
+    // Platz - deshalb steht er schon da, waehrend gemessen wird.
+    for (let i = ordnung.length - 1; i >= 0; i -= 1) {
+      if (reihe.scrollWidth <= reihe.clientWidth) break;
+      const k = ordnung[i];
+      if (k.parentNode !== reihe) continue;
+      topf.insertBefore(k, topf.firstChild);
+    }
+    // Ein Trenner, der nun am Anfang des Topfes oder am Ende der Reihe
+    // steht, trennt nichts mehr.
+    while (topf.firstChild && topf.firstChild.classList
+           && topf.firstChild.classList.contains('fl-trenner')) {
+      topf.firstChild.remove();
+    }
+    if (!topf.childNodes.length) { mehr.hidden = true; topf.hidden = true; }
+    stellen();
+  }
+
+  if (window.ResizeObserver) {
+    new ResizeObserver(messen).observe(reihe);
+  } else {
+    window.addEventListener('resize', messen);
+  }
+  // Beim Reiterwechsel wird die Leiste erst sichtbar - dann messen.
+  document.addEventListener('notizmappe-reiter', messen);
+  setTimeout(messen, 0);
 }
 
 /* ------------------------------------------- Wie das Band dasteht
@@ -5033,7 +5114,10 @@ function bandAnwenden() {
   koerper.classList.toggle('band-voll', stand.zeigen === 'voll');
   // Aufgeklappt wird nur vorübergehend; ein Reiterwechsel macht es wieder zu.
   koerper.classList.remove('band-auf');
-  if (stand.layout === 'klassisch') bandWoerterBauen();
+  // Die Woerter immer bauen, auch im vereinfachten Band: dort werden sie
+  // nur ausgeblendet - im Ueberlauftopf stehen sie trotzdem, und dort
+  // braucht man sie am meisten.
+  bandWoerterBauen();
   const raus = $('#bandraus');
   if (raus) raus.hidden = stand.zeigen !== 'voll';
   flaecheMessen();

@@ -137,6 +137,7 @@ for muster, name in ((r"^function el\(.*?^\}", "el"),
                      (r"^function formelFensterZeigen\(.*?^\}", "formelFensterZeigen"),
                      (r"^function flWort\(.*?^\}", "flWort"),
                      (r"^function mitWort\(.*?^\}", "mitWort"),
+                     (r"^function ueberlaufEinrichten\(.*?^\}", "ueberlaufEinrichten"),
                      (r"^function einfuegeleisteBauen\(.*?^\}", "einfuegeleisteBauen"),
                      (r"^function formatleisteBauen\(.*?^\}", "formatleisteBauen"),
                      (r"^function formatleisteFrischen\(.*?^\}", "formatleisteFrischen")):
@@ -237,6 +238,7 @@ class Knoten {
     if (w.indexOf('blockquote') >= 0) {
       return w.split(',').indexOf(this.art) >= 0;
     }
+    if (w === '.fl-reihe') return this.klassen.has('fl-reihe');
     if (w === '.text') return this.klassen.has('text');
     if (w === '.formatleiste') return this.klassen.has('formatleiste');
     if (w === '.fl-liste') return this.klassen.has('fl-liste');
@@ -302,7 +304,8 @@ const $ = (w) => null;
 function aufAuswahl(befehl, wert) { befehle.push([befehl, wert === undefined ? null : wert]); }
 function hervorheben(f) { befehle.push(['hervorheben', f || null]); }
 function hervorhebungWeg() { befehle.push(['hervorhebungWeg', null]); }
-const window = { getSelection: () => auswahl, innerWidth: 1200, innerHeight: 800 };
+const window = { getSelection: () => auswahl, innerWidth: 1200, innerHeight: 800,
+                 addEventListener: () => {} };
 function gemerkt() { befehle.push(['gemerkt', null]); }
 let auswahl = null;
 const console = { error: () => {} };
@@ -533,7 +536,8 @@ aufAuswahl = alterBefehl;
 /* --- Dieselbe Leiste oben im Band ---------------------------------------- */
 const bandleiste = formatleisteBauen({ band: true });
 wurzel.append(bandleiste);
-const bandtasten = bandleiste.alle().filter((k) => k.klassen.has('fl-taste'));
+const bandtasten = bandleiste.alle()
+  .filter((k) => k.klassen.has('fl-taste') && !k.klassen.has('fl-mehr'));
 ergebnis.bandreihen = bandleiste.kinder.filter((k) => k.klassen.has('fl-reihe')).length;
 ergebnis.bandknoepfe = bandtasten.map((k) => k.title);
 ergebnis.bandklasse = bandleiste.klassen.has('fl-band');
@@ -643,7 +647,9 @@ for (const id of ['dateiwahl', 'neue-seite-band', 'neuer-abschnitt-band']) {
 }
 einfuegeleisteBauen();
 const einfleiste = einfkasten.kinder.find((k) => k.klassen.has('formatleiste'));
-const einftasten = einfleiste.alle().filter((k) => k.klassen.has('fl-taste'));
+// Der Pfeil fuer den Ueberlauf ist kein Werkzeugknopf.
+const einftasten = einfleiste.alle()
+  .filter((k) => k.klassen.has('fl-taste') && !k.klassen.has('fl-mehr'));
 ergebnis.einfknoepfe = einftasten.map((k) => k.title);
 ergebnis.einfalt = einfkasten.kinder[0].id;
 // An jedem Knopf muss das Wort stehen, nicht nur das Bildchen.
