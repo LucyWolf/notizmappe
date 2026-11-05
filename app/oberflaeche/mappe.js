@@ -1972,6 +1972,8 @@ const STIFTE = [
   { name: 'Marker gelb',   f: '#ffd84d', d: 22, a: 'marker' },
   { name: 'Marker türkis', f: '#4dd8d8', d: 22, a: 'marker' },
 ];
+// So viele Stifte passen in die Leiste, ohne dass man sie zaehlen muss.
+const STIFT_MAX = 12;
 const MAX_STRICHE = 4000;
 const MAX_PUNKTE = 1400;            // je Strich; danach faengt ein neuer an
 /* Und ein Deckel über allem: eine Seite wird bei jedem Autosave ganz neu
@@ -1990,14 +1992,20 @@ let lasso = null;                   // die Schlinge, waehrend sie gezogen wird
 let gewaehlt = [];                  // ausgewaehlte Striche
 let zurueckgenommen = [];           // fuer Wiederholen
 let zieht = null;
+let lineal = null;                  // { x, y, w }: Mitte und Winkel des Lineals
+let amLineal = false;               // legt sich der laufende Strich gerade an?
+let formart = 'linie';              // welche Form der Formen-Knopf zieht
+let abspielen = null;               // { strich, punkt, uhr } waehrend der Wiedergabe
+let platz = null;                   // { y, dy } waehrend "Platz einfuegen"
 
 function zeichnungHolen() {
   if (!elemente) return null;
   let e = elemente.find((x) => x && x.typ === 'stift');
   // Noch nicht in die Seite haengen: sonst bekaeme jede Seite, die man nur
   // anschaut, ein leeres Zeichnungs-Element in die Datei geschrieben.
-  if (!e) e = { id: 'zeichnung', typ: 'stift', x: 0, y: 0, b: 0, striche: [] };
+  if (!e) e = { id: 'zeichnung', typ: 'stift', x: 0, y: 0, b: 0, striche: [], hg: '' };
   if (!Array.isArray(e.striche)) e.striche = [];
+  if (typeof e.hg !== 'string') e.hg = '';
   return e;
 }
 
@@ -2013,6 +2021,16 @@ function malblattBauen() {
   for (const art of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) {
     malblatt.addEventListener(art, zeiger, { passive: false });
   }
+  // Das Mausrad ueber dem Lineal dreht es. Mit Shift feiner - sonst trifft
+  // man einen flachen Winkel nie.
+  malblatt.addEventListener('wheel', function (ev) {
+    if (!lineal) return;
+    const p = stelle(ev);
+    if (!aufLineal(p.x, p.y)) return;
+    ev.preventDefault();
+    lineal.w += (ev.deltaY > 0 ? 1 : -1) * (ev.shiftKey ? 0.01 : 0.04);
+    allesMalen();
+  }, { passive: false });
 }
 
 /* Das Blatt wird mit der Fläche skaliert. Die Zeichenfläche selbst darf dabei
@@ -2086,6 +2104,19 @@ function allesMalen() {
   malstift.clearRect(0, 0, malblatt.width, malblatt.height);
   malstift.restore();
   if (!zeichnung) return;
+  // Waehrend der Wiedergabe steht nur da, was bis hierher "gemalt" ist.
+  if (abspielen) {
+    for (let i = 0; i < abspielen.strich && i < zeichnung.striche.length; i += 1) {
+      strichMalen(zeichnung.striche[i], false);
+    }
+    const st = zeichnung.striche[abspielen.strich];
+    if (st) {
+      strichMalen({ f: st.f, d: st.d, a: st.a,
+                    p: st.p.slice(0, Math.max(3, abspielen.punkt)) }, false);
+    }
+    linealMalen();
+    return;
+  }
   for (const st of zeichnung.striche) strichMalen(st, gewaehlt.includes(st));
   if (laufend) strichMalen(laufend, false);
   if (lasso && lasso.length > 3) {
@@ -2100,6 +2131,19 @@ function allesMalen() {
     malstift.stroke();
     malstift.restore();
   }
+  if (platz) {
+    const y = platz.y + platz.dy;
+    malstift.save();
+    malstift.strokeStyle = '#2f6fed';
+    malstift.setLineDash([6, 4]);
+    malstift.lineWidth = 1;
+    malstift.beginPath();
+    malstift.moveTo(0, y);
+    malstift.lineTo(flaeche.clientWidth || 2000, y);
+    malstift.stroke();
+    malstift.restore();
+  }
+  linealMalen();
 }
 
 function strichGrenzen(st) {
@@ -2176,6 +2220,22 @@ function zeiger(ev) {
   if (ev.type === 'pointerdown') {
     malblatt.setPointerCapture(ev.pointerId);
     ev.preventDefault();
+    // Wer waehrend der Wiedergabe etwas tut, will sie nicht zu Ende sehen.
+    if (abspielen) wiedergabeAus();
+    // Auf dem Lineal selbst zieht man das Lineal, nicht einen Strich.
+    if (werkzeug !== 'radierer' && aufLineal(p.x, p.y)) {
+      zieht = { art: 'lineal', x: p.x, y: p.y };
+      return;
+    }
+    if (werkzeug === 'platz') {
+      platz = { y: p.y, dy: 0 };
+      allesMalen();
+      return;
+    }
+    if (werkzeug === 'form') {
+      zieht = { art: 'form', x: p.x, y: p.y };
+      return;
+    }
     if (werkzeug === 'hand') {
       zieht = { x: ev.clientX, y: ev.clientY, l: buehne.scrollLeft, o: buehne.scrollTop };
       return;
@@ -2197,7 +2257,10 @@ function zeiger(ev) {
       return;
     }
     const s = stifte[stiftnummer] || stifte[0];
-    laufend = { f: s.f, d: s.d, a: s.a, p: [p.x, p.y, ev.pressure || 0.5] };
+    // Nahe am Lineal angefangen heisst: der ganze Strich liegt an.
+    amLineal = !!lineal && Math.abs(linealAbstand(p.x, p.y).quer) <= LINEAL_FANG;
+    const an = amLineal ? linealPunkt(p.x, p.y) : p;
+    laufend = { f: s.f, d: s.d, a: s.a, p: [an.x, an.y, ev.pressure || 0.5] };
     return;
   }
 
@@ -2211,6 +2274,21 @@ function zeiger(ev) {
       allesMalen();
       return;
     }
+    if (zieht && zieht.art === 'lineal') {
+      lineal.x += p.x - zieht.x;
+      lineal.y += p.y - zieht.y;
+      zieht.x = p.x; zieht.y = p.y;
+      allesMalen();
+      return;
+    }
+    if (zieht && zieht.art === 'form') {
+      const sf = stifte[stiftnummer] || stifte[0];
+      laufend = { f: sf.f, d: sf.d, a: sf.a,
+                  p: formPunkte(formart, zieht.x, zieht.y, p.x, p.y) };
+      allesMalen();
+      return;
+    }
+    if (platz) { platz.dy = p.y - platz.y; allesMalen(); return; }
     if (zieht) {
       buehne.scrollLeft = zieht.l - (ev.clientX - zieht.x);
       buehne.scrollTop = zieht.o - (ev.clientY - zieht.y);
@@ -2222,18 +2300,27 @@ function zeiger(ev) {
     }
     if (lasso) { lasso.push(p.x, p.y); allesMalen(); return; }
     if (!laufend) return;
+    const ziel = amLineal ? linealPunkt(p.x, p.y) : p;
     const n = laufend.p.length;
     // Punkte, die kaum auseinanderliegen, bringen nichts und blähen die Datei auf.
-    if (Math.abs(laufend.p[n - 3] - p.x) < 0.7 && Math.abs(laufend.p[n - 2] - p.y) < 0.7) return;
-    laufend.p.push(p.x, p.y, ev.pressure || 0.5);
+    if (Math.abs(laufend.p[n - 3] - ziel.x) < 0.7
+        && Math.abs(laufend.p[n - 2] - ziel.y) < 0.7) return;
+    laufend.p.push(ziel.x, ziel.y, ev.pressure || 0.5);
     if (laufend.p.length > MAX_PUNKTE * 3) { strichAblegen(); return; }
     allesMalen();
     return;
   }
 
   // pointerup / pointercancel
+  if (platz) {
+    const wo = platz;
+    platz = null;
+    platzEinfuegen(wo.y, wo.dy);
+    return;
+  }
   if (zieht) {
     if (zieht.art === 'striche') angefasst();
+    if (zieht.art === 'form') { zieht = null; strichAblegen(); return; }
     zieht = null;
     return;
   }
@@ -2296,14 +2383,24 @@ function stiftknoepfeBauen() {
   stifte.forEach((s, i) => {
     const k = document.createElement('button');
     k.type = 'button';
-    k.className = 'malwerkzeug stift';
+    k.className = 'malwerkzeug stift fl-taste';
     k.dataset.werkzeug = 'stift';
     k.dataset.nummer = String(i);
     k.title = `${s.name} (${s.d} px)`;
-    k.textContent = s.a === 'marker' ? '▬' : '✎';
+    k.innerHTML = stiftBild(s);
     k.style.setProperty('--stiftfarbe', s.f);
     wo.append(k);
   });
+}
+
+/* Lineal und Wiedergabe sind Schalter, keine Werkzeuge: sie stehen neben
+   einem Stift an, nicht an seiner Stelle. Deshalb werden sie eigens
+   gesetzt - die Schleife in werkzeugSetzen sieht nur data-werkzeug. */
+function malknoepfeFrischen() {
+  const l = document.getElementById('m-lineal');
+  if (l) l.classList.toggle('an', !!lineal);
+  const w = document.getElementById('m-wiedergabe');
+  if (w) w.classList.toggle('an', !!abspielen);
 }
 
 function werkzeugSetzen(name, nummer) {
@@ -2316,10 +2413,12 @@ function werkzeugSetzen(name, nummer) {
     k.classList.toggle('an', dran);
   }
   if (malblatt) {
-    malblatt.classList.toggle('malt', name === 'stift' || name === 'lasso');
+    malblatt.classList.toggle('malt', name === 'stift' || name === 'lasso'
+                                      || name === 'form' || name === 'platz');
     malblatt.classList.toggle('wischt', name === 'radierer');
     malblatt.classList.toggle('zieht', name === 'hand');
   }
+  malknoepfeFrischen();
   if (name === 'stift') {
     const s = stifte[stiftnummer];
     $('#m-farbe').value = s.f;
@@ -2430,15 +2529,223 @@ function stifteMerken() {
 function stifteHolen() {
   try {
     const roh = JSON.parse(merker.holen('stifte', 'null'));
-    if (Array.isArray(roh) && roh.length === STIFTE.length) {
-      stifte = roh.map((s, i) => ({
-        name: STIFTE[i].name,
-        f: /^#[0-9a-fA-F]{6}$/.test(s.f) ? s.f : STIFTE[i].f,
-        d: Math.min(60, Math.max(1, Number(s.d) || STIFTE[i].d)),
-        a: s.a === 'marker' ? 'marker' : 'stift',
-      }));
+    // Die Anzahl ist nicht mehr fest - man kann Stifte hinzufuegen. Eine
+    // alte Liste mit sieben Eintraegen passt trotzdem.
+    if (Array.isArray(roh) && roh.length >= 1 && roh.length <= STIFT_MAX) {
+      stifte = roh.map((s, i) => {
+        const v = STIFTE[i] || STIFTE[0];
+        return {
+          name: typeof s.name === 'string' && s.name ? s.name.slice(0, 40) : v.name,
+          f: /^#[0-9a-fA-F]{6}$/.test(s.f) ? s.f : v.f,
+          d: Math.min(60, Math.max(1, Number(s.d) || v.d)),
+          a: s.a === 'marker' ? 'marker' : 'stift',
+        };
+      });
+      stiftnummer = Math.min(stiftnummer, stifte.length - 1);
     }
   } catch (f) { /* dann die eingebauten */ }
+}
+
+/* --- Lineal ---------------------------------------------------------------
+ *
+ * Wie in OneNote: ein durchscheinendes Lineal liegt auf der Seite, ziehen
+ * verschiebt es, das Mausrad dreht es. Wer nahe an seiner Mittellinie
+ * anfaengt zu malen, bekommt einen geraden Strich - die Punkte werden auf
+ * die Linie gelegt, statt dass ein eigenes "Linie"-Werkzeug entsteht.
+ * Deshalb bleibt ein so gezogener Strich ein ganz normaler Strich: die
+ * Seite bekommt kein neues Feld und laesst sich in jeder aelteren Fassung
+ * weiter oeffnen. */
+const LINEAL_LAENGE = 900;
+const LINEAL_BREITE = 54;
+const LINEAL_FANG = 45;             // so nah muss der Anfang sein, damit er anliegt
+
+function linealSchalten() {
+  if (lineal) { lineal = null; allesMalen(); malknoepfeFrischen(); return; }
+  lineal = {
+    x: (buehne.scrollLeft + buehne.clientWidth / 2) / zoom,
+    y: (buehne.scrollTop + buehne.clientHeight / 2) / zoom,
+    w: 0,
+  };
+  allesMalen();
+  malknoepfeFrischen();
+  hinweis('Lineal: ziehen verschiebt es, das Mausrad dreht es. Wer daneben anfängt, malt gerade.');
+}
+
+/* Ein Punkt im Koordinatensystem des Lineals: laengs der Kante und quer dazu. */
+function linealAbstand(x, y) {
+  const dx = x - lineal.x, dy = y - lineal.y;
+  const c = Math.cos(lineal.w), s = Math.sin(lineal.w);
+  return { laengs: dx * c + dy * s, quer: -dx * s + dy * c };
+}
+
+function linealPunkt(x, y) {
+  const a = linealAbstand(x, y);
+  return { x: lineal.x + a.laengs * Math.cos(lineal.w),
+           y: lineal.y + a.laengs * Math.sin(lineal.w) };
+}
+
+function aufLineal(x, y) {
+  if (!lineal) return false;
+  const a = linealAbstand(x, y);
+  return Math.abs(a.quer) <= LINEAL_BREITE / 2
+      && Math.abs(a.laengs) <= LINEAL_LAENGE / 2;
+}
+
+function linealMalen() {
+  if (!lineal) return;
+  malstift.save();
+  malstift.translate(lineal.x, lineal.y);
+  malstift.rotate(lineal.w);
+  malstift.fillStyle = 'rgba(110,150,225,.16)';
+  malstift.strokeStyle = '#2f6fed';
+  malstift.lineWidth = 1;
+  malstift.beginPath();
+  malstift.rect(-LINEAL_LAENGE / 2, -LINEAL_BREITE / 2, LINEAL_LAENGE, LINEAL_BREITE);
+  malstift.fill();
+  malstift.stroke();
+  malstift.beginPath();
+  for (let x = -LINEAL_LAENGE / 2; x <= LINEAL_LAENGE / 2; x += 10) {
+    const lang = Math.round(x) % 50 === 0;
+    malstift.moveTo(x, -LINEAL_BREITE / 2);
+    malstift.lineTo(x, -LINEAL_BREITE / 2 + (lang ? 12 : 6));
+  }
+  malstift.stroke();
+  malstift.restore();
+}
+
+/* --- Formen ---------------------------------------------------------------
+ *
+ * Auch eine Form ist nur ein Strich mit ausgerechneten Punkten. Nichts
+ * Neues in der Datei, nichts, was eine aeltere Fassung nicht zeichnen
+ * koennte - und der Radierer, das Lasso und Rueckgaengig gelten ohne
+ * Zutun auch dafuer. */
+const FORMEN = [['linie', 'Linie'], ['pfeil', 'Pfeil'],
+                ['rechteck', 'Rechteck'], ['ellipse', 'Ellipse']];
+
+function formPunkte(art, x0, y0, x1, y1) {
+  const p = [];
+  const setze = function (x, y) { p.push(x, y, 0.5); };
+  if (art === 'rechteck') {
+    setze(x0, y0); setze(x1, y0); setze(x1, y1); setze(x0, y1); setze(x0, y0);
+  } else if (art === 'ellipse') {
+    const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+    const rx = (x1 - x0) / 2, ry = (y1 - y0) / 2;
+    for (let i = 0; i < 48; i += 1) {
+      const w = (i / 48) * Math.PI * 2;
+      setze(mx + rx * Math.cos(w), my + ry * Math.sin(w));
+    }
+    // Den ersten Punkt noch einmal, statt cos(2π) auszurechnen: das gibt
+    // 100.00000000000001 und bei einem dicken Stift eine sichtbare Kerbe.
+    setze(p[0], p[1]);
+  } else {
+    setze(x0, y0); setze(x1, y1);
+    if (art === 'pfeil') {
+      const w = Math.atan2(y1 - y0, x1 - x0);
+      const l = Math.min(26, Math.hypot(x1 - x0, y1 - y0) / 3);
+      setze(x1 - l * Math.cos(w - 0.4), y1 - l * Math.sin(w - 0.4));
+      setze(x1, y1);
+      setze(x1 - l * Math.cos(w + 0.4), y1 - l * Math.sin(w + 0.4));
+    }
+  }
+  return p;
+}
+
+/* --- Freihandwiedergabe ---------------------------------------------------
+ *
+ * Die Striche noch einmal in der Reihenfolge, in der sie entstanden sind.
+ * Am Ende bleibt das Bild stehen - wegblenden waere die Sorte Effekt, nach
+ * der man zweimal drueckt, weil man nicht glaubt, dass es schon vorbei war. */
+function wiedergabeAus() {
+  if (abspielen) clearInterval(abspielen.uhr);
+  abspielen = null;
+  allesMalen();
+  malknoepfeFrischen();
+}
+
+function wiedergabeSchritt() {
+  if (!abspielen || !zeichnung) { wiedergabeAus(); return; }
+  const st = zeichnung.striche[abspielen.strich];
+  if (!st) { wiedergabeAus(); return; }
+  abspielen.punkt += 9;                     // drei Punkte je Bild
+  if (abspielen.punkt >= st.p.length) {
+    abspielen.strich += 1;
+    abspielen.punkt = 3;
+    if (abspielen.strich >= zeichnung.striche.length) {
+      clearInterval(abspielen.uhr);
+      abspielen = null;
+      allesMalen();
+      malknoepfeFrischen();
+      return;
+    }
+  }
+  allesMalen();
+}
+
+function wiedergabeSchalten() {
+  if (abspielen) { wiedergabeAus(); return; }
+  if (!zeichnung || !zeichnung.striche.length) {
+    hinweis('Auf dieser Seite ist nichts gemalt.');
+    return;
+  }
+  gewaehlt = [];
+  abspielen = { strich: 0, punkt: 3, uhr: 0 };
+  abspielen.uhr = setInterval(wiedergabeSchritt, 16);
+  allesMalen();
+  malknoepfeFrischen();
+}
+
+/* --- Platz einfügen -------------------------------------------------------
+ *
+ * Eine Linie ziehen, und alles darunter rutscht mit: Striche und Kaesten.
+ * Nur die Kaesten zu verschieben waere schlimmer als gar nichts - dann
+ * stuende der Text woanders als die Handschrift dazu. */
+function platzEinfuegen(y0, dy) {
+  if (!dy || !zeichnung) return;
+  for (const st of zeichnung.striche) {
+    let oben = Infinity;
+    for (let i = 1; i < st.p.length; i += 3) oben = Math.min(oben, st.p[i]);
+    if (oben <= y0) continue;
+    for (let i = 1; i < st.p.length; i += 3) st.p[i] = Math.max(0, st.p[i] + dy);
+  }
+  const kaesten = Array.from(flaeche.querySelectorAll('.kasten'));
+  for (const e of elemente) {
+    if (e.typ === 'stift' || e.y <= y0) continue;
+    e.y = Math.max(0, e.y + dy);
+    const k = kaesten.find(function (x) { return x.dataset.id === e.id; });
+    if (k) k.style.top = e.y + 'px';
+  }
+  angefasst();
+  allesMalen();
+  flaecheMessen();
+}
+
+/* --- Hintergrund formatieren ----------------------------------------------
+ *
+ * Linien, Kaestchen oder Punkte hinter der Seite. Nicht auf das Malblatt
+ * gezeichnet: das liegt ueber den Kaesten, ein Raster darauf laege also
+ * ueber dem Text. Es haengt als Muster an der Flaeche und wird damit auch
+ * vom Zoom richtig mitskaliert.
+ *
+ * Gemerkt wird es am Zeichnungs-Element der Seite (hg). Eine aeltere
+ * Fassung liest das Feld nicht und zeigt die Seite wie bisher. */
+const HINTERGRUENDE = [['', 'Kein Hintergrund'], ['linien', 'Linien'],
+                       ['karo', 'Kästchen'], ['punkte', 'Punkte']];
+
+function hintergrundZeigen() {
+  const art = (zeichnung && zeichnung.hg) || '';
+  if (art) flaeche.dataset.hg = art;
+  else flaeche.removeAttribute('data-hg');
+}
+
+function hintergrundSetzen(art) {
+  if (!zeichnung) return;
+  const gut = HINTERGRUENDE.some(function (h) { return h[0] === art; });
+  zeichnung.hg = gut ? art : '';
+  // Ohne Striche haengt die Zeichnung noch nicht in der Seite - sonst waere
+  // der Hintergrund beim naechsten Oeffnen wieder weg.
+  if (zeichnung.hg) zeichnungSichern();
+  hintergrundZeigen();
+  angefasst();
 }
 
 /* --- Rückgängig --- */
@@ -2474,7 +2781,10 @@ document.addEventListener('keydown', (ev) => {
     allesMalen();
     return;
   }
-  if (ev.key === 'Escape') { gewaehlt = []; werkzeugSetzen('auswahl'); allesMalen(); return; }
+  if (ev.key === 'Escape') {
+    wiedergabeAus();
+    gewaehlt = []; werkzeugSetzen('auswahl'); allesMalen(); return;
+  }
   if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z') { ev.preventDefault(); strichZurueck(); }
   if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'y') { ev.preventDefault(); strichVor(); }
 });
@@ -2486,6 +2796,10 @@ function zeichnungLaden() {
   zurueckgenommen = [];
   laufend = null;
   lasso = null;
+  platz = null;
+  // Eine laufende Wiedergabe gehoert zur alten Seite.
+  wiedergabeAus();
+  hintergrundZeigen();
   malblattBauen();
   malblattMessen();
   // Das Blatt ist neu - ohne das hier hat es die Klasse nicht, die Zeiger
@@ -4980,6 +5294,177 @@ function einfuegeleisteBauen() {
   ueberlaufEinrichten(wirt);
 }
 
+/* ------------------------------------------------ Der Reiter Zeichnen
+ *
+ * Dieselbe Einteilung wie in OneNote: Rueckgaengig, Auswahl, die Stifte,
+ * Lineal und Hand, Platz und Hintergrund, Formen und Wiedergabe, zuletzt
+ * die Ganzseitenansicht.
+ *
+ * Die vorhandenen Knoepfe und Felder werden umgehaengt, nicht nachgebaut.
+ * An #m-farbe, #m-dicke, den Stiften und den Werkzeugen haengen Zuhoerer;
+ * eine Kopie waere ein zweiter Knopf, der anders aussieht und anders tut. */
+
+const FL_ZURUECK = flBild('<path d="M5.5 3.5 2 7l3.5 3.5"/>'
+                          + '<path d="M2 7h6.5a4 4 0 0 1 0 8H6"/>');
+const FL_WIEDER = flBild('<path d="M10.5 3.5 14 7l-3.5 3.5"/>'
+                         + '<path d="M14 7H7.5a4 4 0 0 0 0 8H10"/>');
+const FL_ZEIGER = flBild('<path d="M3.5 1.8 12 8.4l-3.8.6 2 4.2-1.6.8-2-4.2-2.6 2.5z"/>');
+const FL_LASSO = flBild('<ellipse cx="8" cy="6.5" rx="5.8" ry="4.3" '
+                        + 'stroke-dasharray="2 1.8"/>'
+                        + '<path d="M5.6 10.4c-.4 1.6-.2 3 .9 3.9"/>');
+const FL_RADIER = flBild('<path d="M1.8 10.6 8 4.4l3.8 3.8-3.4 3.4H3.2z"/>'
+                         + '<path d="M8 4.4 10.4 2l3.8 3.8-2.4 2.4"/>'
+                         + '<path d="M1.5 14.2h13"/>');
+const FL_HAND = flBild('<path d="M5.3 8.6V3.5a1.1 1.1 0 0 1 2.2 0v3.2"/>'
+                       + '<path d="M7.5 6.7V2.8a1.1 1.1 0 0 1 2.2 0v3.9"/>'
+                       + '<path d="M9.7 6.7V3.8a1.1 1.1 0 0 1 2.2 0v5.6'
+                       + 'c0 2.6-1.7 4.6-4.2 4.6s-4.4-1.8-4.4-4.1V7.6'
+                       + 'a1.1 1.1 0 0 1 2.2 0"/>');
+const FL_LINEAL = flBild('<rect x="1.2" y="5" width="13.6" height="6" rx="1"/>'
+                         + '<path d="M4 5v2.4M6.5 5v3.2M9 5v2.4M11.5 5v3.2"/>');
+const FL_PLATZ = flBild('<path d="M1.5 3h13M1.5 13h13"/>'
+                        + '<path d="M8 5.5v5"/><path d="M6.3 8.8 8 10.6l1.7-1.8"/>');
+const FL_RASTER = flBild('<rect x="1.5" y="2.5" width="13" height="11" rx="1"/>'
+                         + '<path d="M1.5 6.2h13M1.5 9.8h13M5.8 2.5v11M10.2 2.5v11"/>');
+const FL_FORMEN = flBild('<rect x="1.8" y="1.8" width="8" height="8" rx="1"/>'
+                         + '<circle cx="10.6" cy="10.6" r="3.6"/>');
+const FL_ABSPIELEN = flBild('<circle cx="8" cy="8" r="6.2"/>'
+                            + '<path d="M6.6 5.3 11 8l-4.4 2.7z"/>');
+const FL_GANZSEITE = flBild('<rect x="2.5" y="1.5" width="11" height="13" rx="1"/>'
+                            + '<path d="M5.2 5.5h2.4M5.2 5.5v2.4"/>'
+                            + '<path d="M10.8 10.5H8.4M10.8 10.5V8.1"/>');
+const FL_STIFTPLUS = flBild('<path d="M8 3.2v9.6M3.2 8h9.6"/>');
+
+/* Ein Stift sieht aus wie ein Stift: dunkler Schaft, Spitze in seiner
+   Farbe. Der Marker bekommt einen breiten Keil - sonst stehen sieben
+   gleiche Bildchen nebeneinander und man sucht die Farbe. */
+function stiftBild(s) {
+  const kopf = '<svg class="fl-bild fl-stiftbild" viewBox="0 0 16 16" '
+             + 'width="16" height="16" fill="none" stroke="currentColor" '
+             + 'stroke-width="1.2" stroke-linejoin="round">';
+  if (s.a === 'marker') {
+    return kopf
+      + '<path d="M4.6 2.2h6.8v5.4H4.6z"/>'
+      + '<path d="M4.6 7.6h6.8v3.2l-3.4 3-3.4-3z" fill="var(--stiftfarbe)" '
+      + 'stroke="var(--stiftfarbe)"/>'
+      + '</svg>';
+  }
+  return kopf
+    + '<path d="M5.6 1.9h4.8v6.2l-2.4 5.8-2.4-5.8z"/>'
+    + '<path d="M5.9 8.4h4.2l-2.1 5.1z" fill="var(--stiftfarbe)" '
+    + 'stroke="var(--stiftfarbe)"/>'
+    + '</svg>';
+}
+
+function malleisteBauen() {
+  const leiste = document.getElementById('malzeug');
+  if (!leiste || leiste.querySelector('.formatleiste')) return;
+  const wirt = el('div', { className: 'formatleiste fl-band' });
+  const reihe = el('div', { className: 'fl-reihe' });
+  const trenner = function () { return el('span', { className: 'fl-trenner' }); };
+
+  // Vorhandenes umbauen: Klasse und Symbol neu, der Zuhoerer bleibt dran.
+  const alt = function (wahl, bild, titel) {
+    const k = leiste.querySelector(wahl);
+    if (!k) return null;
+    k.classList.add('fl-taste');
+    if (bild) k.innerHTML = bild;
+    if (titel) k.title = titel;
+    return k;
+  };
+
+  const stifte_an = leiste.querySelector('#m-stifte');
+  const farbe = leiste.querySelector('#m-farbe');
+  const dicke = leiste.querySelector('#m-dicke');
+  const nurstift = leiste.querySelector('#m-nurstift-feld');
+  const anzeige = leiste.querySelector('#m-hinweis');
+
+  const stiftPlus = flKlappe(wirt, 'Stifte ändern', FL_STIFTPLUS,
+                             [['mehr', 'Stift hinzufügen', '+'],
+                              ['weg', 'Diesen Stift entfernen', '−'],
+                              ['zurueck', 'Wieder die eingebauten Stifte', '↺']],
+                             stiftVerwalten);
+  const lineal_k = flTaste(FL_LINEAL, 'Lineal', linealSchalten);
+  lineal_k.id = 'm-lineal';
+  const platz_k = flTaste(FL_PLATZ, 'Platz einfügen',
+                          function () { werkzeugSetzen('platz'); });
+  platz_k.classList.add('malwerkzeug');
+  platz_k.dataset.werkzeug = 'platz';
+  const hintergrund_k = mitWort(flKlappe(wirt, 'Hintergrund formatieren',
+                                         flWort(FL_RASTER, 'Hintergrund formatieren'),
+                                         HINTERGRUENDE.map(function (h) {
+                                           return [h[0], h[1], ''];
+                                         }),
+                                         hintergrundSetzen));
+  const formen_k = flKlappe(wirt, 'Formen', FL_FORMEN,
+                            FORMEN.map(function (f) { return [f[0], f[1], '']; }),
+                            function (wert) { formart = wert; werkzeugSetzen('form'); });
+  formen_k.classList.add('malwerkzeug');
+  formen_k.dataset.werkzeug = 'form';
+  const wiedergabe_k = flTaste(FL_ABSPIELEN, 'Freihandwiedergabe', wiedergabeSchalten);
+  wiedergabe_k.id = 'm-wiedergabe';
+  const ganzseite_k = mitWort(flTaste(flWort(FL_GANZSEITE, 'Ganzseitenansicht'),
+                                      'Ganzseitenansicht', function () {
+                                        merker.legen(BAND_ZEIGEN, 'voll');
+                                        bandAnwenden();
+                                      }));
+
+  const gruppen = [
+    [alt('#m-zurueck', FL_ZURUECK), alt('#m-vor', FL_WIEDER)],
+    [alt('[data-werkzeug="auswahl"]', FL_ZEIGER, 'Auswahl (schreiben wie sonst)'),
+     alt('[data-werkzeug="lasso"]', FL_LASSO, 'Lassoauswahl (Striche umkreisen)')],
+    [stifte_an, stiftPlus, farbe, dicke,
+     alt('[data-werkzeug="radierer"]', FL_RADIER, 'Radierer (ganze Striche)')],
+    [alt('[data-werkzeug="hand"]', FL_HAND, 'Hand (Seite schieben)'), lineal_k],
+    [platz_k, hintergrund_k],
+    [formen_k, wiedergabe_k],
+    [ganzseite_k],
+    [nurstift, anzeige],
+  ];
+  let erste = true;
+  for (const g of gruppen) {
+    const da = g.filter(Boolean);
+    if (!da.length) continue;
+    if (!erste) reihe.append(trenner());
+    erste = false;
+    for (const k of da) reihe.append(k);
+  }
+  wirt.append(reihe);
+  // Ein Klick in die Leiste darf die Auswahl im Text nicht wegnehmen -
+  // sonst weiss der naechste Befehl nicht mehr, worauf er wirken soll.
+  wirt.addEventListener('mousedown', function (ev) {
+    if (ev.target.tagName !== 'SELECT' && ev.target.tagName !== 'INPUT') ev.preventDefault();
+  });
+  // Was jetzt noch dasteht, sind die alten Trenner - die neuen stehen schon.
+  while (leiste.firstChild) leiste.firstChild.remove();
+  leiste.append(wirt);
+  ueberlaufEinrichten(wirt);
+}
+
+/* Stifte hinzufuegen und wegnehmen. Vorher waren es sieben feste - wer
+   einen achten wollte, musste einen umfaerben. */
+function stiftVerwalten(was) {
+  if (was === 'zurueck') {
+    stifte = STIFTE.map(function (s) { return { ...s }; });
+    stiftnummer = 0;
+  } else if (was === 'weg') {
+    if (stifte.length <= 1) { hinweis('Einen Stift muss es geben.'); return; }
+    stifte.splice(stiftnummer, 1);
+    stiftnummer = Math.min(stiftnummer, stifte.length - 1);
+  } else {
+    if (stifte.length >= STIFT_MAX) {
+      hinweis(`Mehr als ${STIFT_MAX} Stifte werden unübersichtlich.`);
+      return;
+    }
+    const v = stifte[stiftnummer] || STIFTE[0];
+    stifte.splice(stiftnummer + 1, 0, { name: 'Eigener Stift', f: v.f, d: v.d, a: v.a });
+    stiftnummer += 1;
+  }
+  stiftknoepfeBauen();
+  werkzeugSetzen('stift', stiftnummer);
+  stifteMerken();
+}
+
 /* ----------------------------------------- Wenn das Band zu schmal wird
 
    Vorher brach die Leiste um und das Band wurde zweizeilig; bei einem
@@ -5093,16 +5578,22 @@ function bandStand() {
    steht (die Tastenkuerzel), bleibt weg: "Fett (Strg+B)" ist kein Wort
    fuer unter einen Knopf. */
 function bandWoerterBauen() {
-  const leiste = document.querySelector('#werkzeuge .formatleiste');
-  if (!leiste) return;
-  for (const k of leiste.querySelectorAll('.fl-taste')) {
-    if (k.querySelector('.fl-wort')) continue;
-    const name = (k.title || '').replace(/\s*\(.*$/, '').trim();
-    if (!name) continue;
-    const wort = el('span', { className: 'fl-wort', textContent: name });
-    const pfeil = k.querySelector('.fl-pfeil');
-    if (pfeil) k.insertBefore(wort, pfeil);
-    else k.append(wort);
+  // Start und Zeichnen: beide haben Knoepfe ohne eingebautes Wort. Im
+  // Reiter Einfuegen steht es schon im Knopf - dort greift der Hinweis
+  // "hat schon ein fl-wort" und es bleibt, wie es ist.
+  for (const leiste of document.querySelectorAll('#werkzeuge .formatleiste,'
+                                                 + ' #malzeug .formatleiste')) {
+    for (const k of leiste.querySelectorAll('.fl-taste')) {
+      if (k.querySelector('.fl-wort')) continue;
+      const name = (k.title || '').replace(/\s*\(.*$/, '').trim();
+      if (!name) continue;
+      // Das selbst gebaute Wort verschwindet im vereinfachten Band wieder;
+      // ein eingebautes bleibt stehen. Deshalb sind sie unterscheidbar.
+      const wort = el('span', { className: 'fl-wort fl-autowort', textContent: name });
+      const pfeil = k.querySelector('.fl-pfeil');
+      if (pfeil) k.insertBefore(wort, pfeil);
+      else k.append(wort);
+    }
   }
 }
 
@@ -5192,6 +5683,7 @@ function bandMenueBauen() {
 function formatleistenBauen() {
   bandleisteUmbauen();
   einfuegeleisteBauen();
+  malleisteBauen();
   formelBauen();
   bandMenueBauen();
   minileisteUmbauen();

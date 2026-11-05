@@ -15,6 +15,8 @@
   --akzent: #7a5cff;
   --warnung: #b23b2e;
   --kasten-rand: #d8d4ca;
+  /* Linien, Kaestchen und Punkte hinter der Seite (Reiter Zeichnen). */
+  --hintergrundlinie: #d9e2ef;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -27,6 +29,7 @@
     --akzent: #9d86ff;
     --warnung: #ff8d7e;
     --kasten-rand: #3a3631;
+    --hintergrundlinie: #2d3340;
   }
 }
 * { box-sizing: border-box; }
@@ -586,15 +589,22 @@ body { display: flex; flex-direction: column; }
 #malzeug .haken { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--matt); }
 #malzeug .haken input { accent-color: var(--akzent); }
 #m-hinweis { font-size: 12px; color: var(--matt); margin-left: 8px; }
-#m-stifte { display: flex; align-items: center; gap: 2px; }
-/* Ein Stift zeigt seine eigene Farbe als Strich darunter - wie im Becher. */
-#malzeug button.stift {
-  position: relative; overflow: hidden;
-}
-#malzeug button.stift::after {
-  content: ""; position: absolute; left: 3px; right: 3px; bottom: 2px;
-  height: 3px; border-radius: 2px; background: var(--stiftfarbe, currentColor);
-}
+/* Die Stifte stehen als eine Einheit in der Leiste - und wandern im
+   schmalen Fenster auch als eine unter den Pfeil. */
+#m-stifte { display: flex; align-items: center; flex-wrap: nowrap; gap: 2px; }
+/* Unter dem Pfeil ist die Zeile schmal - dort dürfen sie umbrechen. In der
+   Leiste nicht: ein Umbruch dort machte das Band zweizeilig, statt dass
+   die Messung "passt nicht" ergibt. */
+.fl-topf #m-stifte { flex-wrap: wrap; }
+#malzeug .formatleiste { padding: 0; }
+#malzeug .fl-band .haken { white-space: nowrap; }
+/* Die Farbe steckt im Symbol: Spitze und Keil sind in der Stiftfarbe,
+   der Schaft in der Schriftfarbe - wie die Stifte in OneNote. */
+.fl-stiftbild { width: 16px; height: 16px; }
+#malzeug button.stift { min-width: 26px; }
+/* Der gewaehlte Stift steht hoeher, wie einer, den man aus dem Becher
+   gezogen hat. */
+#malzeug button.stift.an .fl-stiftbild { transform: translateY(-2px); }
 
 /* Die Zeichenebene liegt ueber den Kaesten, laesst aber alles durch, solange
    nicht gemalt wird - sonst koennte man keinen Text mehr anklicken. */
@@ -604,7 +614,26 @@ body { display: flex; flex-direction: column; }
 }
 #malblatt.malt { pointer-events: auto; cursor: crosshair; }
 #malblatt.wischt { pointer-events: auto; cursor: cell; }
-#malblatt.schiebt { pointer-events: auto; cursor: grab; }
+#malblatt.zieht { pointer-events: auto; cursor: grab; }
+
+/* Hintergrund der Seite. Nicht auf das Malblatt gezeichnet - das liegt
+   ueber den Kaesten, ein Raster darauf laege also ueber dem Text. Als
+   Muster an der Flaeche skaliert es ausserdem mit dem Zoom mit. */
+#flaeche[data-hg="linien"] {
+  background-image: repeating-linear-gradient(to bottom,
+    transparent 0 27px, var(--hintergrundlinie) 27px 28px);
+}
+#flaeche[data-hg="karo"] {
+  background-image:
+    repeating-linear-gradient(to bottom,
+      transparent 0 23px, var(--hintergrundlinie) 23px 24px),
+    repeating-linear-gradient(to right,
+      transparent 0 23px, var(--hintergrundlinie) 23px 24px);
+}
+#flaeche[data-hg="punkte"] {
+  background-image: radial-gradient(var(--hintergrundlinie) 1.2px, transparent 1.3px);
+  background-size: 24px 24px;
+}
 
 
 /* --- Verlauf --------------------------------------------------------------- */
@@ -844,9 +873,13 @@ body #werkzeuge .fl-topf .fl-wort, .fl-topf .fl-wort { display: inline; }
 .bt-punkt:hover { background: var(--flaeche); }
 .bt-haken { width: 14px; color: var(--akzent); }
 
-/* Vereinfacht: nur die Symbole. Im Reiter Einfügen bleiben die Wörter
-   stehen - "Schreibbereich einfügen" errät niemand am Bildchen. */
-body:not(.band-klassisch) #werkzeuge .fl-wort { display: none; }
+/* Vereinfacht: nur die Symbole. Betrifft nur die Wörter, die das Band
+   selbst angehängt hat - die eingebauten (Reiter Einfügen, "Hintergrund
+   formatieren", "Ganzseitenansicht") bleiben stehen, weil sie niemand am
+   Bildchen errät. */
+body:not(.band-klassisch) .fl-autowort { display: none; }
+/* Im Überlauftopf steht das Wort immer, auch das selbst angehängte. */
+body .fl-topf .fl-autowort { display: inline; }
 
 body.band-reiter:not(.band-auf) #bandinhalt { display: none; }
 /* Aufgeklappt legt es sich über die Seite, statt sie zu verschieben -

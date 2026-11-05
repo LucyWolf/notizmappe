@@ -193,6 +193,17 @@ WEIT = 50000                        # weiter als so kann keine Seite sein
 FARBE_MUSTER = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
+HINTERGRUENDE = {"", "linien", "karo", "punkte"}
+
+
+def hintergrund(roh) -> str:
+    """Das Muster hinter der Seite. Eine feste Liste, kein freier Wert: der
+    Name landet als data-Attribut in der Seite, und was dort steht, darf
+    nichts sein, was sich jemand ausgedacht hat."""
+    wert = str(roh or "")
+    return wert if wert in HINTERGRUENDE else ""
+
+
 def striche(roh) -> list[dict]:
     """Nur Zahlen, nur bekannte Felder, mit Deckel.
 

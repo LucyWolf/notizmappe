@@ -206,7 +206,11 @@ def _elemente(roh) -> list[dict]:
             # Die Zeichenebene der Seite. Steht einmal pro Seite da und hat
             # keine Groesse - sie liegt ueber allem.
             gemein["striche"] = reinigen.striche(e.get("striche"))
-            if not gemein["striche"]:
+            # Linien, Kaestchen oder Punkte hinter der Seite. Steht hier und
+            # nicht an der Seite selbst: so kommt kein neues Feld in die
+            # Seitendatei, das aeltere Fassungen beim Speichern wegwerfen.
+            gemein["hg"] = reinigen.hintergrund(e.get("hg"))
+            if not gemein["striche"] and not gemein["hg"]:
                 continue                    # leere Zeichnung nicht mitschleppen
         else:
             # Der Dateiname kommt von der Oberflaeche zurueck. Beim Ablegen hat ihn

@@ -156,6 +156,9 @@ const document = {
   createElement: (a) => new Knoten(a),
   body,
   querySelector: (w) => (w === '#werkzeuge .formatleiste' ? leiste : null),
+  // bandWoerterBauen() geht seit dem Reiter Zeichnen über mehrere Leisten.
+  // Hier gibt es nur die eine - das reicht, geprüft wird, was sie bekommt.
+  querySelectorAll: (w) => (w.indexOf('.formatleiste') >= 0 ? [leiste] : []),
   addEventListener: (art, f) => { (tasten[art] = tasten[art] || []).push(f); },
 };
 function $(w) {
@@ -330,7 +333,11 @@ pruefe("klassisch setzt die Klasse", d["klassisch"] == ['band-klassisch'], d["kl
 pruefe("an jedem Knopf steht das Wort, ohne Tastenkürzel",
        d["woerter"] == ['Fett', 'Kategorie'], d["woerter"])
 pruefe("und es steht vor dem Pfeil, nicht dahinter",
-       d["reihenfolge"] == ['fl-wort', 'fl-pfeil'], d["reihenfolge"])
+       d["reihenfolge"] == ['fl-wort fl-autowort', 'fl-pfeil'], d["reihenfolge"])
+# fl-autowort trennt das selbst angehängte Wort von einem eingebauten:
+# im vereinfachten Band verschwindet nur das selbst angehängte.
+pruefe("das angehängte Wort ist als solches erkennbar",
+       all('fl-autowort' in k for k in d["reihenfolge"][:1]), d["reihenfolge"])
 pruefe("vereinfacht nimmt die Klasse weg", d["einfach"] == [], d["einfach"])
 # Die Wörter bleiben hängen und werden nur ausgeblendet - zweimal gebaut
 # stünden sie doppelt da.
