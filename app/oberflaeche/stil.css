@@ -726,9 +726,14 @@ body { display: flex; flex-direction: column; }
    zusammen, die Messung findet "passt", und vom Wort bleibt "Audi". */
 .fl-band .fl-reihe > * { flex-shrink: 0; }
 .fl-mehr { flex: 0 0 auto; }
+/* Untereinander, nicht in Blöcken umgebrochen: so liest man die Wörter
+   von oben nach unten wie in einem Menü. Nebeneinander entstand bei jeder
+   Fensterbreite eine andere Anordnung, und man suchte jedes Mal neu. */
 .fl-topf {
-  position: absolute; z-index: 62; max-width: min(360px, calc(100vw - 32px));
-  display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 6px;
+  position: absolute; z-index: 62; min-width: 170px;
+  max-width: min(360px, calc(100vw - 32px));
+  display: flex; flex-direction: column; align-items: stretch; gap: 2px;
+  padding: 6px;
   background: var(--leiste); border: 1px solid var(--linie);
   border-radius: 6px; box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
 }
@@ -742,6 +747,14 @@ body #werkzeuge .fl-topf .fl-wort, .fl-topf .fl-wort { display: inline; }
 .fl-band .fl-art { flex: 0 1 150px; min-width: 110px; max-width: 150px; }
 .fl-band .fl-groesse { width: 62px; }
 .fl-band .fl-trenner { height: 20px; margin: 0 5px; }
+/* Im Topf gilt die feste Breite der Auswahlfelder nicht mehr: dort nimmt
+   jeder Eintrag die ganze Zeile. Diese Regeln muessen nach den Breiten
+   oben stehen, sonst gewinnen die. */
+.fl-band .fl-topf > * { flex: 0 0 auto; width: auto; max-width: none; }
+/* Und der Text beginnt links, sonst steht jedes Wort woanders. */
+.fl-band .fl-topf .fl-taste { justify-content: flex-start; padding: 0 6px; gap: 6px; }
+.fl-band .fl-topf .fl-geteilt { display: flex; }
+.fl-band .fl-topf .fl-geteilt > .fl-taste:first-child { flex: 1 1 auto; }
 
 /* Ausrichtung und Zeilenabstand. Feste Werte statt freiem style-Attribut -
    der Reiniger laesst nur diese durch (siehe reinigen.py). */

@@ -387,6 +387,24 @@ pruefe("wieder breit holt alles zurück, in der alten Reihenfolge",
 pruefe("unsichtbar wird nichts verschoben", d["unsichtbar"] == d["breit"],
        d["unsichtbar"])
 
+# Untereinander, nicht nebeneinander umgebrochen. Das steht nur im
+# Stylesheet, also wird es dort geprüft - sonst fällt es beim nächsten
+# Umbauen still wieder auf nebeneinander zurück.
+stil = (WURZEL / "app/oberflaeche/stil.css").read_text(encoding="utf-8")
+topf = re.search(r"^\.fl-topf \{(.*?)^\}", stil, re.S | re.M)
+print("\nDer Topf steht untereinander")
+pruefe("es gibt eine Regel für .fl-topf", bool(topf))
+pruefe("eine Spalte", bool(topf) and "flex-direction: column" in topf.group(1),
+       topf.group(1) if topf else "")
+pruefe("und kein Umbruch nebeneinander",
+       bool(topf) and "flex-wrap" not in topf.group(1),
+       topf.group(1) if topf else "")
+# Die festen Breiten der Auswahlfelder stehen weiter unten in der Datei.
+# Stünde die Aufhebung davor, gewänne die feste Breite - gleiche Stärke,
+# später gewinnt.
+pruefe("die Aufhebung der festen Breiten steht nach den Breiten",
+       stil.index(".fl-band .fl-topf > *") > stil.index(".fl-band .fl-groesse"))
+
 print("\nGemerkt")
 # Wer das Band wegklappt, will es beim nächsten Start nicht wieder vorfinden.
 pruefe("beides steht im Merker",
