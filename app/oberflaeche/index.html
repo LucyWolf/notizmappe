@@ -44,8 +44,12 @@ window.addEventListener('unhandledrejection', function (ev) {
     <span class="bandrechts">
       <button type="button" id="update" hidden></button>
       <span id="zustand"></span>
+      <button type="button" id="bandmenue" title="Menüband anzeigen">⌄</button>
     </span>
   </nav>
+  <!-- Das Menü am rechten Bandende: wie das Band aussieht und ob es
+       überhaupt dasteht. Gebaut wird es in mappe.js. -->
+  <div id="bandtafel" hidden></div>
   <div id="bandinhalt">
       <!-- Hier baut mappe.js die Formatleiste hinein; die beiden Felder
            rutschen dabei nach #bandalt und bleiben als Quelle stehen: an

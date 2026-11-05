@@ -45,6 +45,9 @@ body { display: flex; flex-direction: column; }
 #band {
   flex: 0 0 auto; background: var(--leiste);
   border-bottom: 1px solid var(--linie);
+  /* Damit das aufgeklappte Band (nur Registerkarten) sich hieran ausrichtet
+     und nicht am Fenster - derselbe Fehler wie einmal beim Platinenkasten. */
+  position: relative;
 }
 #band #reiter {
   display: flex; align-items: center; gap: 2px; padding: 4px 10px 0;
@@ -776,6 +779,55 @@ body { display: flex; flex-direction: column; }
   color: var(--schrift); font: inherit; font-size: 15px; line-height: 1;
 }
 .fl-zeichenfeld:hover { background: var(--flaeche); border-color: var(--linie); }
+
+/* --- Wie das Band dasteht ---
+   Der Pfeil rechts im Band und sein Menü. Klassisch heißt: an jedem Knopf
+   steht das Wort. Die Wörter hängen immer im Dokument und werden hier nur
+   ein- und ausgeblendet - zweimal dieselbe Leiste bauen wäre Arbeit für
+   nichts. */
+#bandmenue {
+  min-width: 22px; height: 22px; padding: 0 4px; cursor: pointer;
+  border: 1px solid transparent; border-radius: 4px;
+  background: none; color: var(--schrift); font: inherit; font-size: 11px;
+}
+#bandmenue:hover { border-color: var(--linie); background: var(--flaeche); }
+#bandtafel {
+  position: fixed; z-index: 65; min-width: 240px; padding: 4px;
+  background: var(--leiste); border: 1px solid var(--linie);
+  border-radius: 6px; box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
+}
+.bt-kopf {
+  margin: 6px 8px 2px; font-size: 12px; font-weight: 600; color: var(--matt);
+}
+.bt-kopf:first-child { margin-top: 2px; }
+.bt-punkt {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 6px 8px; border: 0; border-radius: 4px; background: none;
+  color: var(--schrift); font: inherit; font-size: 13px; cursor: pointer;
+  text-align: left;
+}
+.bt-punkt:hover { background: var(--flaeche); }
+.bt-haken { width: 14px; color: var(--akzent); }
+
+/* Vereinfacht: nur die Symbole. Im Reiter Einfügen bleiben die Wörter
+   stehen - "Schreibbereich einfügen" errät niemand am Bildchen. */
+body:not(.band-klassisch) #werkzeuge .fl-wort { display: none; }
+
+body.band-reiter:not(.band-auf) #bandinhalt { display: none; }
+/* Aufgeklappt legt es sich über die Seite, statt sie zu verschieben -
+   sonst springt der Text bei jedem Reiterklick. */
+body.band-reiter.band-auf #bandinhalt {
+  position: absolute; left: 0; right: 0; z-index: 36;
+  background: var(--leiste); border-bottom: 1px solid var(--linie);
+}
+body.band-voll #band, body.band-voll #leiste { display: none; }
+#bandraus {
+  position: fixed; right: 12px; top: 12px; z-index: 66;
+  width: 28px; height: 28px; padding: 0; cursor: pointer;
+  border: 1px solid var(--linie); border-radius: 6px;
+  background: var(--leiste); color: var(--schrift); font-size: 14px;
+}
+#bandraus:hover { border-color: var(--akzent); }
 
 /* --- Bildschirmausschnitt ---
    Das Standbild liegt über allem, damit man das Rechteck darauf zieht und

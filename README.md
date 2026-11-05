@@ -155,6 +155,7 @@ halb umgestellte Ordner (Abbruch mitten im Verschlüsseln).
 | `tests/test_update.py` | Selbstupdate gegen eine nachgemachte GitHub-Antwort |
 | `tests/test_modell.py` | STL, OBJ und FBX einlesen — und ob das Teil wirklich im Bild liegt |
 | `tests/test_platine.py` | Gerber: ZIP auspacken, Koordinatenformat, Zoll, Bohrdatei — und ob die Platine im Bild liegt und von unten gespiegelt ist |
+| `tests/test_band.py` | dass das Menü am rechten Bandende tut, was draufsteht — vier Einstellungen, die sich gegenseitig überschreiben können, und eine davon nimmt den Knopf weg, mit dem man sie gesetzt hat |
 | `tests/test_balken.py` | dass der Update-Hinweis wirklich ankommt — der Weg läuft in einem nachgebauten Dokument, und hinterher wird nachgesehen, ob ein Balken dasteht und was auf ihm steht |
 | `tests/test_leiste.py` | dass hinter jedem Knopf der Formatleiste der richtige Befehl steckt — und dass beim Rechtsklick nicht zwei Leisten übereinander stehen |
 | `tests/test_kein_server.py` | dass nirgends ein Webserver, Port oder HTTP-Aufruf steckt |
@@ -371,6 +372,20 @@ Nachsehen, was in einer Datei steckt, ohne etwas anzulegen:
 OneNote:
 
 `Datei · Start · Einfügen · Zeichnen · Verlauf · Ansicht · Hilfe`
+
+Ganz rechts im Band sitzt ein **Pfeil** mit dem Menü dazu:
+
+* **Menüband Layout**: *Klassisch* schreibt an jeden Knopf das Wort,
+  *Vereinfacht* zeigt nur die Symbole. Die Wörter hängen immer im Dokument und
+  werden nur ein- und ausgeblendet — und sie kommen aus dem `title`, damit es
+  nicht zwei Stellen gibt, die denselben Knopf benennen.
+* **Menüband anzeigen**: *Vollbild* (Band und Seitenleiste weg), *Nur
+  Registerkarten* (das Band klappt beim Klick auf einen Reiter auf und beim
+  Klick in die Seite wieder zu) oder *immer anzeigen*.
+
+Beides wird gemerkt. Im Vollbild ist auch der Pfeil weg — deshalb steht oben
+rechts ein kleiner Knopf, und `Esc` tut dasselbe. Ohne einen sichtbaren Rückweg
+wäre es eine Falle.
 
 **Einfügen** hat, in der Reihenfolge aus OneNote:
 

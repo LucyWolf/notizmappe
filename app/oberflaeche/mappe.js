@@ -2343,12 +2343,23 @@ function reiterSetzen(name) {
     $('#' + leiste).hidden = reiter !== name;
   }
   merker.legen('reiter', name);
+  // "Nur Registerkarten": der Klick auf einen Reiter klappt das Band
+  // vorübergehend auf - so wie in Word.
+  if (document.body.classList.contains('band-reiter')) {
+    document.body.classList.add('band-auf');
+  }
   if (name === 'hilfe') hilfeStandZeigen();
   // Beim Verlassen des Reiters nicht weitermalen: sonst fängt der nächste Klick
   // in den Text einen Strich an.
   werkzeugSetzen(name === 'zeichnen' ? (werkzeug === 'auswahl' ? 'stift' : werkzeug) : 'auswahl',
                  stiftnummer);
 }
+
+// ... und ein Klick in die Seite macht es wieder zu. Sonst stuende es
+// offen, bis man wieder auf einen Reiter klickt - also fast immer.
+buehne.addEventListener('mousedown', () => {
+  document.body.classList.remove('band-auf');
+});
 
 $('#leiste-schalten').addEventListener('click', () => {
   $('#leiste').classList.toggle('versteckt');
@@ -4964,10 +4975,141 @@ function einfuegeleisteBauen() {
   leiste.append(alt, wirt);
 }
 
+/* ------------------------------------------- Wie das Band dasteht
+
+   Der Pfeil am rechten Bandende, wie in Word: Layout (klassisch mit
+   Beschriftung oder vereinfacht) und Anzeige (immer da, nur die Reiter,
+   oder ganz weg).
+
+   Beides wird gemerkt. Wer das Band wegklappt, will es beim naechsten
+   Start nicht wieder vorfinden. */
+const BAND_LAYOUT = 'notizmappe.bandlayout';
+const BAND_ZEIGEN = 'notizmappe.bandzeigen';
+
+const BANDTAFEL = [
+  ['kopf', 'Menüband Layout'],
+  ['layout', 'klassisch', 'Klassisches Menüband'],
+  ['layout', 'einfach', 'Vereinfachtes Menüband'],
+  ['kopf', 'Menüband anzeigen'],
+  ['zeigen', 'voll', 'Vollbildmodus'],
+  ['zeigen', 'reiter', 'Nur Registerkarten anzeigen'],
+  ['zeigen', 'immer', 'Menüband immer anzeigen'],
+];
+
+function bandStand() {
+  return { layout: merker.holen(BAND_LAYOUT, 'einfach') === 'klassisch'
+    ? 'klassisch' : 'einfach',
+  zeigen: ['voll', 'reiter', 'immer'].indexOf(merker.holen(BAND_ZEIGEN, 'immer')) >= 0
+    ? merker.holen(BAND_ZEIGEN, 'immer') : 'immer' };
+}
+
+/* Im klassischen Layout steht an jedem Knopf das Wort. Es wird einmal
+   angehaengt und danach nur noch per CSS ein- und ausgeblendet: zweimal
+   denselben Text bauen und wieder wegwerfen waere Arbeit fuer nichts.
+
+   Der Text kommt aus dem title - er steht ohnehin schon da, und zwei
+   Stellen, die den Knopf benennen, waeren eine zu viel. Was in Klammern
+   steht (die Tastenkuerzel), bleibt weg: "Fett (Strg+B)" ist kein Wort
+   fuer unter einen Knopf. */
+function bandWoerterBauen() {
+  const leiste = document.querySelector('#werkzeuge .formatleiste');
+  if (!leiste) return;
+  for (const k of leiste.querySelectorAll('.fl-taste')) {
+    if (k.querySelector('.fl-wort')) continue;
+    const name = (k.title || '').replace(/\s*\(.*$/, '').trim();
+    if (!name) continue;
+    const wort = el('span', { className: 'fl-wort', textContent: name });
+    const pfeil = k.querySelector('.fl-pfeil');
+    if (pfeil) k.insertBefore(wort, pfeil);
+    else k.append(wort);
+  }
+}
+
+function bandAnwenden() {
+  const stand = bandStand();
+  const koerper = document.body;
+  koerper.classList.toggle('band-klassisch', stand.layout === 'klassisch');
+  koerper.classList.toggle('band-reiter', stand.zeigen === 'reiter');
+  koerper.classList.toggle('band-voll', stand.zeigen === 'voll');
+  // Aufgeklappt wird nur vorübergehend; ein Reiterwechsel macht es wieder zu.
+  koerper.classList.remove('band-auf');
+  if (stand.layout === 'klassisch') bandWoerterBauen();
+  const raus = $('#bandraus');
+  if (raus) raus.hidden = stand.zeigen !== 'voll';
+  flaecheMessen();
+}
+
+function bandTafelZu() {
+  const tafel = $('#bandtafel');
+  if (tafel) tafel.hidden = true;
+}
+
+function bandTafelZeigen() {
+  const tafel = $('#bandtafel');
+  const knopf = $('#bandmenue');
+  if (!tafel || !knopf) return;
+  if (!tafel.hidden) { bandTafelZu(); return; }
+  const stand = bandStand();
+  tafel.textContent = '';
+  for (const eintrag of BANDTAFEL) {
+    if (eintrag[0] === 'kopf') {
+      tafel.append(el('p', { className: 'bt-kopf', textContent: eintrag[1] }));
+      continue;
+    }
+    const [art, wert, name] = eintrag;
+    const an = stand[art] === wert;
+    const z = el('button', { type: 'button', className: 'bt-punkt' }, [
+      el('span', { className: 'bt-haken', textContent: an ? '✓' : '' }),
+      el('span', { textContent: name }),
+    ]);
+    z.addEventListener('click', function () {
+      merker.legen(art === 'layout' ? BAND_LAYOUT : BAND_ZEIGEN, wert);
+      bandTafelZu();
+      bandAnwenden();
+    });
+    tafel.append(z);
+  }
+  tafel.hidden = false;
+  const r = knopf.getBoundingClientRect();
+  const b = tafel.getBoundingClientRect();
+  tafel.style.left = Math.max(8, Math.min(r.right - b.width,
+                                          window.innerWidth - b.width - 8)) + 'px';
+  tafel.style.top = (r.bottom + 2) + 'px';
+}
+
+function bandMenueBauen() {
+  const knopf = $('#bandmenue');
+  if (!knopf) return;
+  knopf.addEventListener('click', function (ev) {
+    ev.stopPropagation();
+    bandTafelZeigen();
+  });
+  document.addEventListener('mousedown', function (ev) {
+    if (!ev.target.closest('#bandtafel') && !ev.target.closest('#bandmenue')) bandTafelZu();
+  });
+  // Im Vollbild ist auch der Pfeil weg - ohne einen Weg zurueck waere das
+  // eine Falle. Esc genuegt nicht: man muss sehen, dass es einen gibt.
+  const raus = el('button', { type: 'button', id: 'bandraus', hidden: true,
+                              title: 'Vollbild beenden (Esc)', textContent: '⤡' });
+  raus.addEventListener('click', function () {
+    merker.legen(BAND_ZEIGEN, 'immer');
+    bandAnwenden();
+  });
+  document.body.append(raus);
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Escape') return;
+    if (bandStand().zeigen !== 'voll') return;
+    merker.legen(BAND_ZEIGEN, 'immer');
+    bandAnwenden();
+  });
+  bandAnwenden();
+}
+
 function formatleistenBauen() {
   bandleisteUmbauen();
   einfuegeleisteBauen();
   formelBauen();
+  bandMenueBauen();
   minileisteUmbauen();
   flHakenAnschalten();
   flPinselAnschalten();

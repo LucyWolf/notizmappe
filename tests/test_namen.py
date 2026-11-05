@@ -150,7 +150,11 @@ vorhanden = set(re.findall(r'id="([^"]+)"', html))
 # Was die Oberflaeche selbst zur Laufzeit baut und erst danach anspricht.
 # Der Update-Balken und das Profilfenster entstehen erst, wenn es etwas zu
 # sagen gibt - in index.html stuenden sie sonst als leere Huelsen herum.
-GEBAUT = {"schwebe", "updatebalken", "u-text", "profilfenster", "profilteil"}
+# bandraus ist der Weg aus dem Vollbild. Er entsteht mit dem Bandmenue,
+# weil er nur dann gebraucht wird - und ohne das Menue gaebe es kein
+# Vollbild, aus dem er herausfuehren muesste.
+GEBAUT = {"schwebe", "updatebalken", "u-text", "profilfenster", "profilteil",
+          "bandraus"}
 gesucht = set(re.findall(r"""\$\(['"]#([A-Za-z0-9_-]+)['"]\)""", js))
 fehlende = sorted(gesucht - vorhanden - GEBAUT)
 pruefe("jede angesprochene Kennung steht in index.html", not fehlende,
