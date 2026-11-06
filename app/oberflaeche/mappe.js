@@ -2991,11 +2991,19 @@ async function papierkorbZeigen() {
     }]] : []);
 }
 
-function letzteZeigen() {
+/* In OneNote hat "Letzte Änderungen" eine Klappe mit Zeitraeumen. Ohne
+   sie steht in einer gewachsenen Mappe immer dasselbe oben - die Frage ist
+   aber meist "was war heute?", nicht "was war zuletzt?". */
+const LETZTE_ZEITEN = [['1', 'Letzte 24 Stunden', ''], ['7', 'Letzte 7 Tage', ''],
+                       ['30', 'Letzte 30 Tage', ''], ['0', 'Alle', '']];
+
+function letzteZeigen(tage) {
+  const seit = tage ? Date.now() / 1000 - tage * 86400 : 0;
   const alle = [];
   for (const buch of baumDaten) {
     for (const ab of buch.abschnitte) {
       for (const s of ab.seiten) {
+        if (seit && (s.geaendert || 0) < seit) continue;
         alle.push({ buch: buch.name, abschnitt: ab.name, seite: s, zeit: s.geaendert || 0 });
       }
     }
@@ -3009,13 +3017,25 @@ function letzteZeigen() {
       await seiteOeffnen(e.buch, e.abschnitt, e.seite.name);
     }]],
   }));
+  const zeitwort = (LETZTE_ZEITEN.find((z) => Number(z[0]) === (tage || 0)) || [])[1];
   verlaufFenster('Letzte Änderungen',
-    'Die zuletzt angefassten Seiten, neueste zuerst.', zeilen, []);
+    tage ? `Was in den letzten ${tage === 1 ? '24 Stunden' : tage + ' Tagen'} `
+           + 'angefasst wurde, neueste zuerst.'
+         : 'Die zuletzt angefassten Seiten, neueste zuerst.',
+    zeilen, []);
+  if (zeitwort && !zeilen.length) $('#v-erklaerung').textContent += ` (${zeitwort})`;
 }
 
-$('#v-versionen').addEventListener('click', versionenZeigen);
-$('#v-papierkorb').addEventListener('click', papierkorbZeigen);
-$('#v-letzte').addEventListener('click', letzteZeigen);
+/* Papierkorb: aufmachen oder gleich leeren. Das Leeren fragt nach - es ist
+   der einzige Knopf hier, nach dem etwas endgueltig weg ist. */
+async function papierkorbMenue(was) {
+  if (was !== 'leer') { papierkorbZeigen(); return; }
+  if (!confirm('Alle Einträge im Papierkorb endgültig löschen?')) return;
+  try {
+    const w = await api('/api/papierkorb/leeren', 'POST', {});
+    sagen(`${w.weg} Einträge gelöscht`);
+  } catch (f) { melden(f.message); }
+}
 
 /* ------------------------------------------------------------------ Sperre */
 
@@ -5480,6 +5500,71 @@ function stiftVerwalten(was) {
   stifteMerken();
 }
 
+/* ------------------------------------------------- Der Reiter Verlauf
+ *
+ * In OneNote stehen hier sieben Knoepfe. Drei davon gelten immer, vier nur
+ * dort, wo mehrere im selben Ordner arbeiten: "Nach Autor suchen",
+ * "Autoren ausblenden", "Als gelesen markieren" und "Naechstes ungelesenes
+ * Element". In eigenen Notizen schreibt nur einer, und das Programm fuehrt
+ * dort bewusst keine Leseliste (siehe neues.py in der Serverfassung).
+ *
+ * Deshalb baut diese Datei nur die drei. Die vier anderen haengt die
+ * Serverfassung an, und auch dort nur in einem Projekt. Ein Knopf, der
+ * dauerhaft ausgegraut dasteht und nur erklaert, dass er nichts tut, ist
+ * keiner. */
+
+const FL_VERSIONEN = flBild('<rect x="2.5" y="1.5" width="8" height="13" rx="1"/>'
+                            + '<path d="M5 4.5h3M5 7h3"/>'
+                            + '<circle cx="11.5" cy="10.5" r="3.6"/>'
+                            + '<path d="M11.5 8.6v2h1.6"/>');
+const FL_KORB = flBild('<path d="M3 4.5h10"/>'
+                       + '<path d="M4.2 4.5 5 14h6l.8-9.5"/>'
+                       + '<path d="M6.3 4.5V2.6h3.4v1.9"/>'
+                       + '<path d="M6.8 7v4.5M9.2 7v4.5"/>');
+const FL_LETZTE = flBild('<circle cx="8" cy="8" r="6.2"/>'
+                         + '<path d="M8 4.4V8l2.6 1.6"/>');
+
+function verlaufleisteBauen() {
+  const leiste = document.getElementById('verlaufzeug');
+  if (!leiste || leiste.querySelector('.formatleiste')) return;
+  const wirt = el('div', { className: 'formatleiste fl-band' });
+  const reihe = el('div', { className: 'fl-reihe' });
+  const hinweis_an = leiste.querySelector('#v-hinweis');
+
+  const gruppen = [
+    [mitWort(flTaste(flWort(FL_VERSIONEN, 'Seitenversionen'), 'Seitenversionen',
+                     versionenZeigen))],
+    [mitWort(flKlappe(wirt, 'Notizbuch-Papierkorb',
+                      flWort(FL_KORB, 'Notizbuch-Papierkorb'),
+                      [['auf', 'Papierkorb öffnen', ''],
+                       ['leer', 'Papierkorb leeren', '']],
+                      papierkorbMenue))],
+    [mitWort(flKlappe(wirt, 'Letzte Änderungen',
+                      flWort(FL_LETZTE, 'Letzte Änderungen'),
+                      LETZTE_ZEITEN,
+                      function (w) { letzteZeigen(Number(w)); }))],
+  ];
+  let erste = true;
+  for (const g of gruppen) {
+    if (!erste) reihe.append(el('span', { className: 'fl-trenner' }));
+    erste = false;
+    for (const k of g) reihe.append(k);
+  }
+  if (hinweis_an) reihe.append(hinweis_an);
+  wirt.append(reihe);
+  wirt.addEventListener('mousedown', function (ev) {
+    if (ev.target.tagName !== 'SELECT' && ev.target.tagName !== 'INPUT') ev.preventDefault();
+  });
+  while (leiste.firstChild) leiste.firstChild.remove();
+  leiste.append(wirt);
+  ueberlaufEinrichten(wirt);
+  // Die Serverfassung haengt hier die Knoepfe an, die nur in einem Projekt
+  // einen Sinn haben. Sie braucht dafuer die Leiste und den Punkt, an dem
+  // sie fertig ist - raten waere ein Rennen gegen den eigenen Aufbau.
+  document.dispatchEvent(new CustomEvent('notizmappe-verlaufleiste',
+                                         { detail: { wirt, reihe } }));
+}
+
 /* ----------------------------------------- Wenn das Band zu schmal wird
 
    Vorher brach die Leiste um und das Band wurde zweizeilig; bei einem
@@ -5521,9 +5606,18 @@ function ueberlaufEinrichten(leiste) {
     // Unsichtbar misst sich nichts: die Leiste des gerade nicht gewaehlten
     // Reiters ist 0 breit, und dann wanderte alles in den Topf.
     if (!reihe.clientWidth) return;
+    // Was nach dem Einrichten dazugekommen ist, aufnehmen. Die Serverfassung
+    // haengt im Reiter Verlauf Knoepfe an, sobald sie weiss, ob man in einem
+    // Projekt ist - ohne das stuenden die hinter dem Pfeil und kaemen nie in
+    // den Topf.
+    for (const k of Array.from(reihe.children)) {
+      if (k !== mehr && ordnung.indexOf(k) < 0) ordnung.push(k);
+    }
     for (const k of ordnung) {
       if (k.parentNode !== reihe) reihe.insertBefore(k, mehr);
     }
+    // Und der Pfeil gehoert ans Ende, auch wenn etwas dahinter gelandet ist.
+    if (reihe.lastChild !== mehr) reihe.append(mehr);
     mehr.hidden = true;
     topf.textContent = '';
     if (reihe.scrollWidth <= reihe.clientWidth) { topf.hidden = true; return; }
@@ -5597,7 +5691,8 @@ function bandWoerterBauen() {
   // Reiter Einfuegen steht es schon im Knopf - dort greift der Hinweis
   // "hat schon ein fl-wort" und es bleibt, wie es ist.
   for (const leiste of document.querySelectorAll('#werkzeuge .formatleiste,'
-                                                 + ' #malzeug .formatleiste')) {
+                                                 + ' #malzeug .formatleiste,'
+                                                 + ' #verlaufzeug .formatleiste')) {
     for (const k of leiste.querySelectorAll('.fl-taste')) {
       if (k.querySelector('.fl-wort')) continue;
       const name = (k.title || '').replace(/\s*\(.*$/, '').trim();
@@ -5699,6 +5794,7 @@ function formatleistenBauen() {
   bandleisteUmbauen();
   einfuegeleisteBauen();
   malleisteBauen();
+  verlaufleisteBauen();
   formelBauen();
   bandMenueBauen();
   minileisteUmbauen();
