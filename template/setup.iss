@@ -61,6 +61,7 @@ Name: "german"; MessagesFile: "compiler:Languages\German.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
+@AUTOSTART_TASK@
 
 [Files]
 ; Alles aus program\ - bei einem Buendel aus einem Ordner (PyInstaller --onedir)
@@ -71,6 +72,7 @@ Source: "program\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs creat
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExe}"
 Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
+@AUTOSTART_ICON@
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent shellexec

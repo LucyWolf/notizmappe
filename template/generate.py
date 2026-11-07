@@ -99,6 +99,25 @@ def windows(conf, repo, tag):
               "WINDOWS_EXE": conf.get("WINDOWS_EXE") or conf["WINDOWS_FILE"], "REPO": repo,
               "APP_GUID": str(uuid.uuid5(uuid.NAMESPACE_URL, f"https://github.com/{repo}")).upper(),
               "SETUP_ICON": f"SetupIconFile=..\\{icon.replace('/', chr(92))}" if icon else ""}
+    # Beim Anmelden mitstarten: eine Verknuepfung im Autostart-Ordner des
+    # Benutzers, kein Dienst und kein Eintrag in der Registrierung. Das
+    # Deinstallieren raeumt sie mit weg, weil Inno jedes [Icons] mitfuehrt -
+    # ein Run-Schluessel bliebe stehen.
+    #
+    # Als Haken, nicht fest: "an" setzt ihn vor, alles andere laesst ihn
+    # offen. AutoStartProgram ist eine eingebaute Meldung von Inno und steht
+    # damit in beiden Sprachen da, ohne eigenen Text.
+    wahl = (conf.get("WINDOWS_AUTOSTART") or "").strip().lower()
+    if wahl in ("an", "frage", "1", "yes", "on"):
+        haken = "" if wahl == "an" else "; Flags: unchecked"
+        values["AUTOSTART_TASK"] = (
+            'Name: "autostart"; Description: "{cm:AutoStartProgram,{#AppName}}"' + haken)
+        values["AUTOSTART_ICON"] = (
+            'Name: "{userstartup}\\{#AppName}"; Filename: "{app}\\{#AppExe}"; '
+            'Tasks: autostart')
+    else:
+        values["AUTOSTART_TASK"] = ""
+        values["AUTOSTART_ICON"] = ""
     with open(os.path.join(OUT, "setup.iss"), "w", encoding="utf-8-sig", newline="\r\n") as f:
         f.write(fill("setup.iss", values))
     print(f"Windows setup script built (version {values['VERSION']})")
