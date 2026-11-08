@@ -294,6 +294,36 @@ pruefe("Nicht stillschweigend in den eigenen Ordner geschrieben",
 Gegenserver.abgelaufen = False
 
 print()
+# --- Die Verwaltung im Fenster ------------------------------------------------
+#
+# verwaltung.js ist dieselbe Datei wie im Browser. Dort geht jeder Aufruf
+# per fetch an den eigenen Server; hier geht er über die Brücke, und die
+# lässt nur durch, was in ferne.SERVERSEITEN steht. Fehlt dort ein Weg,
+# sagt das Fenster "Diese Seite ruft das Fenster nicht auf" - und zwar
+# erst, wenn jemand den Knopf drückt.
+print("\nWas die Verwaltung aufruft, darf das Fenster auch")
+verwaltung = (WURZEL / "app/oberflaeche/verwaltung.js").read_text(encoding="utf-8")
+# hol(weg) ist ein GET, hol(weg, rumpf) ein POST - genau wie im Browser.
+import re as _re                                              # noqa: E402
+wege = {}
+for treffer in _re.finditer(r"hol\('(/[a-z0-9/-]+)'(\s*,)?", verwaltung):
+    weg, rumpf = treffer.group(1), bool(treffer.group(2))
+    wege.setdefault(weg, set()).add("POST" if rumpf else "GET")
+pruefe("es werden ueberhaupt Wege gefunden", len(wege) >= 8, sorted(wege))
+fehlt = sorted(f"{art} {weg}" for weg, arten in wege.items() for art in arten
+               if weg not in ferne.SERVERSEITEN.get(art, ()))
+pruefe("jeder Weg steht in ferne.SERVERSEITEN", not fehlt, ", ".join(fehlt))
+# Und andersherum nichts Totes: ein Weg, den niemand ruft, ist eine offene
+# Tuer ohne Zweck.
+VON_HAND = {"GET /profil", "GET /zwei-schritte", "GET /bereiche",
+            "POST /profil/email", "POST /profil/passwort", "POST /profil/meldung",
+            "POST /zwei-schritte", "POST /bereich"}
+alle = {f"{art} {weg}" for art, menge in ferne.SERVERSEITEN.items() for weg in menge}
+gerufen = {f"{art} {weg}" for weg, arten in wege.items() for art in arten} | VON_HAND
+# GET /verwaltung ruft verwaltung.js, POST /verwaltung gibt es nicht.
+tot = sorted(alle - gerufen)
+pruefe("und kein Weg steht da, den niemand ruft", not tot, ", ".join(tot))
+
 print("alles gruen" if not fehler else f"{len(fehler)} FEHLER:\n - " + "\n - ".join(fehler))
 server.shutdown()
 shutil.rmtree(DATEN, ignore_errors=True)

@@ -272,10 +272,20 @@ def ruf(methode: str, args: list) -> dict:
 # zweite Schritt, die Bereiche. Eine feste Liste und keine freie Adresse -
 # sonst waere das eine Stelle, mit der sich jede Route des Servers aufrufen
 # laesst, und zwar mit dem Kennzeichen des angemeldeten Benutzers.
+# Eine feste Liste, kein Durchreichen beliebiger Adressen: was hier nicht
+# steht, ruft das Fenster nicht auf. Seit 1.2.29 gehoert die Verwaltung des
+# Servers dazu - Benutzer, Einladungen, Projekte, Rollen, Mailversand, Ablage
+# und der Name der Mappe. Die Oberflaeche dazu ist dieselbe wie im Browser
+# (oberflaeche/verwaltung.js); ob man etwas davon darf, entscheidet weiter
+# der Server an seiner Rolle, nicht das Fenster.
 SERVERSEITEN = {
-    "GET": {"/profil", "/zwei-schritte", "/bereiche", "/verwaltung"},
+    "GET": {"/profil", "/zwei-schritte", "/bereiche", "/verwaltung",
+            "/ablage", "/post"},
     "POST": {"/profil/email", "/profil/passwort", "/profil/meldung",
-             "/zwei-schritte", "/bereich"},
+             "/zwei-schritte", "/bereich",
+             "/verwaltung/benutzer", "/verwaltung/einladung",
+             "/verwaltung/mappe", "/verwaltung/projekt",
+             "/ablage", "/ablage/pruefen", "/post", "/post/probe"},
 }
 
 

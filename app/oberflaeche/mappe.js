@@ -240,6 +240,11 @@ function ordnerZeigen(e) {
   const wo = $('#ordner');
   if (!wo || !e) return;
   const fern = e.ferne && e.ferne.aktiv;
+  // Verbunden heisst: es gibt einen Server, den man verwalten kann. Die
+  // Oberflaeche dafuer steht in verwaltung.js und ist dieselbe wie im
+  // Browser - sie baut sich erst, wenn sie weiss, dass es etwas zu tun gibt.
+  window.NOTIZMAPPE_SERVER_DA = !!fern;
+  if (fern && window.Verwaltung) window.Verwaltung.alles();
   wo.textContent = fern ? e.ordner : 'Eigener Ordner';
   // Die Adresse gehoert in den Hinweis, nicht in die Zeile: dort wird sie
   // abgeschnitten, und wissen will man "hier oder dort", nicht "welcher Port".

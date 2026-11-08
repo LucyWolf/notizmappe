@@ -42,7 +42,11 @@ BEKANNT = {
     "await", "async", "of", "in", "do", "else", "try", "finally", "throw", "case",
 }
 
-js = (WURZEL / "app/oberflaeche/mappe.js").read_text(encoding="utf-8")
+# verwaltung.js wird direkt nach mappe.js geladen und teilt sich den
+# Namensraum mit ihr - also beide zusammen pruefen. Sonst faellt ein Name,
+# der beim Umzug aus shim.js liegen geblieben ist, erst im Betrieb auf.
+js = "\n".join((WURZEL / "app/oberflaeche" / n_).read_text(encoding="utf-8")
+                for n_ in ("mappe.js", "verwaltung.js"))
 
 # Richtig parsen statt Textsuche: ein Regex haelt Parameter, Objektfelder und
 # Zerlegungen nicht auseinander und meldet dann Fehler, wo keine sind.
@@ -107,7 +111,7 @@ def gehen(knoten):
 gehen(baum)
 
 offen = sorted(n for n in gerufen if n not in deklariert and n not in BEKANNT)
-pruefe("jeder Aufruf in mappe.js hat eine Funktion dazu", not offen,
+pruefe("jeder Aufruf in mappe.js und verwaltung.js hat eine Funktion dazu", not offen,
        "ohne Definition: " + ", ".join(offen) if offen else "")
 pruefe("es wird ueberhaupt etwas geprueft", len(gerufen) > 40, f"{len(gerufen)} Aufrufe gefunden")
 

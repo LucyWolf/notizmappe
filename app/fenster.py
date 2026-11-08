@@ -45,11 +45,19 @@ def oberflaeche_bauen() -> str:
     html = html.replace('<link rel="stylesheet" href="stil.css">',
                         f"<style>\n{stil}\n</style>", 1)
 
-    skript = (ordner / "mappe.js").read_text(encoding="utf-8")
-    # Ein "</script>" im Text wuerde den Block hier vorzeitig schliessen.
-    skript = skript.replace("</script>", "<\\/script>")
-    html = html.replace('<script src="mappe.js"></script>',
-                        f"<script>\n{skript}\n</script>", 1)
+    # Die Seite wird als Inhalt uebergeben, nicht aus einer Datei geladen -
+    # ein <script src="..."> fuehrt also nirgendwohin. Jede Skriptdatei muss
+    # hinein. Die Reihenfolge bleibt die aus index.html: verwaltung.js
+    # benutzt serverHol() und melden() aus mappe.js.
+    for name in ("mappe.js", "verwaltung.js"):
+        datei = ordner / name
+        if not datei.is_file():
+            continue
+        skript = datei.read_text(encoding="utf-8")
+        # Ein "</script>" im Text wuerde den Block hier vorzeitig schliessen.
+        skript = skript.replace("</script>", "<\\/script>")
+        html = html.replace(f'<script src="{name}"></script>',
+                            f"<script>\n{skript}\n</script>", 1)
 
     symbol = ordner / "icon.png"
     if symbol.is_file():
