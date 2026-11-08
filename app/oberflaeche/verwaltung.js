@@ -770,47 +770,6 @@
       }
       .reiterzu { display: none !important; }
 
-      /* Profil unten in der Leiste. Alles ueber die Farbnamen der Oberflaeche -
-         eigene Farben hier waeren genau der weisse Fleck, der vorher auffiel. */
-      /* Ohne das haengt sich das aufgeklappte Menue an den naechsten
-         positionierten Vorfahren - und das waere irgendwo weit oben. */
-      .fussrechts { position: relative; }
-      #profilknopf {
-        display: inline-flex; align-items: center; gap: 6px;
-        height: 28px; padding: 0 8px 0 3px;
-        border: 1px solid var(--linie); border-radius: 14px;
-        background: var(--papier); color: var(--schrift);
-        cursor: pointer; font-size: 12px; max-width: 150px;
-      }
-      #profilknopf:hover { border-color: var(--akzent); }
-      #profilbild {
-        width: 22px; height: 22px; border-radius: 50%;
-        background: var(--akzent); color: var(--papier);
-        display: inline-flex; align-items: center; justify-content: center;
-        font-size: 11px; font-weight: 700; flex: 0 0 auto;
-      }
-      #profilname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      /* Die Leiste sitzt ganz unten - das Menue klappt deshalb nach oben auf. */
-      #profilmenue {
-        position: absolute; bottom: 36px; right: 8px; z-index: 40;
-        min-width: 170px; padding: 4px;
-        background: var(--papier); color: var(--schrift);
-        border: 1px solid var(--linie); border-radius: 8px;
-        box-shadow: 0 6px 20px rgba(0, 0, 0, .28);
-      }
-      #profilkopf {
-        margin: 0; padding: 6px 8px 8px;
-        border-bottom: 1px solid var(--linie); display: grid; gap: 1px;
-      }
-      #profilkopf .hinweis { font-size: 11px; }
-      .profilpunkt {
-        display: block; width: 100%; text-align: left;
-        padding: 7px 8px; margin: 1px 0;
-        background: none; border: 0; border-radius: 6px;
-        color: var(--schrift); cursor: pointer; font-size: 13px;
-      }
-      .profilpunkt:hover { background: var(--flaeche); }
-
       /* Der Speicher-Reiter ist eine eigene Seite, kein #einstellungen - die
          Regeln von drueben greifen dort also nicht, und ein nacktes <select>
          nimmt die Browserfarben. Auf dunklem Grund steht dann ein weisser
@@ -839,28 +798,6 @@
       #ablageteil button:hover { border-color: var(--akzent); }
       #ablageteil .hinweis { color: var(--matt); font-size: 12px; margin: 8px 0 0; }
       #ablageteil h3 { margin: 0 0 10px; }
-      /* Das Profilfenster. Farben aus der Oberflaeche - ein <dialog> bringt
-         sonst Weiss und einen hellen Rand mit. */
-      #profilfenster {
-        width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 64px);
-        padding: 0 20px 20px; border: 1px solid var(--linie); border-radius: 12px;
-        background: var(--papier); color: var(--schrift);
-        box-shadow: 0 12px 48px rgba(0, 0, 0, .45);
-      }
-      #profilfenster::backdrop { background: rgba(0, 0, 0, .5); }
-      #profilkopfzeile {
-        position: sticky; top: 0; z-index: 1;
-        display: flex; align-items: center; justify-content: space-between;
-        gap: 12px; padding: 16px 0 10px; background: var(--papier);
-        border-bottom: 1px solid var(--linie);
-      }
-      #profilkopfzeile h2 { margin: 0; font-size: 16px; }
-      #profilzu {
-        width: 28px; height: 28px; padding: 0; line-height: 1;
-        border: 1px solid var(--linie); border-radius: 50%;
-        background: var(--leiste); color: var(--schrift); cursor: pointer;
-      }
-      #profilzu:hover { border-color: var(--akzent); }
       #profilteil .ordnerzeile { display: flex; gap: 8px; margin: 10px 0 4px; flex-wrap: wrap; }
       /* Auch das E-Mail-Feld: die Regel galt nur fuer Passwortfelder, und ein
          weisses Feld in der dunklen Oberflaeche ist genau der Fleck, der hier
@@ -898,50 +835,6 @@
         width: 30px; height: 24px; padding: 0; border: 1px solid var(--linie);
         border-radius: 4px; background: none; cursor: pointer;
       }
-      /* Rahmen mit Griffen - wie man es aus Textverarbeitungen kennt.
-         Ziehen am Rahmen verschiebt, Ziehen am Griff aendert die Groesse;
-         drehen geht noch nicht. */
-      #malrahmen {
-        position: absolute; z-index: 20; cursor: move;
-        border: 1px dashed var(--schrift);
-        background: color-mix(in srgb, var(--akzent) 6%, transparent);
-        touch-action: none; user-select: none; -webkit-user-select: none;
-      }
-      .malgriff {
-        position: absolute; width: 9px; height: 9px;
-        background: var(--papier); border: 1px solid var(--schrift);
-      }
-      /* Ein markierter Kasten muss auch markiert aussehen. .aktiv gibt es
-         drueben schon fuers Schreiben - deshalb ein eigener Name. */
-      .kasten.mitgewaehlt { outline: 1px dashed var(--akzent); outline-offset: 2px; }
-      #malband {
-        position: absolute; z-index: 19; pointer-events: none;
-        border: 1px dashed var(--akzent);
-        background: color-mix(in srgb, var(--akzent) 10%, transparent);
-      }
-      .malgriff-nw, .malgriff-so { cursor: nwse-resize; }
-      .malgriff-no, .malgriff-sw { cursor: nesw-resize; }
-      .malgriff-n, .malgriff-s { cursor: ns-resize; }
-      .malgriff-w, .malgriff-o { cursor: ew-resize; }
-      .malgriff-nw { left: -5px; top: -5px; }
-      .malgriff-n  { left: calc(50% - 5px); top: -5px; }
-      .malgriff-no { right: -5px; top: -5px; }
-      .malgriff-w  { left: -5px; top: calc(50% - 5px); }
-      .malgriff-o  { right: -5px; top: calc(50% - 5px); }
-      .malgriff-sw { left: -5px; bottom: -5px; }
-      .malgriff-s  { left: calc(50% - 5px); bottom: -5px; }
-      .malgriff-so { right: -5px; bottom: -5px; }
-      .malweg {
-        position: absolute; right: -11px; top: -26px;
-        width: 22px; height: 22px; padding: 0; line-height: 1;
-        border: 1px solid var(--linie); border-radius: 50%;
-        background: var(--papier); color: var(--schrift);
-        cursor: pointer; font-size: 12px;
-      }
-      .malweg:hover { border-color: var(--warnung); color: var(--warnung); }
-      #m-loeschen, #m-gruppe { font-size: 14px; }
-      #m-glatt { font-size: 15px; }
-      #m-glatt[data-stufe="stark"] { font-weight: 700; }
       #ablage-stand code { color: var(--schrift); }
       #serververwaltung h3 {
         margin: 22px 0 8px; font-size: 13px; text-transform: uppercase;
@@ -1038,25 +931,7 @@
         border-radius: 6px; padding: 5px 8px; text-align: center; user-select: all;
       }
       #v-meldung { color: var(--matt); font-size: 12px; margin-top: 10px; }
-      /* Der Balken sitzt ueber allem, aber unten rechts - nicht im Weg und
-         nicht zu uebersehen. */
-      #updatebalken {
-        position: fixed; right: 16px; bottom: 16px; z-index: 60;
-        display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-        max-width: min(460px, calc(100vw - 32px));
-        padding: 10px 12px; border-radius: 10px;
-        border: 1px solid var(--akzent); background: var(--papier);
-        color: var(--schrift); font-size: 13px;
-        box-shadow: 0 6px 24px rgba(0, 0, 0, .35);
-      }
-      #updatebalken button {
-        border: 1px solid var(--linie); background: var(--leiste); color: var(--schrift);
-        border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; font-size: 13px;
-      }
-      #u-jetzt { border-color: var(--akzent); }
-      #u-jetzt:hover:not(:disabled) { background: var(--akzent); color: var(--papier); }
-      #updatebalken button:disabled { opacity: .6; cursor: default; }
-      #u-text { flex: 1 1 200px; }`;
+    `;
     document.head.append(stil);
   }
 
