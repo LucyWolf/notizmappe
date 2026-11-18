@@ -10,6 +10,7 @@ AppId={{@APP_GUID@}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
+AppPublisher=@APP_PUBLISHER@
 AppPublisherURL=https://github.com/@REPO@
 DefaultDirName={localappdata}\Programs\{#AppName}
 DefaultGroupName={#AppName}
@@ -23,6 +24,15 @@ SolidCompression=yes
 WizardStyle=modern
 @SETUP_ICON@
 UninstallDisplayIcon={app}\{#AppExe}
+; Eine setup.exe ohne Versionsressource hat weder Herausgeber noch
+; Produktnamen. Virenscanner werten das als Signal - fast jede
+; Schadsoftware kommt so, fast jedes ordentliche Programm nicht.
+VersionInfoVersion={#AppVersion}
+VersionInfoProductVersion={#AppVersion}
+VersionInfoProductName={#AppName}
+VersionInfoCompany=@APP_PUBLISHER@
+VersionInfoDescription={#AppName} Setup
+VersionInfoCopyright=@APP_PUBLISHER@
 ; Kein Restart Manager. Er schickt laufenden Anwendungen eine Nachricht an ihr
 ; Fenster und wartet dann auf eine Frist - ein Programm ohne Fenster bekommt sie
 ; nie, und die Installation steht minutenlang bei "Anwendungen werden geschlossen".

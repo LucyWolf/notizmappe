@@ -97,6 +97,9 @@ def windows(conf, repo, tag):
               # es die Datei selbst.
               "WINDOWS_FILE": conf["WINDOWS_FILE"],
               "WINDOWS_EXE": conf.get("WINDOWS_EXE") or conf["WINDOWS_FILE"], "REPO": repo,
+              # Ohne eigenen Eintrag der Programmname: leer bliebe das Feld
+              # in der Versionsressource, und genau die soll ja entstehen.
+              "APP_PUBLISHER": (conf.get("APP_PUBLISHER") or conf["APP_NAME"]).replace('"', "'"),
               "APP_GUID": str(uuid.uuid5(uuid.NAMESPACE_URL, f"https://github.com/{repo}")).upper(),
               "SETUP_ICON": f"SetupIconFile=..\\{icon.replace('/', chr(92))}" if icon else ""}
     # Beim Anmelden mitstarten: eine Verknuepfung im Autostart-Ordner des

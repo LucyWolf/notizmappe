@@ -100,9 +100,17 @@ jobs:
       # --add-data bleibt noetig, fuer die Oberflaeche und VERSION.
       # Seit es keinen Webserver mehr gibt, fallen fastapi, uvicorn, starlette,
       # jinja2 und pydantic ganz weg - das war der groesste Teil der Ladezeit.
+      # Eine exe ohne Versionsressource hat weder Firmen- noch Produktnamen -
+      # fuer die Heuristik von Defender ein Signal, und zusammen mit
+      # "unsigniert und frisch" reicht das fuer einen Fehlalarm. Kostet
+      # nichts und nimmt einen der Gruende.
+      - name: Versionsressource
+        run: python tools/versionsdatei.py windows/version.txt
+
       - name: Buendeln
         run: >
           pyinstaller --onedir --name Notizmappe --icon icon.ico
+          --version-file windows/version.txt --noupx
           --paths app
           --add-data "app;app"
           --collect-all webview

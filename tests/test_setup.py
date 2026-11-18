@@ -81,6 +81,74 @@ pruefe("und auch keine Verknüpfung", "userstartup" not in aus)
 pruefe("der Rest bleibt, wie er war",
        "{cm:CreateDesktopIcon}" in aus and "[Icons]" in aus)
 
+# --- Versionsressource -------------------------------------------------------
+#
+# Eine .exe ohne Versionsressource hat weder Firmen- noch Produktnamen - in
+# den Eigenschaften steht nichts. Für die Heuristik von Defender ist das ein
+# Signal, und zusammen mit "unsigniert, frisch gebaut, kaum verbreitet"
+# reicht es für einen Fehlalarm. Das nimmt die Erkennung nicht von selbst
+# weg - dafür muss die Datei bei Microsoft eingereicht werden -, aber es
+# nimmt einen der Gründe.
+print("\nVersionsressource der exe")
+import importlib.util                                         # noqa: E402
+lade = importlib.util.spec_from_file_location("versionsdatei", WURZEL / "tools/versionsdatei.py")
+vd = importlib.util.module_from_spec(lade)
+lade.loader.exec_module(vd)
+
+pruefe("1.2.31 wird zu vier Zahlen", vd.vierer("1.2.31") == (1, 2, 31, 0), vd.vierer("1.2.31"))
+pruefe("auch mit weniger Stellen", vd.vierer("2") == (2, 0, 0, 0), vd.vierer("2"))
+pruefe("und mit zu vielen", vd.vierer("1.2.3.4.5") == (1, 2, 3, 4), vd.vierer("1.2.3.4.5"))
+# Eine Fassung mit Buchstaben darf die Datei nicht unbrauchbar machen -
+# PyInstaller wertet sie als Python aus, ein 'beta' darin bricht den Bau ab.
+pruefe("Buchstaben fliegen raus statt den Bau umzuwerfen",
+       vd.vierer("1.2.3beta") == (1, 2, 3, 0), vd.vierer("1.2.3beta"))
+
+fassung = (WURZEL / "app/VERSION").read_text(encoding="utf-8").strip()
+roh = vd.text(fassung)
+# PyInstaller liest die Datei als Python mit seinen eigenen Klassen. Hier
+# werden sie nachgebaut: faellt dabei etwas um, faellt es auch dort um.
+gebaut = {}
+
+
+def merker(name):
+    def innen(*args, **kwargs):
+        gebaut.setdefault(name, []).append((args, kwargs))
+        return (name, args, kwargs)
+    return innen
+
+
+raum = {n: merker(n) for n in ("VSVersionInfo", "FixedFileInfo", "StringFileInfo",
+                               "StringTable", "StringStruct", "VarFileInfo", "VarStruct")}
+try:
+    exec(compile(roh, "version.txt", "exec"), raum)           # noqa: S102
+    ging = True
+except Exception as f:                                        # noqa: BLE001
+    ging = False
+    print("   ", f)
+pruefe("die Datei lässt sich auswerten, so wie PyInstaller es tut", ging)
+
+felder = {a[0]: a[1] for (a, _) in gebaut.get("StringStruct", [])}
+for name in ("CompanyName", "ProductName", "FileDescription", "FileVersion",
+             "LegalCopyright", "OriginalFilename", "ProductVersion"):
+    pruefe(f"{name} steht drin", bool(felder.get(name)), felder.get(name))
+pruefe("die Nummer stimmt mit app/VERSION überein",
+       felder.get("FileVersion") == fassung, (felder.get("FileVersion"), fassung))
+# Ohne den Translation-Block zeigt Windows die Felder gar nicht an.
+pruefe("und die Sprachangabe fehlt nicht", bool(gebaut.get("VarStruct")))
+
+print("\nDie exe wird damit gebaut")
+lauf_yml = (WURZEL / ".github/workflows/release.yml").read_text(encoding="utf-8")
+pruefe("der Workflow erzeugt die Datei", "tools/versionsdatei.py" in lauf_yml)
+pruefe("und gibt sie PyInstaller mit", "--version-file windows/version.txt" in lauf_yml)
+# UPX packt die exe und sieht damit noch mehr nach Packer aus. PyInstaller
+# nimmt es, wenn es es findet - auf dem Laeufer also mal so, mal so.
+pruefe("und packt nicht zusätzlich mit UPX", "--noupx" in lauf_yml)
+
+print("\nUnd das Setup selbst")
+pruefe("setup.exe bekommt eine Versionsnummer", "VersionInfoVersion=" in an)
+pruefe("einen Herausgeber", "VersionInfoCompany=LucyWolf" in an and "AppPublisher=LucyWolf" in an)
+pruefe("und einen Produktnamen", "VersionInfoProductName=" in an)
+
 print("\nWas in installer.conf steht")
 conf = (WURZEL / "installer.conf").read_text(encoding="utf-8")
 pruefe("Autostart ist für die Notizmappe eingeschaltet",
