@@ -181,6 +181,15 @@ async function api(weg, art = 'GET', rumpf = null) {
     laeuftZu = true;
     zusperrenZeigen();
   }
+  // Die Sitzung am Server gilt zwei Wochen. Laeuft sie ab, ist das kein
+  // Fehler irgendeiner Seite, sondern einer des ganzen Fensters - und die
+  // Meldung braucht einen Weg heraus, nicht nur eine Feststellung.
+  if (daten && daten.art === 'anmelden') {
+    abgelaufenMelden(daten.fehler);
+    const f = new Error(daten.fehler);
+    f.daten = daten;
+    throw f;
+  }
   if (daten && daten.fehler && schluessel !== 'GET /api/version') {
     const f = new Error(daten.fehler);
     f.daten = daten;
@@ -188,6 +197,28 @@ async function api(weg, art = 'GET', rumpf = null) {
     throw f;
   }
   return daten;
+}
+
+/* Nur einmal, nicht bei jedem Aufruf: nach dem Ablaufen schlaegt alles
+   fehl, was das Fenster anfasst - Baum, Seite, die Uhr, die nach Aenderungen
+   sieht. Ohne die Sperre stuende die Meldung zehnmal in der Sekunde neu da
+   und waere nicht anzuklicken. */
+let abgelaufenGesagt = false;
+
+function abgelaufenMelden(text) {
+  if (abgelaufenGesagt) return;
+  abgelaufenGesagt = true;
+  melden(text || 'Die Anmeldung am Server ist abgelaufen.',
+         [['Neu anmelden', () => {
+           abgelaufenGesagt = false;
+           meldungWeg();
+           tafelZeigen(true);
+           dateiPunkt('server');
+           setTimeout(() => {
+             const feld = document.getElementById('e-ferne-passwort');
+             if (feld) feld.focus();
+           }, 120);
+         }]]);
 }
 
 function sagen(text, dauer = 2500) {

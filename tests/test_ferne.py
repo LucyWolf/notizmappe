@@ -286,11 +286,34 @@ pruefe("Und wieder hinüber", ferne.stand()["aktiv"] is True)
 print("\nWenn die Anmeldung abläuft")
 Gegenserver.abgelaufen = True
 antwort = b.baum()
-pruefe("Das wird gesagt", antwort.get("art") == "ferne" and "neu anmelden" in antwort.get("fehler", ""),
-       antwort)
+pruefe("Das wird gesagt", antwort.get("art") == "anmelden"
+       and "abgelaufen" in antwort.get("fehler", ""), antwort)
 pruefe("Und das Kennzeichen weggeworfen", not konfig.lesen().get("ferne_keks"))
 pruefe("Nicht stillschweigend in den eigenen Ordner geschrieben",
        not (DATEN / "Vom Server").exists())
+
+# Das ist der eigentliche Fehler gewesen, nicht die Meldung: bis 1.2.30 hing
+# am "arbeite ich gegen einen Server?" auch das Sitzungs-Kennzeichen. Faellt
+# das nach zwei Wochen weg, galt das Fenster als nicht verbunden - und ab da
+# ging *jeder* Aufruf stillschweigend in den eigenen Ordner. Man sah seine
+# oertlichen Notizen, niemand sagte etwas, und der naechste Satz waere in die
+# falsche Mappe geschrieben worden.
+pruefe("Der Serverbetrieb bleibt eingeschaltet", ferne.aktiv() is True)
+pruefe("aber angemeldet ist man nicht mehr", ferne.angemeldet() is False)
+pruefe("und der Stand sagt genau das",
+       ferne.stand()["abgelaufen"] is True and ferne.stand()["angemeldet"] is False,
+       ferne.stand())
+# Kein einziger Aufruf darf jetzt noch oertlich landen.
+vorher = sorted(p_.name for p_ in DATEN.iterdir())
+zweites = b.notizbuch_anlegen("Darf hier nicht entstehen")
+pruefe("Anlegen geht nicht in den eigenen Ordner",
+       zweites.get("art") == "anmelden", zweites)
+pruefe("und es ist nichts entstanden",
+       sorted(p_.name for p_ in DATEN.iterdir()) == vorher,
+       sorted(p_.name for p_ in DATEN.iterdir()))
+pruefe("Auch der Baum kommt nicht aus dem eigenen Ordner",
+       b.baum().get("art") == "anmelden", b.baum())
+
 Gegenserver.abgelaufen = False
 
 print()

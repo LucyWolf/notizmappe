@@ -34,6 +34,14 @@ class FerneFehler(Exception):
     """Keine Verbindung, falsche Anmeldung, der Server mag nicht."""
 
 
+class NichtAngemeldet(FerneFehler):
+    """Serverbetrieb ist eingeschaltet, aber die Anmeldung gilt nicht mehr.
+
+    Eigene Klasse, damit die Oberflaeche daraus einen Knopf machen kann:
+    "neu anmelden" ist etwas anderes als "der Server antwortet nicht".
+    """
+
+
 def _einstellung() -> dict:
     d = konfig.lesen()
     return {
@@ -46,15 +54,37 @@ def _einstellung() -> dict:
 
 
 def aktiv() -> bool:
-    """Arbeitet das Fenster gerade gegen einen Server?"""
+    """Arbeitet das Fenster gegen einen Server?
+
+    Gefragt ist die Einstellung, nicht die Anmeldung. Das ist der Unterschied,
+    an dem 1.2.30 gescheitert ist: hing hier auch der Keks mit drin, dann
+    fiel nach zwei Wochen - wenn die Sitzung ablaeuft - *jeder* Aufruf
+    stillschweigend in den eigenen Ordner zurueck. Das Fenster zeigte dann
+    die oertlichen Notizen, sagte aber nichts, und der naechste Satz waere in
+    die falsche Mappe geschrieben worden.
+
+    Ob die Anmeldung noch gilt, beantwortet angemeldet().
+    """
     e = _einstellung()
-    return bool(e["aktiv"] and e["adresse"] and e["keks"])
+    return bool(e["aktiv"] and e["adresse"])
+
+
+def angemeldet() -> bool:
+    """Gilt die Sitzung am Server noch?"""
+    return bool(_einstellung()["keks"])
+
+
+ABGELAUFEN = ("Die Anmeldung am Server ist abgelaufen. "
+              "Bitte in den Einstellungen neu anmelden.")
 
 
 def stand() -> dict:
     e = _einstellung()
     return {"adresse": e["adresse"], "benutzer": e["benutzer"],
             "angemeldet": bool(e["keks"]), "aktiv": aktiv(),
+            # Eingeschaltet, aber ohne gueltige Sitzung: daran haengt die
+            # Meldung mit dem Knopf zum Neuanmelden.
+            "abgelaufen": bool(aktiv() and not e["keks"]),
             # Wie die Mappe am Server heisst, falls sie dort einen Namen hat.
             # "http://192.168.178.27:8112" sagt einem nichts, wenn man zwei
             # davon hat - der Name der Mappe schon.
@@ -247,8 +277,10 @@ def umschalten(an: bool) -> dict:
 def ruf(methode: str, args: list) -> dict:
     """Eine Brücken-Methode auf dem Server ausführen."""
     e = _einstellung()
-    if not e["adresse"] or not e["keks"]:
+    if not e["adresse"]:
         raise FerneFehler("Nicht mit einem Server verbunden")
+    if not e["keks"]:
+        raise NichtAngemeldet(ABGELAUFEN)
     daten = json.dumps({"args": list(args)}).encode("utf-8")
     lage, rumpf, _ = _schicken(
         e["adresse"], "/bruecke/" + urllib.parse.quote(methode), daten,
@@ -258,7 +290,7 @@ def ruf(methode: str, args: list) -> dict:
         # Abgelaufen oder das Passwort dort geaendert: nicht stillschweigend
         # weiterwursteln, sondern sagen, dass neu angemeldet werden muss.
         konfig.aendern(ferne_keks=None)
-        raise FerneFehler("Die Anmeldung am Server gilt nicht mehr - bitte neu anmelden")
+        raise NichtAngemeldet(ABGELAUFEN)
     try:
         antwort = json.loads(rumpf.decode("utf-8"))
     except (ValueError, UnicodeDecodeError):
@@ -295,8 +327,10 @@ def serverseite(art: str, weg: str, rumpf=None) -> dict:
     if weg not in SERVERSEITEN.get(art, ()):
         raise FerneFehler(f"Diese Seite ruft das Fenster nicht auf: {art} {weg}")
     e = _einstellung()
-    if not e["adresse"] or not e["keks"]:
+    if not e["adresse"]:
         raise FerneFehler("Nicht mit einem Server verbunden")
+    if not e["keks"]:
+        raise NichtAngemeldet(ABGELAUFEN)
     daten = json.dumps(rumpf or {}).encode("utf-8") if art == "POST" else None
     lage, roh, kopf = _schicken(
         e["adresse"], weg, daten,
@@ -312,8 +346,11 @@ def serverseite(art: str, weg: str, rumpf=None) -> dict:
     except ValueError:
         raise FerneFehler(f"Der Server antwortet nicht verständlich ({lage})")
     if lage == 401:
-        konfig.aendern(ferne_keks=None, ferne_aktiv=False)
-        raise FerneFehler("Die Anmeldung am Server gilt nicht mehr - bitte neu anmelden")
+        # Nur den Keks wegwerfen, nicht den Serverbetrieb: sonst arbeitet das
+        # Fenster ab jetzt im eigenen Ordner weiter, ohne dass es jemand
+        # gesagt haette.
+        konfig.aendern(ferne_keks=None)
+        raise NichtAngemeldet(ABGELAUFEN)
     if not isinstance(antwort, dict):
         raise FerneFehler("Der Server antwortet nicht verständlich")
     return antwort
@@ -322,8 +359,10 @@ def serverseite(art: str, weg: str, rumpf=None) -> dict:
 def anhang_holen(notizbuch: str, abschnitt: str, name: str, datei: str) -> bytes:
     """Einen Anhang vom Server holen - zum Öffnen oder Ablegen hier."""
     e = _einstellung()
-    if not e["adresse"] or not e["keks"]:
+    if not e["adresse"]:
         raise FerneFehler("Nicht mit einem Server verbunden")
+    if not e["keks"]:
+        raise NichtAngemeldet(ABGELAUFEN)
     felder = urllib.parse.urlencode({"notizbuch": notizbuch, "abschnitt": abschnitt,
                                      "name": name, "datei": datei})
     lage, rumpf, _ = _schicken(e["adresse"], "/anhang?" + felder, None,

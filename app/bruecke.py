@@ -153,10 +153,17 @@ def _gefasst(f):
         if f.__name__ in FERN and ferne.aktiv():
             try:
                 return ferne.ruf(f.__name__, list(args[1:]))
+            except ferne.NichtAngemeldet as x:
+                # Nicht in den eigenen Ordner ausweichen. Wer am Server
+                # arbeitet, will am Server arbeiten - und nicht unbemerkt
+                # eine zweite, oertliche Mappe fuellen.
+                return {"fehler": str(x), "art": "anmelden"}
             except ferne.FerneFehler as x:
                 return {"fehler": str(x), "art": "ferne"}
         try:
             return f(*args, **kwargs)
+        except ferne.NichtAngemeldet as x:
+            return {"fehler": str(x), "art": "anmelden"}
         except ferne.FerneFehler as x:
             # Methoden aus FERN_SELBST rufen den Server in ihrem eigenen
             # Rumpf. Ohne diese Zeile faellt ein abgelaufenes Kennzeichen
@@ -264,6 +271,12 @@ class Bruecke:
         antwortet.
         """
         stand = ferne.stand()
+        if stand["abgelaufen"]:
+            # Verbunden, aber die Sitzung gilt nicht mehr. Hier einfach die
+            # eigenen Notizbuecher zu zeigen waere die schlimmste Antwort:
+            # es sieht aus, als waere alles vom Server verschwunden - und
+            # wer dann weiterschreibt, schreibt in die falsche Mappe.
+            raise ferne.NichtAngemeldet(ferne.ABGELAUFEN)
         if not stand["angemeldet"]:
             return {"notizbuecher": speicher.baum(), "ordner": str(speicher.wurzel())}
 
