@@ -2,6 +2,13 @@
 [hidden] { display: none !important; }
 
 :root {
+  /* Was der Browser selbst zeichnet - Auswahllisten, Bildlaufleisten,
+     Eingabefelder - richtet sich danach. Ohne diese Zeile bleibt das hell,
+     auch wenn die Oberflaeche dunkel ist: WebKitGTK unter Linux nimmt dann
+     das helle Thema des Systems, und mitten im dunklen Band stehen weisse
+     Felder. Unter Windows faellt es nicht auf, dort zieht WebView2 die
+     Farben der Seite durch. */
+  color-scheme: light dark;
   --papier: #fffefb;
   --linie: #e3e0d8;
   --schrift: #1f1d1a;
@@ -1182,3 +1189,33 @@ body.band-voll #band, body.band-voll #leiste { display: none; }
 #u-jetzt:hover:not(:disabled) { background: var(--akzent); color: var(--papier); }
 #updatebalken button:disabled { opacity: .6; cursor: default; }
 #u-text { flex: 1 1 200px; }
+
+/* ------------------------------------------------- Auswahlfelder
+
+   WebKitGTK zeichnet <select> mit dem Thema des Systems und geht dabei
+   ueber background und color hinweg. In der dunklen Oberflaeche standen
+   deshalb unter Linux weisse Felder - unter Windows dieselbe Datei, aber
+   richtig, weil WebView2 die Angaben der Seite nimmt.
+
+   appearance: none nimmt dem Browser das Zeichnen ganz ab. Dann gelten die
+   Farben ueberall gleich - und der Pfeil muss selbst her, sonst ist keiner
+   da. Er steht als Bild im Hintergrund, in einem Grau, das auf hellem und
+   auf dunklem Grund sichtbar ist.
+
+   Ganz unten, weil die Regeln weiter oben "background" als Kurzform setzen:
+   die wuerfe das Pfeilbild sonst wieder weg. */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 18px;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1.5 5 5.5 9 1.5' fill='none' stroke='%238a8a8a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 5px center;
+  background-size: 9px 6px;
+}
+/* Die aufgeklappte Liste zeichnet das System. Mehr als die Farben geht
+   dort nicht - aber die gehen, und ohne sie steht schwarz auf schwarz. */
+select option {
+  background: var(--papier);
+  color: var(--schrift);
+}

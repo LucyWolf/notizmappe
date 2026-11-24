@@ -130,6 +130,29 @@ benutzt = set(re.findall(r"var\((--[a-z-]+)", css))
 mit_ersatz = set(re.findall(r"var\((--[a-z-]+)\s*,", css))
 fehlend = sorted(benutzt - definiert - mit_ersatz - {"--stiftfarbe"})
 pruefe("jede benutzte Farbe ist auch definiert", not fehlend, ", ".join(fehlend))
+
+# --- Was der Browser selbst zeichnet -----------------------------------------
+#
+# Auswahllisten, Bildlaufleisten, Eingabefelder: ohne color-scheme nimmt
+# WebKitGTK unter Linux das helle Thema des Systems, und mitten im dunklen
+# Band stehen weisse Felder. Unter Windows faellt das nicht auf - dieselbe
+# Datei, aber WebView2 zieht die Farben der Seite durch. Genau so ist es
+# bis 1.2.32 unbemerkt geblieben.
+pruefe("die Oberflaeche sagt, dass sie beide Helligkeiten kann",
+       bool(re.search(r"^\s*color-scheme:\s*light dark", css, re.M)))
+pruefe("Auswahlfelder zeichnet die Oberflaeche selbst",
+       bool(re.search(r"^select \{[^}]*appearance: none", css, re.M | re.S)))
+# Der Pfeil steht im Hintergrundbild. Eine spaetere Regel mit der Kurzform
+# "background:" fuer ein select wuerfe ihn wieder weg - dann stuende ein
+# Feld ohne jeden Hinweis da, dass man es aufklappen kann.
+_pfeil = css.index("background-image: url(\"data:image/svg+xml")
+# Gemeint ist das Feld selbst, nicht "select option" - das ist die Liste
+# darin und hat mit dem Pfeil nichts zu tun.
+_spaeter = [m.group(1).strip() for m in
+            re.finditer(r"(?:^|[,}])\s*([^{}]*?select)\s*\{[^}]*?\n?\s*background:",
+                        css, re.S | re.M)
+            if m.start() > _pfeil]
+pruefe("und keine spaetere Regel wirft den Pfeil weg", not _spaeter, _spaeter)
 pruefe("es werden ueberhaupt Farben geprueft", len(benutzt) > 5, f"{len(benutzt)} benutzt")
 
 # --- Kein Weg zweimal --------------------------------------------------------
