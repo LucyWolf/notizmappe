@@ -184,6 +184,64 @@ pruefe("das Symbol liegt unter demselben Namen",
 # Browser. Umfallen darf es deswegen nicht.
 pruefe("ohne PyGObject faellt nichts um", isinstance(_f._kennung_setzen(), str))
 
+# --- Und wenn der Menüeintrag fehlt ------------------------------------------
+#
+# Der gleiche Name genügt nicht: zeigt der Eintrag auf ein Symbol, das es
+# nicht gibt, bleibt der Platz leer - so wie in 1.2.34. Deshalb sieht das
+# Fenster beim Start nach und legt nach, was fehlt. Hier läuft das in einem
+# eigenen XDG_DATA_HOME, damit es den echten Menüordner nicht anfasst.
+print("\nDas Fenster legt sein Symbol selbst nach")
+import os as _os                                             # noqa: E402
+
+_heim = Path(tempfile.mkdtemp(prefix="symbolprobe-"))
+_vorher = _os.environ.get("XDG_DATA_HOME")
+_os.environ["XDG_DATA_HOME"] = str(_heim)
+try:
+    sitzt, warum = _f._symbol_pruefen()
+    pruefe("ohne Eintrag sitzt nichts", not sitzt, warum)
+    getan = _f._symbol_nachlegen()
+    pruefe("das Symbol liegt danach da", _f._symboldatei().is_file(), getan)
+    pruefe("und der Eintrag heißt wie die Kennung", _f._menueintrag().is_file(), getan)
+    eintrag = _f._menueintrag().read_text(encoding="utf-8")
+    pruefe("mit der Klasse darin", f"StartupWMClass={_f.KLASSE}" in eintrag, eintrag)
+    pruefe("und zeigt auf unser eigenes Symbol", f"\nIcon={_f.KENNUNG}\n" in eintrag, eintrag)
+    pruefe("er startet auch etwas", bool(re.search(r"^Exec=\S", eintrag, re.M)), eintrag)
+    sitzt, warum = _f._symbol_pruefen()
+    pruefe("jetzt sitzt es", sitzt, warum)
+    pruefe("und ein zweiter Lauf ändert nichts mehr",
+           _f._symbol_nachlegen() == "nichts zu tun", _f._symbol_nachlegen())
+
+    # Der Notnagel des Installers: liegt im Paket kein Symbol, schreibt er
+    # einen fremden Namen aus dem Symbolthema. Ob der aufgeht, weiss hier
+    # niemand - also wird er durch unseren ersetzt, der Rest bleibt stehen.
+    _f._menueintrag().write_text(
+        eintrag.replace(f"Icon={_f.KENNUNG}", "Icon=accessories-text-editor"),
+        encoding="utf-8")
+    _f._symboldatei().unlink()
+    sitzt, warum = _f._symbol_pruefen()
+    pruefe("ein fremder Symbolname gilt nicht als in Ordnung", not sitzt, warum)
+    _f._symbol_nachlegen()
+    neu = _f._menueintrag().read_text(encoding="utf-8")
+    pruefe("der fremde Name wird ersetzt", f"\nIcon={_f.KENNUNG}\n" in neu, neu)
+    pruefe("der Rest des Eintrags bleibt stehen",
+           neu.replace(f"Icon={_f.KENNUNG}", "Icon=accessories-text-editor")
+           == eintrag.replace(f"Icon={_f.KENNUNG}", "Icon=accessories-text-editor"))
+finally:
+    if _vorher is None:
+        _os.environ.pop("XDG_DATA_HOME", None)
+    else:
+        _os.environ["XDG_DATA_HOME"] = _vorher
+    shutil.rmtree(_heim, ignore_errors=True)
+
+# Das Symbol, das pywebview ans Fenster haengt, ist unter Wayland unsichtbar -
+# der Weg ueber den Menueeintrag ist der einzige, der dort traegt. Beides steht
+# im Protokoll, sonst ist "das Symbol fehlt" wieder eine Frage ans Raten.
+quelle = (WURZEL / "app/fenster.py").read_text(encoding="utf-8")
+pruefe("beim Start wird nachgesehen", "_symbol_pruefen()" in quelle)
+pruefe("und zwar bevor das Fenster aufgeht",
+       quelle.index("_symbol_pruefen()") < quelle.index("webview.create_window"))
+pruefe("das Symbol liegt im Paket", (WURZEL / "app/oberflaeche/icon.png").is_file())
+
 print("\nWas in installer.conf steht")
 conf = (WURZEL / "installer.conf").read_text(encoding="utf-8")
 pruefe("Autostart ist für die Notizmappe eingeschaltet",

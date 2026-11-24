@@ -71,6 +71,122 @@ def _kennung_setzen() -> str:
     return f"{vorher!r} -> {KENNUNG!r} / {KLASSE!r}"
 
 
+def _datenwurzel() -> Path:
+    return Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share"))
+
+
+def _menueintrag() -> Path:
+    return _datenwurzel() / "applications" / f"{KENNUNG}.desktop"
+
+
+def _symboldatei() -> Path:
+    return _datenwurzel() / "icons/hicolor/512x512/apps" / f"{KENNUNG}.png"
+
+
+def _symbol_pruefen() -> tuple[bool, str]:
+    """Findet die Arbeitsflaeche zu diesem Fenster ueberhaupt ein Symbol?
+
+    Sie sucht es nicht am Fenster, sondern im Menueeintrag - und nur in dem,
+    dessen Name zur Kennung des Fensters passt. Fehlt der Eintrag, oder zeigt
+    sein Icon= ins Leere, bleibt der Platz leer. Das Symbol, das pywebview ans
+    Fenster haengt, hilft dort nicht: unter Wayland sieht es niemand.
+
+    Gibt zurueck, ob es sitzt, und was sonst dagegen spricht.
+    """
+    eintrag = _menueintrag()
+    if not eintrag.is_file():
+        return False, f"kein Menüeintrag ({eintrag})"
+    try:
+        text = eintrag.read_text(encoding="utf-8", errors="replace")
+    except OSError as f:                                     # noqa: BLE001
+        return False, f"Menüeintrag nicht lesbar ({f})"
+    treffer = re.search(r"^Icon=(.*)$", text, re.M)
+    name = (treffer.group(1).strip() if treffer else "")
+    if not name:
+        return False, f"Menüeintrag ohne Icon= ({eintrag})"
+    if name.startswith("/"):
+        da = Path(name).is_file()
+        return da, f"Icon={name}" + ("" if da else " - Datei fehlt")
+    if name != KENNUNG:
+        # Der Notnagel des Installers, wenn im Paket kein Symbol lag. Ob der
+        # Name im Symbolthema aufgeht, entscheidet das Thema - und das ist
+        # genau die Unsicherheit, die hier nicht stehen bleiben soll.
+        return False, f"Icon={name} - fremder Name, nicht unserer"
+    da = _symboldatei().is_file()
+    return da, f"Icon={name}" + ("" if da else f" - {_symboldatei()} fehlt")
+
+
+def _symbol_nachlegen() -> str:
+    """Fehlt das Symbol, legt das Fenster es sich selbst hin.
+
+    Der Installer tut das auch. Aber wer aus dem Quelltext startet oder mit
+    einer alten Fassung installiert hat, hat keinen Eintrag - und unter
+    Wayland gibt es keinen zweiten Weg: dort zaehlen allein die Kennung und
+    die .desktop-Datei, die so heisst.
+
+    Ein vorhandener Eintrag bleibt stehen; nur seine Icon=-Zeile wird
+    geradegerueckt, wenn sie ins Leere zeigt. Wirkt ab dem naechsten Start -
+    die Arbeitsflaeche liest ihre Eintraege, wenn das Fenster laengst steht.
+    """
+    quelle = Path(__file__).resolve().parent / "oberflaeche/icon.png"
+    if not quelle.is_file():
+        return f"kein Symbol zum Hinlegen ({quelle})"
+    getan = []
+    ziel = _symboldatei()
+    try:
+        if not ziel.is_file():
+            ziel.parent.mkdir(parents=True, exist_ok=True)
+            ziel.write_bytes(quelle.read_bytes())
+            getan.append(f"Symbol -> {ziel}")
+        eintrag = _menueintrag()
+        if not eintrag.is_file():
+            eintrag.parent.mkdir(parents=True, exist_ok=True)
+            eintrag.write_text(_eintragstext(), encoding="utf-8")
+            getan.append(f"Menüeintrag -> {eintrag}")
+        else:
+            text = eintrag.read_text(encoding="utf-8", errors="replace")
+            neu = re.sub(r"^Icon=.*$", f"Icon={KENNUNG}", text, count=1, flags=re.M)
+            if neu != text:
+                eintrag.write_text(neu, encoding="utf-8")
+                getan.append(f"Icon= auf {KENNUNG} gesetzt")
+    except OSError as f:                                     # noqa: BLE001
+        return f"ging nicht ({f})"
+    if not getan:
+        return "nichts zu tun"
+    for befehl in (["gtk-update-icon-cache", "-q", "-t", str(_datenwurzel() / "icons/hicolor")],
+                   ["update-desktop-database", str(_menueintrag().parent)]):
+        try:
+            subprocess.run(befehl, timeout=10, check=False,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except (OSError, subprocess.SubprocessError):
+            pass                                             # gibt es nicht ueberall
+    return ", ".join(getan) + " - sichtbar ab dem nächsten Start"
+
+
+def _eintragstext() -> str:
+    starter = _datenort() / KENNUNG
+    if starter.is_file() and os.access(starter, os.X_OK):
+        befehl = str(starter)
+    else:
+        # Aus dem Quelltext gestartet: dann zeigt der Eintrag genau dorthin,
+        # mit demselben Python, das gerade laeuft.
+        befehl = f'"{sys.executable}" "{Path(__file__).resolve()}"'
+    return (
+        "[Desktop Entry]\n"
+        "Type=Application\n"
+        "Version=1.0\n"
+        f"Name={TITEL}\n"
+        "GenericName=Notizen\n"
+        "Comment=Freie Notizfläche, Daten im eigenen Ordner\n"
+        f"StartupWMClass={KLASSE}\n"
+        f"Exec={befehl}\n"
+        f"Icon={KENNUNG}\n"
+        "Terminal=false\n"
+        "Categories=Office;Utility;TextEditor;\n"
+        "StartupNotify=false\n"
+    )
+
+
 def oberflaeche_bauen() -> str:
     """Die Seite als ein Stueck Text, mit Stil und Skript darin.
 
@@ -246,6 +362,11 @@ def fenster_zeigen() -> bool:
     # Ins Protokoll, nicht nur tun: "das Symbol fehlt" ist sonst wieder eine
     # Frage, die man nur durch Raten beantwortet.
     notieren("Fensterkennung: " + _kennung_setzen())
+    if sys.platform not in ("win32", "darwin"):
+        sitzt, warum = _symbol_pruefen()
+        notieren(f"Symbol: {warum}")
+        if not sitzt:
+            notieren("Symbol: " + _symbol_nachlegen())
 
     fenster = webview.create_window(
         TITEL, html=oberflaeche_bauen(), js_api=verbindung,
