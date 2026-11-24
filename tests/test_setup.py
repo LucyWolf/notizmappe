@@ -196,36 +196,68 @@ import os as _os                                             # noqa: E402
 _heim = Path(tempfile.mkdtemp(prefix="symbolprobe-"))
 _vorher = _os.environ.get("XDG_DATA_HOME")
 _os.environ["XDG_DATA_HOME"] = str(_heim)
+
+
+def eintrag_legen(exec_zeile, icon=None, klasse=None):
+    """Einen Menüeintrag hinlegen, wie ihn der Installer schreibt."""
+    d = _f._menueintrag()
+    d.parent.mkdir(parents=True, exist_ok=True)
+    d.write_text("[Desktop Entry]\nType=Application\nName=Notizmappe\n"
+                 f"StartupWMClass={klasse or _f.KLASSE}\n"
+                 f"Exec={exec_zeile}\nTryExec={exec_zeile}\n"
+                 f"Icon={icon or _f.KENNUNG}\nTerminal=false\n", encoding="utf-8")
+    return d
+
+
 try:
     sitzt, warum = _f._symbol_pruefen()
     pruefe("ohne Eintrag sitzt nichts", not sitzt, warum)
     getan = _f._symbol_nachlegen()
-    pruefe("das Symbol liegt danach da", _f._symboldatei().is_file(), getan)
-    pruefe("und der Eintrag heißt wie die Kennung", _f._menueintrag().is_file(), getan)
-    eintrag = _f._menueintrag().read_text(encoding="utf-8")
-    pruefe("mit der Klasse darin", f"StartupWMClass={_f.KLASSE}" in eintrag, eintrag)
-    pruefe("und zeigt auf unser eigenes Symbol", f"\nIcon={_f.KENNUNG}\n" in eintrag, eintrag)
-    pruefe("er startet auch etwas", bool(re.search(r"^Exec=\S", eintrag, re.M)), eintrag)
+    pruefe("das Symbol liegt trotzdem schon bereit", _f._symboldatei().is_file(), getan)
+    # 1.2.35 hat hier selbst einen Eintrag geschrieben, mit einem Exec, das
+    # es sich ausgedacht hat - im Menue stand dann ein zweites "Notizmappe",
+    # das nichts aufmachte. Welcher Weg wirklich startet, weiss nur der
+    # Installer.
+    pruefe("aber kein Menüeintrag wird erfunden", not _f._menueintrag().is_file(), getan)
+    pruefe("und es steht im Protokoll, warum nicht", "Installer" in getan, getan)
+
+    # Der Notnagel des Installers: liegt im Paket kein Symbol, schreibt er
+    # einen fremden Namen aus dem Symbolthema. Ob der aufgeht, weiss hier
+    # niemand - also wird er durch unseren ersetzt, der Rest bleibt stehen.
+    vorlage = eintrag_legen(sys.executable, icon="accessories-text-editor")
+    alt = vorlage.read_text(encoding="utf-8")
+    _f._symboldatei().unlink()
+    sitzt, warum = _f._symbol_pruefen()
+    pruefe("ein fremder Symbolname gilt nicht als in Ordnung", not sitzt, warum)
+    _f._symbol_nachlegen()
+    neu = vorlage.read_text(encoding="utf-8")
+    pruefe("der fremde Name wird ersetzt", f"\nIcon={_f.KENNUNG}\n" in neu, neu)
+    pruefe("das Symbol liegt wieder da", _f._symboldatei().is_file())
+    pruefe("der Rest des Eintrags bleibt stehen",
+           neu.replace(f"Icon={_f.KENNUNG}", "Icon=accessories-text-editor") == alt)
     sitzt, warum = _f._symbol_pruefen()
     pruefe("jetzt sitzt es", sitzt, warum)
     pruefe("und ein zweiter Lauf ändert nichts mehr",
            _f._symbol_nachlegen() == "nichts zu tun", _f._symbol_nachlegen())
 
-    # Der Notnagel des Installers: liegt im Paket kein Symbol, schreibt er
-    # einen fremden Namen aus dem Symbolthema. Ob der aufgeht, weiss hier
-    # niemand - also wird er durch unseren ersetzt, der Rest bleibt stehen.
-    _f._menueintrag().write_text(
-        eintrag.replace(f"Icon={_f.KENNUNG}", "Icon=accessories-text-editor"),
-        encoding="utf-8")
-    _f._symboldatei().unlink()
-    sitzt, warum = _f._symbol_pruefen()
-    pruefe("ein fremder Symbolname gilt nicht als in Ordnung", not sitzt, warum)
-    _f._symbol_nachlegen()
-    neu = _f._menueintrag().read_text(encoding="utf-8")
-    pruefe("der fremde Name wird ersetzt", f"\nIcon={_f.KENNUNG}\n" in neu, neu)
-    pruefe("der Rest des Eintrags bleibt stehen",
-           neu.replace(f"Icon={_f.KENNUNG}", "Icon=accessories-text-editor")
-           == eintrag.replace(f"Icon={_f.KENNUNG}", "Icon=accessories-text-editor"))
+    # --- Den Eintrag von 1.2.35 wieder loswerden ---------------------------
+    print("\nEin Menüeintrag, der nichts startet, kommt weg")
+    pruefe("ein Eintrag, der etwas startet, bleibt stehen",
+           _f._toten_eintrag_entfernen() == "" and vorlage.is_file())
+    eintrag_legen(str(_heim / "gibtsnicht/notizmappe"))
+    getan = _f._toten_eintrag_entfernen()
+    pruefe("einer mit totem Exec kommt weg", not _f._menueintrag().is_file(), getan)
+    pruefe("und es steht da, woran es lag", "gibtsnicht" in getan, getan)
+    # Ein Eintrag, der nicht von uns stammt, wird nicht angefasst - auch
+    # dann nicht, wenn sein Exec ins Leere zeigt. Das ist nicht unsere Datei.
+    eintrag_legen(str(_heim / "gibtsnicht/fremd"), klasse="EtwasAnderes")
+    pruefe("ein fremder Eintrag bleibt unangetastet",
+           _f._toten_eintrag_entfernen() == "" and _f._menueintrag().is_file())
+    # Ein Befehl ohne Pfad wird im PATH gesucht, so wie die Arbeitsflaeche
+    # es auch tut - sonst flöge jeder Eintrag raus, der "sh" aufruft.
+    eintrag_legen("sh")
+    pruefe("ein Befehl aus dem PATH zählt als vorhanden",
+           _f._toten_eintrag_entfernen() == "" and _f._menueintrag().is_file())
 finally:
     if _vorher is None:
         _os.environ.pop("XDG_DATA_HOME", None)
@@ -241,6 +273,13 @@ pruefe("beim Start wird nachgesehen", "_symbol_pruefen()" in quelle)
 pruefe("und zwar bevor das Fenster aufgeht",
        quelle.index("_symbol_pruefen()") < quelle.index("webview.create_window"))
 pruefe("das Symbol liegt im Paket", (WURZEL / "app/oberflaeche/icon.png").is_file())
+# 1.2.35 hing daran: ging beim Symbol etwas schief, ging gar kein Fenster
+# auf. Ein Programm ohne Bild im Menue ist unschoen, eines das nicht startet
+# ist kaputt. Deshalb steht der ganze Block in einem Netz.
+_ab = quelle.index('notieren("Fensterkennung: "')
+pruefe("und das Fenster geht auf, auch wenn dabei etwas schiefgeht",
+       "except Exception" in quelle[_ab:quelle.index("webview.create_window")],
+       quelle[_ab:quelle.index("webview.create_window")])
 
 print("\nWas in installer.conf steht")
 conf = (WURZEL / "installer.conf").read_text(encoding="utf-8")

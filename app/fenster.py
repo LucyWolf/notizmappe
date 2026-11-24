@@ -14,6 +14,8 @@ from __future__ import annotations
 import os
 import re
 import base64
+import shlex
+import shutil
 import socket
 import subprocess
 import sys
@@ -139,16 +141,19 @@ def _symbol_nachlegen() -> str:
             ziel.write_bytes(quelle.read_bytes())
             getan.append(f"Symbol -> {ziel}")
         eintrag = _menueintrag()
-        if not eintrag.is_file():
-            eintrag.parent.mkdir(parents=True, exist_ok=True)
-            eintrag.write_text(_eintragstext(), encoding="utf-8")
-            getan.append(f"Menüeintrag -> {eintrag}")
-        else:
+        if eintrag.is_file():
             text = eintrag.read_text(encoding="utf-8", errors="replace")
             neu = re.sub(r"^Icon=.*$", f"Icon={KENNUNG}", text, count=1, flags=re.M)
             if neu != text:
                 eintrag.write_text(neu, encoding="utf-8")
                 getan.append(f"Icon= auf {KENNUNG} gesetzt")
+        else:
+            # Hier endet, was dieses Programm tun darf. 1.2.35 hat an dieser
+            # Stelle selbst einen Eintrag geschrieben - mit einem Exec, das es
+            # sich ausgedacht hat. Im Menue stand dann ein zweites
+            # "Notizmappe", das nichts aufmachte. Welcher Weg wirklich
+            # startet, weiss nur der Installer; er legt den Eintrag an.
+            getan.append("kein Menüeintrag - den legt der Installer an")
     except OSError as f:                                     # noqa: BLE001
         return f"ging nicht ({f})"
     if not getan:
@@ -156,35 +161,46 @@ def _symbol_nachlegen() -> str:
     for befehl in (["gtk-update-icon-cache", "-q", "-t", str(_datenwurzel() / "icons/hicolor")],
                    ["update-desktop-database", str(_menueintrag().parent)]):
         try:
-            subprocess.run(befehl, timeout=10, check=False,
+            subprocess.run(befehl, timeout=5, check=False,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except (OSError, subprocess.SubprocessError):
             pass                                             # gibt es nicht ueberall
     return ", ".join(getan) + " - sichtbar ab dem nächsten Start"
 
 
-def _eintragstext() -> str:
-    starter = _datenort() / KENNUNG
-    if starter.is_file() and os.access(starter, os.X_OK):
-        befehl = str(starter)
-    else:
-        # Aus dem Quelltext gestartet: dann zeigt der Eintrag genau dorthin,
-        # mit demselben Python, das gerade laeuft.
-        befehl = f'"{sys.executable}" "{Path(__file__).resolve()}"'
-    return (
-        "[Desktop Entry]\n"
-        "Type=Application\n"
-        "Version=1.0\n"
-        f"Name={TITEL}\n"
-        "GenericName=Notizen\n"
-        "Comment=Freie Notizfläche, Daten im eigenen Ordner\n"
-        f"StartupWMClass={KLASSE}\n"
-        f"Exec={befehl}\n"
-        f"Icon={KENNUNG}\n"
-        "Terminal=false\n"
-        "Categories=Office;Utility;TextEditor;\n"
-        "StartupNotify=false\n"
-    )
+def _toten_eintrag_entfernen() -> str:
+    """Einen Menueeintrag wegraeumen, der nichts mehr startet.
+
+    1.2.35 hat einen geschrieben, dessen Exec auf einen Startweg zeigte, den
+    es auf diesem Rechner nie gab. Er stand im Menue, hiess "Notizmappe" und
+    tat nichts. Angefasst wird nur ein Eintrag, der von uns stammt und dessen
+    Befehl tatsaechlich ins Leere zeigt - der des Installers haengt an
+    TryExec und bleibt stehen.
+    """
+    eintrag = _menueintrag()
+    if not eintrag.is_file():
+        return ""
+    try:
+        text = eintrag.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+    if f"StartupWMClass={KLASSE}" not in text:
+        return ""                                            # nicht unserer
+    treffer = re.search(r"^Exec=(.*)$", text, re.M)
+    if not treffer:
+        return ""
+    try:
+        teile = shlex.split(treffer.group(1))
+    except ValueError:
+        return ""
+    befehl = teile[0] if teile else ""
+    if not befehl or Path(befehl).is_file() or shutil.which(befehl):
+        return ""                                            # startet etwas, bleibt
+    try:
+        eintrag.unlink()
+    except OSError as f:                                     # noqa: BLE001
+        return f"toter Menüeintrag, ließ sich nicht entfernen ({f})"
+    return f"toter Menüeintrag entfernt - {befehl} gibt es hier nicht"
 
 
 def oberflaeche_bauen() -> str:
@@ -362,11 +378,20 @@ def fenster_zeigen() -> bool:
     # Ins Protokoll, nicht nur tun: "das Symbol fehlt" ist sonst wieder eine
     # Frage, die man nur durch Raten beantwortet.
     notieren("Fensterkennung: " + _kennung_setzen())
+    # Das Symbol ist eine Nebensache. Geht dabei etwas schief, geht das
+    # Fenster trotzdem auf - 1.2.35 hing daran, und ein Programm, das nicht
+    # startet, ist schlimmer als eines ohne Bild im Menue.
     if sys.platform not in ("win32", "darwin"):
-        sitzt, warum = _symbol_pruefen()
-        notieren(f"Symbol: {warum}")
-        if not sitzt:
-            notieren("Symbol: " + _symbol_nachlegen())
+        try:
+            weg = _toten_eintrag_entfernen()
+            if weg:
+                notieren("Symbol: " + weg)
+            sitzt, warum = _symbol_pruefen()
+            notieren(f"Symbol: {warum}")
+            if not sitzt:
+                notieren("Symbol: " + _symbol_nachlegen())
+        except Exception as f:                               # noqa: BLE001
+            notieren(f"Symbol: übersprungen ({f!r})")
 
     fenster = webview.create_window(
         TITEL, html=oberflaeche_bauen(), js_api=verbindung,
