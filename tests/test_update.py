@@ -272,6 +272,47 @@ pruefe("der Reiter Hilfe zeigt den Stand",
 pruefe("und nennt den Grund, wenn sich hier nichts einspielen laesst",
        "nicht aus einer Installation" in _mappe)
 
+# --- Nach dem Update neu starten ---------------------------------------------
+#
+# Unter Windows wartet die Stapeldatei auf das Setup und ruft das Programm
+# danach wieder auf. Unter Linux lief der Installer einfach durch: die neue
+# Fassung lag auf der Platte, im Fenster lief die alte weiter, und "Version x
+# ist installiert" blieb stehen. Wer nicht von Hand schloss, hatte sie nicht.
+print("\nNach dem Update startet es neu")
+import aktualisieren as _akt                                     # noqa: E402
+
+pruefe("aktualisieren.py kann neu starten", hasattr(_akt, "neu_starten"))
+_quelle_akt = (QUELLE / "app/aktualisieren.py").read_text(encoding="utf-8")
+_fn = _re.search(r"^def neu_starten\(.*?^\n\ndef ", _quelle_akt, _re.S | _re.M)
+if _fn:
+    _t = _fn.group(0)
+    # Ohne die Erklaerung davor - dort steht sys.argv als Begruendung, und
+    # die soll den Test nicht ausloesen.
+    _code = _t.split('"""')[-1]
+    # Nicht sys.argv wiederholen: nach dem Update ist das von gestern, und
+    # der Weg, der im Menue steht, ist der, der auch wirklich einrichtet.
+    pruefe("und nimmt dafuer den Starter, nicht sys.argv",
+           'ORDNER / "notizmappe"' in _code and "sys.argv" not in _code, _code[:300])
+    pruefe("der neue Lauf ueberlebt unser Ende", "start_new_session=True" in _t)
+    pruefe("und dieser hier endet auch wirklich", "os._exit(0)" in _t)
+    # Erst antworten, dann gehen - sonst steht das Fenster ohne Meldung da.
+    pruefe("aber erst, nachdem die Antwort durch ist", "threading.Timer" in _t)
+_bruecke = (QUELLE / "app/bruecke.py").read_text(encoding="utf-8")
+pruefe("die Bruecke bietet es an", "def update_neustart" in _bruecke)
+pruefe("und die Oberflaeche kennt den Weg dahin",
+       "'POST /api/update/neustart'" in _mappe)
+_verfolgen = _re.search(r"^function updateVerfolgen\(.*?^\}", _mappe, _re.S | _re.M)
+pruefe("updateVerfolgen steht in mappe.js", bool(_verfolgen))
+if _verfolgen:
+    _t = _verfolgen.group(0)
+    pruefe("und ruft den Neustart, wenn die neue Fassung da ist",
+           "/api/update/neustart" in _t, _t[-400:])
+    pruefe("sagt vorher, dass es gleich zugeht", "wird neu gestartet" in _t)
+    # Die Serverfassung teilt sich diese Datei und kennt den Weg nicht.
+    # Dort darf nicht einfach nichts passieren.
+    pruefe("und faengt es ab, wo es den Weg nicht gibt",
+           "catch" in _t and "wiederAufbauen()" in _t, _t[-400:])
+
 print()
 print("alles gruen" if not fehler else f"{len(fehler)} FEHLER: " + ", ".join(fehler))
 server.shutdown()

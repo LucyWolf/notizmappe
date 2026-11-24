@@ -877,6 +877,11 @@ class Bruecke:
         return aktualisieren.protokoll()
 
     @_gefasst
+    def update_neustart(self) -> dict:
+        """Nach dem Update neu aufmachen. Das Fenster hier geht dabei zu."""
+        return aktualisieren.neu_starten()
+
+    @_gefasst
     def datei_speichern(self, rumpf: dict) -> dict:
         """Etwas aus der Oberflaeche als Datei ablegen - zum Beispiel den Export.
 

@@ -358,6 +358,37 @@ def einspielen() -> dict:
     return {"von": installierte_version(), "nach": r["version"], "pruefsumme": echt}
 
 
+def neu_starten() -> dict:
+    """Das Programm hinter sich neu aufmachen und sich beenden.
+
+    Unter Windows erledigt das die Stapeldatei aus einspielen(): sie wartet
+    auf das Setup und ruft danach das Programm wieder auf. Unter Linux lief
+    der Installer bisher einfach durch, und die neue Fassung lag danach auf
+    der Platte, waehrend die alte weiterlief - im Fenster blieb "Version x
+    ist installiert" stehen, und erst wer von Hand schloss, bekam sie
+    tatsaechlich.
+
+    Gestartet wird der Weg, der auch im Menue steht, nicht dieser Prozess
+    noch einmal: nach dem Update ist sys.argv von gestern.
+    """
+    starter = ORDNER / "notizmappe"
+    if starter.is_file() and os.access(starter, os.X_OK):
+        befehl = [str(starter)]
+    else:
+        # Aus dem Quellordner gestartet - dann wieder von dort, mit
+        # demselben Python.
+        befehl = [sys.executable, str(HIER / "fenster.py")]
+    subprocess.Popen(befehl, stdin=subprocess.DEVNULL,
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                     start_new_session=True,   # ueberlebt unser Ende
+                     cwd=str(ORDNER),
+                     env={**os.environ, "NOTIZMAPPE_NEUSTART": "1"})
+    # Zeit genug, damit die Antwort noch durch die Bruecke kommt und das
+    # Fenster "wird neu gestartet" zeigen kann.
+    threading.Timer(1.5, lambda: os._exit(0)).start()
+    return {"gestartet": " ".join(befehl)}
+
+
 def protokoll() -> dict:
     try:
         text = PROTOKOLL.read_text(encoding="utf-8")[-4000:]

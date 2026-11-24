@@ -89,6 +89,7 @@ const WEGE = {
   'GET /api/version':          (p, b) => b.version(p.frisch === 'true'),
   'POST /api/update':          (p, b) => b.update(),
   'GET /api/update/stand':     (p, b) => b.update_stand(),
+  'POST /api/update/neustart': (p, b) => b.update_neustart(),
   'POST /api/onenote':         (p, b, r) => b.onenote_einlesen(r),
   'POST /api/datei/speichern': (p, b, r) => b.datei_speichern(r),
   'GET /api/verlauf':          (p, b) => b.versionen(p.notizbuch, p.abschnitt, p.name),
@@ -1712,10 +1713,24 @@ function updateVerfolgen(ziel) {
         clearInterval(uhr);
         updateFensterZeigen('Fertig', `Version ${ziel} ist installiert.`);
         updatefenster.querySelector('.balken').classList.add('fertig');
-        // Das Programm startet sich selbst neu; kommt es doch nicht dazu,
-        // wird hier wenigstens frisch geholt - neu laden geht nicht, siehe
-        // nichtsMehrZeigen().
-        setTimeout(wiederAufbauen, 1200);
+        // Auf der Platte liegt jetzt die neue Fassung, im Fenster läuft noch
+        // die alte - geladen ist geladen. Also einmal durchstarten. Früher
+        // blieb hier "Version x ist installiert" stehen, und erst wer von
+        // Hand schloss, bekam sie wirklich.
+        setTimeout(async () => {
+          $('#u-schritt').textContent = `Version ${ziel} ist installiert — wird neu gestartet …`;
+          try {
+            await api('/api/update/neustart', 'POST');
+          } catch (f) {
+            // Kein Neustart zu haben (Serverfassung, oder er ging daneben):
+            // dann wenigstens frisch holen. Neu laden geht nicht, die Seite
+            // hat keine Adresse - siehe nichtsMehrZeigen().
+            $('#u-schritt').textContent = `Version ${ziel} ist installiert.`;
+            $('#u-hinweis').textContent = 'Beim nächsten Start der Notizmappe ist sie da.';
+            $('#u-zu').hidden = false;
+            wiederAufbauen();
+          }
+        }, 1200);
         return;
       }
       const p = await api('/api/update/stand');
