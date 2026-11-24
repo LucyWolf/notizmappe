@@ -63,14 +63,21 @@ def _kennung_setzen() -> str:
         return f"kein GLib ({f})"
     vorher = GLib.get_prgname()
     GLib.set_prgname(KENNUNG)
-    try:
-        from gi.repository import Gdk                        # noqa: PLC0415
-        Gdk.set_program_class(KLASSE)
-    except Exception:                                        # noqa: BLE001
-        # Gdk braucht eine Versionsangabe, die hier niemand erzwingen soll -
-        # ohne sie leitet GTK die Klasse aus prgname ab, und das genuegt.
-        pass
-    return f"{vorher!r} -> {KENNUNG!r} / {KLASSE!r}"
+    # Hier endet es. Gdk wird nicht angefasst - weder fuer set_program_class
+    # noch sonst.
+    #
+    # "from gi.repository import Gdk" ohne Versionsangabe laedt Gdk 4.0. Kurz
+    # darauf verlangt pywebview Gdk 3.0 und bekommt
+    #
+    #   ValueError: Namespace Gdk is already loaded with version 4.0
+    #
+    # Damit faellt das GTK-Backend aus, und wo kein Qt daneben liegt, geht gar
+    # kein Fenster mehr auf. Genau das war 1.2.34 bis 1.2.36. Ein try/except
+    # hilft nicht: der Import hier gelingt ja, geknallt hat es erst drueben.
+    #
+    # Gebraucht wird Gdk auch nicht. Unter Wayland zaehlt allein die Kennung,
+    # und unter X11 leitet GTK die Fensterklasse aus prgname ab.
+    return f"{vorher!r} -> {KENNUNG!r}"
 
 
 def _datenwurzel() -> Path:

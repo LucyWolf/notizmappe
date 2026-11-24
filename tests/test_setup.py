@@ -184,6 +184,20 @@ pruefe("das Symbol liegt unter demselben Namen",
 # Browser. Umfallen darf es deswegen nicht.
 pruefe("ohne PyGObject faellt nichts um", isinstance(_f._kennung_setzen(), str))
 
+# 1.2.34 hat hier Gdk geholt - ohne Versionsangabe, also Gdk 4.0. Kurz darauf
+# verlangt pywebview Gdk 3.0 und bekommt
+#   ValueError: Namespace Gdk is already loaded with version 4.0
+# Damit faellt das GTK-Backend aus, und wo kein Qt daneben liegt, geht gar
+# kein Fenster mehr auf. Drei Fassungen lang war das so. Wer hier etwas aus
+# gi holt, entscheidet mit, welche Fassung von GTK pywebview nachher
+# bekommt - also wird nur GLib geholt, und das laedt kein Gdk.
+_quelle = (WURZEL / "app/fenster.py").read_text(encoding="utf-8")
+_aus_gi = {n.strip() for z in re.findall(r"^\s*from gi\.repository import (.+)$", _quelle, re.M)
+           for n in z.split("#")[0].split(",")}
+pruefe("aus gi wird nur GLib geholt", _aus_gi <= {"GLib"}, sorted(_aus_gi))
+pruefe("und Gdk gar nicht angefasst",
+       not re.search(r"^\s*(from gi\.repository import.*\bGdk\b|.*Gdk\.)", _quelle, re.M))
+
 # --- Und wenn der Menüeintrag fehlt ------------------------------------------
 #
 # Der gleiche Name genügt nicht: zeigt der Eintrag auf ein Symbol, das es
