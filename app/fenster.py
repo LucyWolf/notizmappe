@@ -28,6 +28,49 @@ def _oberflaeche() -> Path:
     return Path(__file__).resolve().parent / "oberflaeche/index.html"
 
 
+KENNUNG = "notizmappe"              # wie notizmappe.desktop heisst
+KLASSE = "Notizmappe"               # und was dort unter StartupWMClass steht
+
+
+def _kennung_setzen() -> str:
+    """Dem Fenster unter Linux seinen eigenen Namen geben.
+
+    Ohne das traegt es den Namen, unter dem GTK gerade gestartet wurde - und
+    das ist nicht "notizmappe", sondern was in argv[0] steht. Die
+    Arbeitsflaeche sucht dazu eine .desktop-Datei, findet keine, und malt
+    statt des Symbols einen Buchstaben in einen Kreis.
+
+    Zwei Dinge muessen zusammenpassen:
+
+      X11      WM_CLASS des Fensters und StartupWMClass im Menueeintrag
+      Wayland  die Kennung (app_id) und der Dateiname notizmappe.desktop
+
+    Beides kommt aus prgname, also wird der gesetzt - vor Gtk.init(), sonst
+    steht die Kennung schon fest. webview.start() ruft es spaeter auf.
+
+    Gibt zurueck, was gesetzt wurde (oder warum nicht) - das steht im
+    Protokoll. Beim naechsten "das Symbol fehlt" muss man nicht raten.
+    """
+    if sys.platform == "win32" or sys.platform == "darwin":
+        return "nicht noetig"
+    try:
+        from gi.repository import GLib                       # noqa: PLC0415
+    except Exception as f:                                   # noqa: BLE001
+        # Ohne PyGObject laeuft das Fenster ueber Qt oder den Browser. Dort
+        # haengt das Symbol an anderen Dingen, und raten hilft hier nicht.
+        return f"kein GLib ({f})"
+    vorher = GLib.get_prgname()
+    GLib.set_prgname(KENNUNG)
+    try:
+        from gi.repository import Gdk                        # noqa: PLC0415
+        Gdk.set_program_class(KLASSE)
+    except Exception:                                        # noqa: BLE001
+        # Gdk braucht eine Versionsangabe, die hier niemand erzwingen soll -
+        # ohne sie leitet GTK die Klasse aus prgname ab, und das genuegt.
+        pass
+    return f"{vorher!r} -> {KENNUNG!r} / {KLASSE!r}"
+
+
 def oberflaeche_bauen() -> str:
     """Die Seite als ein Stueck Text, mit Stil und Skript darin.
 
@@ -199,6 +242,10 @@ def fenster_zeigen() -> bool:
     notieren(f"Oberfläche: {seite}")
     if sys.platform == "win32":
         notieren(f"Windows: {webview2_lage()}")
+
+    # Ins Protokoll, nicht nur tun: "das Symbol fehlt" ist sonst wieder eine
+    # Frage, die man nur durch Raten beantwortet.
+    notieren("Fensterkennung: " + _kennung_setzen())
 
     fenster = webview.create_window(
         TITEL, html=oberflaeche_bauen(), js_api=verbindung,

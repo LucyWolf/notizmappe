@@ -149,6 +149,41 @@ pruefe("setup.exe bekommt eine Versionsnummer", "VersionInfoVersion=" in an)
 pruefe("einen Herausgeber", "VersionInfoCompany=LucyWolf" in an and "AppPublisher=LucyWolf" in an)
 pruefe("und einen Produktnamen", "VersionInfoProductName=" in an)
 
+# --- Der Menüeintrag unter Linux ---------------------------------------------
+#
+# Die Arbeitsfläche findet das Symbol nur, wenn Fenster und Menüeintrag
+# denselben Namen tragen:
+#
+#   X11      WM_CLASS des Fensters  ==  StartupWMClass im .desktop
+#   Wayland  die Kennung (app_id)   ==  Dateiname der .desktop
+#
+# Passt das nicht, malt die Arbeitsfläche einen Buchstaben in einen Kreis -
+# so wie unter Linux bis 1.2.33. Beides steht an zwei Stellen, in fenster.py
+# und in tools/install.sh, und läuft ohne diese Prüfung auseinander.
+print("\nFenster und Menüeintrag heißen gleich")
+import importlib.util as _il                                  # noqa: E402
+_lade = _il.spec_from_file_location("fenster_probe", WURZEL / "app/fenster.py")
+_f = _il.module_from_spec(_lade)
+import sys as _sys                                            # noqa: E402
+_sys.path.insert(0, str(WURZEL / "app"))
+_lade.loader.exec_module(_f)
+install = (WURZEL / "tools/install.sh").read_text(encoding="utf-8")
+
+pruefe("das Fenster setzt seine Kennung selbst", "_kennung_setzen()" in
+       (WURZEL / "app/fenster.py").read_text(encoding="utf-8"))
+pruefe("und zwar bevor es aufgeht",
+       (WURZEL / "app/fenster.py").read_text(encoding="utf-8").index("_kennung_setzen()")
+       < (WURZEL / "app/fenster.py").read_text(encoding="utf-8").index("webview.create_window"))
+pruefe("die Klasse steht so im Menüeintrag",
+       f"StartupWMClass={_f.KLASSE}" in install, _f.KLASSE)
+pruefe("und die Kennung ist der Dateiname der .desktop",
+       f"/applications/{_f.KENNUNG}.desktop" in install, _f.KENNUNG)
+pruefe("das Symbol liegt unter demselben Namen",
+       f"/apps/{_f.KENNUNG}.png" in install and f"SYMBOL_NAME={_f.KENNUNG}" in install)
+# Ohne gi passiert nichts - das Fenster laeuft dann ueber Qt oder den
+# Browser. Umfallen darf es deswegen nicht.
+pruefe("ohne PyGObject faellt nichts um", isinstance(_f._kennung_setzen(), str))
+
 print("\nWas in installer.conf steht")
 conf = (WURZEL / "installer.conf").read_text(encoding="utf-8")
 pruefe("Autostart ist für die Notizmappe eingeschaltet",
