@@ -175,6 +175,26 @@ mb.NOTIZ.write_text(json.dumps(notiz), encoding="utf-8")
 s = mb.pruefen(frisch=True)
 pruefe("danach fragt es wieder", ZUSTAND["anfragen"] == 2 and s["fehler"] is None, (ZUSTAND["anfragen"], s))
 
+# Dasselbe am Knopf. Das Nachsehen hatte den Klartext von Anfang an, das
+# Einspielen nicht - dort fiel der rohe Fehler durch und im Balken stand
+# "HTTPError: HTTP Error 403: rate limit exceeded". Richtig, aber niemand
+# erfaehrt daraus, dass es die Bremse ist und ab wann es wieder geht.
+ZUSTAND["bremse"] = _zeit.time() + 1800
+mk = modul_laden(ARBEIT / "bremse-knopf", "1.0.1", True)
+try:
+    mk.einspielen()
+    pruefe("'Jetzt aktualisieren' bricht bei der Bremse ab", False, "kam durch")
+except RuntimeError as f:
+    pruefe("'Jetzt aktualisieren' sagt, dass es die Bremse ist",
+           "keine Anfragen mehr" in str(f), str(f))
+    pruefe("und wann es wieder geht",
+           _zeit.strftime("%H:%M", _zeit.localtime(ZUSTAND["bremse"])) in str(f), str(f))
+    pruefe("kein roher Python-Fehler mehr", "HTTPError" not in str(f), str(f))
+except Exception as f:                                      # noqa: BLE001
+    pruefe("'Jetzt aktualisieren' wirft keinen rohen Fehler mehr", False,
+           f"{type(f).__name__}: {f}")
+ZUSTAND["bremse"] = 0
+
 m6 = modul_laden(ARBEIT / "f", "1.0.1", True)
 r = m6.einspielen()
 pruefe("Update gemeldet", r["von"] == "1.0.1" and r["nach"] == "1.0.9", r)

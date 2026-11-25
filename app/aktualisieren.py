@@ -276,7 +276,14 @@ def einspielen() -> dict:
     if not aus_installation():
         raise RuntimeError("Läuft aus dem Quellordner - hier wird mit git aktualisiert.")
 
-    r = neuestes_release()
+    # Denselben Klartext wie beim Nachsehen. Ohne das steht beim Knopf
+    # "HTTPError: HTTP Error 403: rate limit exceeded" - richtig, aber
+    # niemand erfaehrt daraus, dass es die Bremse ist und ab wann es
+    # wieder geht.
+    try:
+        r = neuestes_release()
+    except urllib.error.HTTPError as f:
+        raise RuntimeError(_httpfehler(f))
     if version_tupel(r["version"]) <= version_tupel(installierte_version()):
         raise RuntimeError(f"Nichts Neueres da (installiert {installierte_version()}, "
                            f"im Release {r['version'] or '?'})")
@@ -287,7 +294,10 @@ def einspielen() -> dict:
     if not quelle:
         raise RuntimeError("Am Release hängt keine Installationsdatei")
 
-    rohdaten = _abrufen(quelle, roh=True)
+    try:
+        rohdaten = _abrufen(quelle, roh=True)
+    except urllib.error.HTTPError as f:
+        raise RuntimeError(_httpfehler(f))
     echt = hashlib.sha256(rohdaten).hexdigest()
     soll = _erwartete_summe(summenquelle) if summenquelle else None
     if soll and soll != echt:
