@@ -586,6 +586,8 @@ pruefe("Nur Datei-Adressen, nichts aus dem Netz",
 drop = rumpf_von("buehne.addEventListener('drop'")
 pruefe("Ohne Datei sucht das Ablegen nach Adressen", "dateiAdressen(dt)" in drop)
 pruefe("und gibt sie an das Programm weiter", "pfadeAnnehmen(adressen" in drop)
+pruefe("In der Serverfassung gibt es den Weg nicht",
+       "amServer()" in rumpf_von("async function pfadeAnnehmen"))
 pruefe("Was danebenfällt, landet trotzdem in der Seite",
        "Abgelegt neben der Fläche" in js)
 pruefe("Jeder Zug steht im Protokoll, auch der leere",

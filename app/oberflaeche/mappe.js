@@ -1094,6 +1094,15 @@ function dateiAdressen(dt) {
 /* Der Weg für Abgelegtes, von dem nur die Adresse da ist. */
 async function pfadeAnnehmen(pfade, x, y) {
   if (!offen) { sagen('Erst eine Seite öffnen', 2000); insProtokoll('Abgelegt: keine Seite offen'); return; }
+  // Im Browser gibt es diesen Weg nicht: dort liegt die Datei auf einem
+  // anderen Rechner als der Server, und der Server soll keine Pfade lesen.
+  // Browser legen aber ohnehin die Datei selbst hin - hierher kommt man nur,
+  // wenn das einmal nicht so ist, und dann gehört das gesagt.
+  if (amServer()) {
+    melden('Im Browser kommt von hier nur die Adresse der Datei an. '
+           + 'Über 📎 lässt sie sich auswählen.');
+    return;
+  }
   let versatz = 0;
   for (const p of pfade) {
     insProtokoll('Abgelegt als Adresse: ' + p);
