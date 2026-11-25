@@ -905,6 +905,45 @@ class Bruecke:
             raise Abbruch(f"Ließ sich nicht schreiben: {f}")
         return {"ok": True, "ziel": str(ziel)}
 
+    # --- Was die Oberflaeche erlebt ---------------------------------------
+    #
+    # Das Fenster hat keine Konsole. Geht in der Oberflaeche etwas schief -
+    # ein Fehler im Skript, ein Aufruf, der nie zurueckkommt -, sieht man
+    # nichts und es steht auch nirgends. "Passiert nix" war deshalb bisher
+    # nicht nachvollziehbar: weder aus dem Protokoll noch aus dem Terminal.
+    # Ab hier schreibt die Oberflaeche ihre eigenen Schritte mit, in dieselbe
+    # Datei wie das Fenster.
+    #
+    # Mit Absicht nicht in FERN und am Server nicht freigegeben: das gehoert
+    # zu diesem Rechner, nicht in die Mappe.
+
+    @_gefasst
+    def protokoll(self, text: str) -> dict:
+        import fenster                                       # noqa: PLC0415
+        zeile = reinigen.text(text, 500) or ""
+        if not zeile:
+            return {"ok": False}
+        fenster.notieren("Oberfläche: " + zeile
+                         + (" [am Server]" if ferne.aktiv() else ""))
+        return {"ok": True}
+
+    @_gefasst
+    def protokoll_lesen(self, zeilen: int = 60) -> dict:
+        """Die letzten Zeilen des Protokolls - zum Anschauen im Fenster.
+
+        Sonst muesste man sie im Dateimanager suchen; wer nach "es passiert
+        nichts" fragt, soll die Antwort im Fenster vorfinden.
+        """
+        import fenster                                       # noqa: PLC0415
+        wieviel = max(10, min(int(zeilen or 60), 400))
+        try:
+            alles = fenster.PROTOKOLL.read_text(encoding="utf-8", errors="replace")
+        except OSError as f:
+            return {"datei": str(fenster.PROTOKOLL), "text": f"Nicht lesbar: {f}"}
+        teile = alles.rstrip("\n").split("\n")
+        return {"datei": str(fenster.PROTOKOLL), "zeilen": len(teile),
+                "text": "\n".join(teile[-wieviel:])}
+
     # --- Verbindung zu einem Server ---------------------------------------
 
     @_gefasst

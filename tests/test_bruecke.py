@@ -19,6 +19,9 @@ KONFIG = Path(tempfile.mkdtemp(prefix="notizen-konfig-"))
 os.environ["NOTIZEN_ORDNER"] = str(DATEN)
 os.environ["NOTIZMAPPE_KONFIG"] = str(KONFIG)
 os.environ["NOTIZMAPPE_OPTIONEN"] = str(KONFIG / "optionen.json")
+# Auch das Protokoll in die Wegwerf-Ablage: der Test schreibt hinein und soll
+# nicht das echte fenster.log dieses Rechners vollschreiben.
+os.environ["XDG_DATA_HOME"] = str(KONFIG / "daten")
 os.environ["NOTIZMAPPE_QUELLE"] = "http://127.0.0.1:1"      # kein echtes GitHub im Test
 sys.path.insert(0, str(WURZEL / "app"))
 
@@ -463,6 +466,69 @@ pruefe("einstellungen() liefert jedes Feld, das die Oberflaeche liest", not fehl
        "fehlt: " + ", ".join(fehlt))
 pruefe("es werden ueberhaupt Felder geprueft", len(gelesen) > 5, f"{len(gelesen)} Felder")
 pruefe("im Fenster ist die Oberflaeche am selben Rechner", b.einstellungen()["hier"] is True)
+
+# --- Das Fenster schreibt mit -----------------------------------------------
+#
+# "Es passiert nichts" war bisher nicht nachvollziehbar: ein Fehler im Skript
+# der Oberflaeche sieht aus wie ein Knopf, der nichts tut, und steht nirgends.
+# Gegen genau diesen blinden Fleck gibt es protokoll()/protokoll_lesen() - und
+# die Stellen im Anhang-Weg, die sie benutzen.
+print("\nWas die Oberfläche erlebt, steht hinterher im Protokoll")
+
+import fenster as fenster_modul                             # noqa: E402
+
+pruefe("Die Bruecke nimmt Zeilen der Oberflaeche an", b.protokoll("Probe eins")["ok"] is True)
+pruefe("Leeres wird nicht aufgeschrieben", b.protokoll("")["ok"] is False)
+protokoll = fenster_modul.PROTOKOLL.read_text(encoding="utf-8") \
+    if fenster_modul.PROTOKOLL.exists() else ""
+pruefe("und sie stehen als Zeile der Oberflaeche da", "Oberfläche: Probe eins" in protokoll,
+       protokoll[-200:])
+b.protokoll("x" * 900)
+protokoll = fenster_modul.PROTOKOLL.read_text(encoding="utf-8")
+pruefe("eine lange Zeile wird gekuerzt, nicht ungebremst geschrieben",
+       ("x" * 500) in protokoll and ("x" * 520) not in protokoll)
+gelesen = b.protokoll_lesen(20)
+pruefe("protokoll_lesen gibt die letzten Zeilen zurueck",
+       "Probe eins" in gelesen.get("text", "") and gelesen.get("datei"), gelesen)
+pruefe("und nennt die Datei, in der sie stehen",
+       str(fenster_modul.PROTOKOLL) == gelesen.get("datei"))
+pruefe("mehr als 400 Zeilen gibt es nicht auf einmal",
+       len(b.protokoll_lesen(99999).get("text", "").split("\n")) <= 400)
+
+# Gehoert dem Rechner, nicht der Mappe: beides darf nie an einen Server gehen.
+pruefe("protokoll geht nie an einen Server", "protokoll" not in bruecke_modul.FERN)
+pruefe("protokoll_lesen auch nicht", "protokoll_lesen" not in bruecke_modul.FERN)
+
+pruefe("Die Oberflaeche faengt Fehler des Skripts ab",
+       "addEventListener('error'" in js and "addEventListener('unhandledrejection'" in js)
+pruefe("und schreibt sie ins Protokoll",
+       js.count("insProtokoll('Fehler") >= 1 and "insProtokoll('Fehler ohne Fang: '" in js)
+pruefe("insProtokoll fragt erst, ob es die Methode gibt",
+       "typeof a.protokoll !== 'function'" in rumpf_von("function insProtokoll"))
+pruefe("und schaltet sich in der Serverfassung ab",
+       "amServer()" in rumpf_von("function insProtokoll"))
+pruefe("Mitschreiben kann nichts kaputtmachen (alles in einem Fang)",
+       rumpf_von("function insProtokoll").lstrip("{").strip().startswith("//")
+       and "try {" in rumpf_von("function insProtokoll"))
+
+hoch = rumpf_von("async function anhangHochladen")
+pruefe("Jeder Anhang steht mit Namen und Groesse im Protokoll",
+       "insProtokoll(`Anhang \"${datei.name}\", ${datei.size} Byte: fängt an`)" in hoch)
+for fall, text in (("keine Seite offen", "keine Seite offen"), ("zu gross", "zu groß"),
+                   ("Brueckenfehler", "Brücke sagt"), ("Ablehnung", "abgelehnt")):
+    pruefe(f"und warum er nicht ankam: {fall}", f"insProtokoll('Anhang: {text}" in hoch
+           or f"insProtokoll('Anhang: {text}' " in hoch or text in hoch)
+pruefe("und wo er gelandet ist", "liegt als ${r.datei}" in hoch)
+pruefe("Der Dateiwaehler sagt, dass er aufgeht", "insProtokoll('Dateiwahl: wird geöffnet')" in js)
+pruefe("und wie viele Dateien herauskamen", "Datei(en) gewählt" in js)
+pruefe("Abgelegtes ebenso", "insProtokoll('Abgelegt: '" in js)
+
+pruefe("Der Knopf dafuer steht im Reiter Hilfe",
+       'id="hilfe-protokoll"' in (WURZEL / "app/oberflaeche/index.html").read_text(encoding="utf-8"))
+pruefe("und er holt die Zeilen ueber die Bruecke", "b.protokoll_lesen(80)" in js)
+pruefe("ohne Knopf (Serverfassung) stolpert nichts", "if (knopfProtokoll)" in js)
+pruefe("Das Protokollfenster hat seinen Stil",
+       "#protokollfenster {" in (WURZEL / "app/oberflaeche/stil.css").read_text(encoding="utf-8"))
 
 print()
 print("alles gruen" if not fehler else f"{len(fehler)} FEHLER:\n - " + "\n - ".join(fehler))

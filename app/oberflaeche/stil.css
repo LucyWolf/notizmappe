@@ -1145,6 +1145,36 @@ body.band-voll #band, body.band-voll #leiste { display: none; }
   background: var(--leiste); color: var(--schrift); cursor: pointer;
 }
 #profilzu:hover { border-color: var(--akzent); }
+
+/* Das Protokollfenster sieht aus wie das Profil - nur breiter, weil darin
+   lange Zeilen stehen. */
+#protokollfenster {
+  width: min(860px, calc(100vw - 32px)); max-height: calc(100vh - 64px);
+  padding: 0 20px 20px; border: 1px solid var(--linie); border-radius: 12px;
+  background: var(--papier); color: var(--schrift);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, .45);
+}
+#protokollfenster::backdrop { background: rgba(0, 0, 0, .5); }
+#protokollkopfzeile {
+  position: sticky; top: 0; z-index: 1;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 16px 0 10px; background: var(--papier);
+  border-bottom: 1px solid var(--linie);
+}
+#protokollkopfzeile h2 { margin: 0; font-size: 16px; }
+#protokollzu {
+  width: 28px; height: 28px; padding: 0; line-height: 1;
+  border: 1px solid var(--linie); border-radius: 50%;
+  background: var(--leiste); color: var(--schrift); cursor: pointer;
+}
+#protokollzu:hover { border-color: var(--akzent); }
+#protokolltext {
+  margin: 12px 0 6px; padding: 10px; max-height: 60vh; overflow: auto;
+  border: 1px solid var(--linie); border-radius: 8px;
+  background: var(--leiste); font-size: 12px; line-height: 1.45;
+  white-space: pre-wrap; word-break: break-word;
+}
+#protokollort { margin: 0 0 10px; }
 #profilteil .ordnerzeile { display: flex; gap: 8px; margin: 10px 0 4px; flex-wrap: wrap; }
 /* Auch das E-Mail-Feld: die Regel galt nur fuer Passwortfelder, und ein
    weisses Feld in der dunklen Oberflaeche ist genau der Fleck, der hier

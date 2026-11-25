@@ -160,6 +160,43 @@ function bruecke() {
   return bruecke_bereit;
 }
 
+/* --- Das Fenster schreibt mit ---------------------------------------------
+ *
+ * Ein Fenster hat keine Konsole. Ein Fehler im Skript sieht deshalb von
+ * aussen genauso aus wie "der Knopf tut nichts": es passiert nichts, und
+ * hinterher steht nirgends, woran es lag. Was hier durchgeht, landet im
+ * fenster.log neben allem anderen - und im Reiter Hilfe lässt es sich
+ * ansehen, ohne einen Dateimanager zu öffnen.
+ *
+ * Still und ohne await: Mitschreiben darf nie der Grund sein, warum etwas
+ * langsamer wird oder gar nicht erst passiert. In der Serverfassung gibt es
+ * die Methode nicht - dort schaltet sich das nach dem ersten Versuch ab. */
+let protokollGeht = true;
+
+function insProtokoll(text) {
+  // Alles in einem Fang: ein Fehler beim Mitschreiben wäre der eine Fehler,
+  // der nirgends landen kann - und er darf den Aufrufer nicht mitreißen.
+  try {
+    if (!protokollGeht || amServer()) return;
+    const a = bruecke_da();
+    if (!a || typeof a.protokoll !== 'function') return;
+    const p = a.protokoll(String(text).slice(0, 500));
+    if (p && typeof p.then === 'function') {
+      p.then((r) => { if (r && r.fehler) protokollGeht = false; },
+             () => { protokollGeht = false; });
+    }
+  } catch (f) { protokollGeht = false; }
+}
+
+window.addEventListener('error', (ev) => {
+  insProtokoll('Fehler: ' + ((ev && ev.message) || 'unbekannt')
+               + ' (' + ((ev && ev.filename) || '?') + ':' + ((ev && ev.lineno) || 0) + ')');
+});
+window.addEventListener('unhandledrejection', (ev) => {
+  const g = ev && ev.reason;
+  insProtokoll('Fehler ohne Fang: ' + ((g && (g.message || g.name)) || g || 'unbekannt'));
+});
+
 async function api(weg, art = 'GET', rumpf = null) {
   const [pfad, abfrage] = weg.split('?');
   const teile = {};
@@ -770,9 +807,14 @@ async function inTextEinsetzen(text, e, dateien, stelle) {
                                  anhangName(d), await alsBase64(d));
     } catch (f) {
       melden('Hinzufügen ging nicht: ' + f.message);
+      insProtokoll('Anhang im Text: Brücke sagt ' + f.message);
       continue;
     }
-    if (r && r.fehler) { melden(`"${d.name}" ging nicht: ${r.fehler}`); continue; }
+    if (r && r.fehler) {
+      melden(`"${d.name}" ging nicht: ${r.fehler}`);
+      insProtokoll('Anhang im Text: abgelehnt - ' + r.fehler);
+      continue;
+    }
 
     if (r.art !== 'bild') {
       // Keine Bilder (PDF, Zip ...) bleiben Kacheln auf der Fläche.
@@ -818,11 +860,13 @@ function elementAnlegen(r, datei, x, y) {
 }
 
 async function anhangHochladen(datei, x, y) {
-  if (!offen) { sagen('Erst eine Seite öffnen', 2000); return; }
+  insProtokoll(`Anhang "${datei.name}", ${datei.size} Byte: fängt an`);
+  if (!offen) { sagen('Erst eine Seite öffnen', 2000); insProtokoll('Anhang: keine Seite offen'); return; }
   // Vorher prüfen: sonst wandert eine riesige Datei erst durch die Brücke, nur
   // damit sie danach abgelehnt wird.
   if (datei.size > MAX_ANHANG) {
     melden(`"${datei.name}" ist ${groesse(datei.size)} groß - mehr als ${groesse(MAX_ANHANG)} gehen nicht.`);
+    insProtokoll('Anhang: zu groß');
     return;
   }
   zustandAnzeige.textContent = 'lädt …';
@@ -833,14 +877,17 @@ async function anhangHochladen(datei, x, y) {
                                anhangName(datei), await alsBase64(datei));
   } catch (f) {
     melden('Hinzufügen ging nicht: ' + f.message);
+    insProtokoll('Anhang: Brücke sagt ' + f.message);
     zustandAnzeige.textContent = '';
     return;
   }
   if (r && r.fehler) {
     melden(`"${datei.name}" ging nicht: ${r.fehler}`);
+    insProtokoll('Anhang: abgelehnt - ' + r.fehler);
     zustandAnzeige.textContent = '';
     return;
   }
+  insProtokoll(`Anhang "${datei.name}" liegt als ${r.datei} (${r.groesse} Byte)`);
   const e = {
     id: Math.random().toString(36).slice(2, 12),
     typ: r.art, x, y,
@@ -1034,6 +1081,8 @@ buehne.addEventListener('dragleave', (ev) => {
   buehne.classList.remove('zieltafel');
 });
 buehne.addEventListener('drop', (ev) => {
+  insProtokoll('Abgelegt: ' + ((ev.dataTransfer && ev.dataTransfer.files.length) || 0)
+               + ' Datei(en)');
   if (!ev.dataTransfer || !ev.dataTransfer.files.length) return;
   ev.preventDefault();
   buehne.classList.remove('zieltafel');
@@ -1071,8 +1120,12 @@ document.addEventListener('paste', (ev) => {
   dateienAnnehmen(dateien, e ? e.x : 40, e ? e.y + 60 : 40);
 });
 
-$('#anhang').addEventListener('click', () => $('#dateiwahl').click());
+$('#anhang').addEventListener('click', () => {
+  insProtokoll('Dateiwahl: wird geöffnet');
+  $('#dateiwahl').click();
+});
 $('#dateiwahl').addEventListener('change', async (ev) => {
+  insProtokoll('Dateiwahl: ' + ev.target.files.length + ' Datei(en) gewählt');
   if (!ev.target.files.length) return;
   const mitte = Math.round((buehne.scrollLeft + 80) / zoom / RASTER) * RASTER;
   const oben = Math.round((buehne.scrollTop + 80) / zoom / RASTER) * RASTER;
@@ -2535,6 +2588,63 @@ $('#leiste-schalten').addEventListener('click', () => {
 });
 $('#hilfe-pruefen').addEventListener('click', () => zuDenEinstellungen('e-pruefen'));
 $('#hilfe-diagnose').addEventListener('click', () => { reiterSetzen('start'); dateiZeigen(true); dateiPunkt('info'); });
+
+/* Das Protokoll im Fenster, nicht im Dateimanager. Wer sagt "es passiert
+ * nichts", soll nachsehen können, was zuletzt passiert ist - und es
+ * weitergeben können, ohne ein Terminal zu öffnen. */
+function protokollfenster() {
+  const vorhanden = document.getElementById('protokollfenster');
+  if (vorhanden) return vorhanden;
+  const zu = el('button', { type: 'button', id: 'protokollzu', title: 'Schließen',
+                            textContent: '✕' });
+  const text = el('pre', { id: 'protokolltext', textContent: 'wird geholt …' });
+  const kopieren = el('button', { type: 'button', id: 'protokollkopie',
+                                  textContent: 'Kopieren' });
+  const wo = el('p', { className: 'hinweis', id: 'protokollort' });
+  const fenster = el('dialog', { id: 'protokollfenster' }, [
+    el('div', { id: 'protokollkopfzeile' },
+       [el('h2', { textContent: 'Protokoll' }), zu]),
+    text, wo, el('p', { className: 'knoepfe' }, [kopieren]),
+  ]);
+  zu.addEventListener('click', () => fenster.close());
+  fenster.addEventListener('click', (ev) => { if (ev.target === fenster) fenster.close(); });
+  kopieren.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(text.textContent || '');
+      kopieren.textContent = 'kopiert';
+      setTimeout(() => { kopieren.textContent = 'Kopieren'; }, 1500);
+    } catch (f) {
+      // Ohne Zwischenablage wenigstens markieren - Strg+C reicht dann.
+      const w = window.getSelection(); const r = document.createRange();
+      r.selectNodeContents(text); w.removeAllRanges(); w.addRange(r);
+    }
+  });
+  document.body.append(fenster);
+  return fenster;
+}
+
+const knopfProtokoll = $('#hilfe-protokoll');
+if (knopfProtokoll) {
+  knopfProtokoll.addEventListener('click', async () => {
+    const fenster = protokollfenster();
+    if (typeof fenster.showModal === 'function') fenster.showModal();
+    else fenster.setAttribute('open', 'open');
+    const text = document.getElementById('protokolltext');
+    const wo = document.getElementById('protokollort');
+    text.textContent = 'wird geholt …';
+    try {
+      const b = await bruecke();
+      const r = await b.protokoll_lesen(80);
+      if (!r || r.fehler) throw new Error((r && r.fehler) || 'Kein Protokoll');
+      text.textContent = r.text || '(noch nichts aufgeschrieben)';
+      wo.textContent = r.datei || '';
+      text.scrollTop = text.scrollHeight;
+    } catch (f) {
+      text.textContent = f.message;
+      wo.textContent = '';
+    }
+  });
+}
 $('#neue-seite-band').addEventListener('click', async () => {
   // Dort anlegen, wo man gerade ist - sonst in dem ersten Abschnitt, den es gibt.
   const erste = erstesSeitchen();
