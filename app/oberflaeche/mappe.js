@@ -7461,13 +7461,20 @@ function modellWecken(z) {
   if (!z.glz) {
     // Erst der Grund, den der Browser selbst nennt - der steht in GL_KLAGE
     // und sagt meist genau, woran es lag ("GPU access blocked", "too many
-    // contexts"). Nur wenn WebGL wirklich fehlt, bleibt der alte Satz.
+    // contexts").
+    //
+    // Nennt er keinen, ist der haeufigste Fall mit Abstand: die
+    // Grafikbeschleunigung ist in den Einstellungen des Browsers aus. Ohne
+    // sie gibt es keinen WebGL-Kontext, auf keiner Seite. Das steht deshalb
+    // zuerst da und nicht irgendein anderer Verdacht - ein falscher an
+    // erster Stelle hat die Fehlersuche hier schon einmal in die Irre
+    // gefuehrt, und zwar genau in diesem Fall.
     const grund = klage || GL_KLAGE;
     kachelBehalten(z, grund
       ? 'Die 3D-Fläche ging nicht auf: ' + grund
       : (window.WebGLRenderingContext
-          ? 'Der Browser gibt gerade keine 3D-Fläche her. Meist hilft: andere Tabs '
-            + 'mit 3D schließen und neu laden; sonst steht die Beschleunigung aus.'
+          ? 'Der Browser gibt keine 3D-Fläche her. Meist ist die Grafikbeschleunigung '
+            + 'in seinen Einstellungen aus — ohne sie gibt es kein WebGL.'
           : 'Dieser Browser zeichnet kein 3D (WebGL fehlt oder ist aus).'));
     return;
   }

@@ -639,6 +639,11 @@ pruefe("modellWecken steht in mappe.js", bool(_wecken))
 if _wecken:
     _t = _wecken.group(0)
     pruefe("die Meldung nennt den Grund des Browsers", "GL_KLAGE" in _t, _t)
+    # Nennt der Browser keinen Grund, ist es fast immer die abgeschaltete
+    # Beschleunigung. Ein anderer Verdacht an erster Stelle schickt die
+    # Fehlersuche in die Irre - einmal passiert, mit "andere Tabs schliessen".
+    pruefe("und sonst zuerst die Grafikbeschleunigung",
+           "Grafikbeschleunigung" in _t and "Tabs" not in _t, _t)
     # Der alte Satz bleibt - aber nur fuer den Fall, fuer den er stimmt.
     pruefe("'WebGL fehlt' steht nur noch da, wo WebGL wirklich fehlt",
            "window.WebGLRenderingContext" in _t
