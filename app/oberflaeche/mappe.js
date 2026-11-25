@@ -7351,7 +7351,111 @@ function netzHochladen(z) {
   gl.vertexAttribPointer(z.glz.norm, 3, gl.FLOAT, false, 0, 0);
 }
 
+/* --- Ohne 3D-Fläche: dieselben Dreiecke, von Hand gezeichnet ------------
+ *
+ * Gibt der Browser kein WebGL her - Beschleunigung aus, GPU gesperrt, alle
+ * Flächen vergeben -, dann wird das Teil eben in die 2D-Fläche gemalt. Die
+ * Platine entsteht ohnehin so, und die Dreiecke liegen fertig im Speicher.
+ *
+ * Gerechnet wird mit derselben Matrix wie drüben, damit beide Wege gleich
+ * aussehen: Ecken durchrechnen, durch w teilen, nach Tiefe sortieren und
+ * von hinten nach vorne füllen. Kein Tiefenpuffer - bei geschlossenen
+ * Körpern reicht die Reihenfolge; einzelne durchdringende Flächen können
+ * sich vertauschen.
+ *
+ * Teuer ist nicht das Rechnen, sondern jedes einzelne fill(). Ganz nach
+ * Helligkeit sortieren waere am schnellsten, zerstoert aber die
+ * Reihenfolge und damit die Verdeckung. Also bleibt es bei der Tiefe, und
+ * zusammengefasst wird nur, was ohnehin hintereinander liegt und gleich
+ * hell ist - die Helligkeit kommt dafuer in 24 Stufen statt stufenlos.
+ */
+const WEICH_STUFEN = 24;         // so viele Helligkeiten, so viele fill()
+const WEICH_BEIM_ZIEHEN = 24000; // darüber wird während des Ziehens gesiebt
+
+function weichZeichnen(z) {
+  const bild = z.bild;
+  const dpr = window.devicePixelRatio || 1;
+  const breit = Math.max(1, Math.round(bild.clientWidth * dpr));
+  const hoch = Math.max(1, Math.round(bild.clientHeight * dpr));
+  if (bild.width !== breit || bild.height !== hoch) { bild.width = breit; bild.height = hoch; }
+  const ctx = bild.getContext('2d');
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, breit, hoch);
+
+  const grund = matMal(matSchieben(-z.punkt[0], -z.punkt[1], -z.punkt[2]),
+                matMal(matSkala(1 / z.netz.radius),
+                       matSchieben(-z.netz.mitte[0], -z.netz.mitte[1], -z.netz.mitte[2])));
+  const dreh = matMal(matDrehX(z.hoehe), matDrehY(z.seite));
+  const m = matMal(matPerspektive(MODELL_WINKEL, breit / hoch, 0.05, 100),
+            matMal(matSchieben(0, 0, -z.weg), matMal(dreh, grund)));
+  const d3 = mat3Von(dreh);
+
+  const p = z.netz.punkte, n = z.netz.normalen;
+  const anzahl = z.netz.dreiecke;
+  // Beim Ziehen nur jedes n-te Dreieck: lieber ein gröberes Teil, das der
+  // Hand folgt, als ein genaues, das hinterherhinkt. Beim Loslassen wird
+  // einmal vollständig gezeichnet.
+  const schritt = (z.zieht && anzahl > WEICH_BEIM_ZIEHEN)
+    ? Math.ceil(anzahl / WEICH_BEIM_ZIEHEN) : 1;
+
+  const sx = breit / 2, sy = hoch / 2;
+  const sicht = [0.35, 0.75, 0.55];
+  const sl = Math.hypot(sicht[0], sicht[1], sicht[2]);
+  const flaechen = [];
+  for (let d = 0; d < anzahl; d += schritt) {
+    const i = d * 9;
+    let hinten = false;
+    const x = [0, 0, 0], y = [0, 0, 0];
+    let tiefe = 0;
+    for (let e = 0; e < 3; e++) {
+      const o = i + e * 3;
+      const ax = p[o], ay = p[o + 1], az = p[o + 2];
+      const cw = m[3] * ax + m[7] * ay + m[11] * az + m[15];
+      if (cw <= 0.0001) { hinten = true; break; }   // hinter der Kamera
+      x[e] = sx + (m[0] * ax + m[4] * ay + m[8] * az + m[12]) / cw * sx;
+      y[e] = sy - (m[1] * ax + m[5] * ay + m[9] * az + m[13]) / cw * sy;
+      tiefe += cw;
+    }
+    if (hinten) continue;
+    // Normale drehen. Wie drüben im Shader: zeigt sie weg, wird sie
+    // umgedreht - viele STL-Dateien haben Dreiecke verkehrt herum.
+    const o = i;
+    let nx = d3[0] * n[o] + d3[3] * n[o + 1] + d3[6] * n[o + 2];
+    let ny = d3[1] * n[o] + d3[4] * n[o + 1] + d3[7] * n[o + 2];
+    let nz = d3[2] * n[o] + d3[5] * n[o + 1] + d3[8] * n[o + 2];
+    const nl = Math.hypot(nx, ny, nz) || 1;
+    nx /= nl; ny /= nl; nz /= nl;
+    if (nz < 0) { nx = -nx; ny = -ny; nz = -nz; }
+    const dot = Math.max((nx * sicht[0] + ny * sicht[1] + nz * sicht[2]) / sl, 0);
+    const hell = 0.30 + 0.70 * dot + 0.10 * Math.pow(1 - Math.abs(nz), 3);
+    flaechen.push({ x: x, y: y, t: tiefe,
+                    s: Math.min(WEICH_STUFEN - 1,
+                                Math.max(0, Math.round(hell * (WEICH_STUFEN - 1)))) });
+  }
+  // Von hinten nach vorne. Grosse Tiefe = weit weg, also zuerst.
+  flaechen.sort(function (a, b) { return b.t - a.t; });
+
+  let stufe = -1;
+  for (let i = 0; i < flaechen.length; i++) {
+    const f = flaechen[i];
+    if (f.s !== stufe) {
+      if (stufe >= 0) ctx.fill();
+      stufe = f.s;
+      const h = stufe / (WEICH_STUFEN - 1);
+      ctx.fillStyle = 'rgb(' + Math.round(161 * h) + ',' + Math.round(163 * h)
+                             + ',' + Math.round(179 * h) + ')';
+      ctx.beginPath();
+    }
+    ctx.moveTo(f.x[0], f.y[0]);
+    ctx.lineTo(f.x[1], f.y[1]);
+    ctx.lineTo(f.x[2], f.y[2]);
+    ctx.closePath();
+  }
+  if (stufe >= 0) ctx.fill();
+}
+
 function modellZeichnen(z) {
+  if (z.weich) { if (z.netz) weichZeichnen(z); return; }
   if (!z.glz || !z.netz) return;
   const gl = z.glz.gl;
   const breit = Math.max(1, Math.round(z.bild.clientWidth * (window.devicePixelRatio || 1)));
@@ -7446,7 +7550,10 @@ function platzSchaffen(ausser) {
 }
 
 function modellWecken(z) {
-  if (z.glz || !z.netz) return;
+  // z.weich: schon von Hand gezeichnet. Ohne diese Abfrage liefe das
+  // Wecken ein zweites Mal durch und haengte die Bedienung doppelt an -
+  // jede Drehung zaehlte dann doppelt.
+  if (z.glz || z.weich || !z.netz) return;
   platzSchaffen(z);
   const bild = el('canvas', {});
   z.bild.replaceWith(bild);
@@ -7459,23 +7566,20 @@ function modellWecken(z) {
     klage = f.message;
   }
   if (!z.glz) {
-    // Erst der Grund, den der Browser selbst nennt - der steht in GL_KLAGE
-    // und sagt meist genau, woran es lag ("GPU access blocked", "too many
-    // contexts").
+    // Keine 3D-Flaeche zu bekommen - dann eben von Hand. Das Teil ist da,
+    // es laesst sich drehen und schieben wie sonst auch, nur gerechnet wird
+    // hier statt in der Grafikkarte.
     //
-    // Nennt er keinen, ist der haeufigste Fall mit Abstand: die
-    // Grafikbeschleunigung ist in den Einstellungen des Browsers aus. Ohne
-    // sie gibt es keinen WebGL-Kontext, auf keiner Seite. Das steht deshalb
-    // zuerst da und nicht irgendein anderer Verdacht - ein falscher an
-    // erster Stelle hat die Fehlersuche hier schon einmal in die Irre
-    // gefuehrt, und zwar genau in diesem Fall.
+    // Frueher stand hier eine Meldung: erst "WebGL fehlt oder ist aus",
+    // dann ein Hinweis auf die Grafikbeschleunigung. Beide stimmten sogar,
+    // nur genuetzt hat keiner - eine Meldung, die ein Problem bloss
+    // beschreibt, nimmt niemandem die Arbeit ab. Der Grund, den der
+    // Browser nennt, geht ins Protokoll; wer ihn sucht, findet ihn.
     const grund = klage || GL_KLAGE;
-    kachelBehalten(z, grund
-      ? 'Die 3D-Fläche ging nicht auf: ' + grund
-      : (window.WebGLRenderingContext
-          ? 'Der Browser gibt keine 3D-Fläche her. Meist ist die Grafikbeschleunigung '
-            + 'in seinen Einstellungen aus — ohne sie gibt es kein WebGL.'
-          : 'Dieser Browser zeichnet kein 3D (WebGL fehlt oder ist aus).'));
+    if (grund) console.info('[notizmappe] 3D ohne Grafikkarte: ' + grund);
+    z.weich = true;
+    drehenAnbieten(z);
+    modellZeichnen(z);
     return;
   }
   netzHochladen(z);
@@ -7499,6 +7603,9 @@ function drehenAnbieten(z) {
     // springt die Bewegung, wenn man die Taste mitten im Ziehen loslaesst.
     const schieben = ev.shiftKey;
     z.wo.classList.add(schieben ? 'schiebt' : 'dreht');
+    // Ohne Grafikkarte wird waehrend des Ziehens gesiebt gezeichnet - der
+    // Hand folgen ist wichtiger als jedes Dreieck.
+    z.zieht = true;
     let x = ev.clientX, y = ev.clientY;
     const bewegen = function (e2) {
       if (schieben) {
@@ -7519,6 +7626,9 @@ function drehenAnbieten(z) {
       bild.removeEventListener('pointercancel', los);
       z.wo.classList.remove('dreht');
       z.wo.classList.remove('schiebt');
+      // Losgelassen: einmal vollstaendig, damit nichts Gesiebtes stehen
+      // bleibt.
+      if (z.zieht) { z.zieht = false; modellZeichnen(z); }
     };
     bild.addEventListener('pointermove', bewegen);
     bild.addEventListener('pointerup', los);

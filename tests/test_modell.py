@@ -84,6 +84,9 @@ for muster, name in ((r"^const MODELL_ARTEN = [^\n]*$", "MODELL_ARTEN"),
                      (r"^const MODELL_LEBENDIG = [^\n]*$", "MODELL_LEBENDIG"),
                      (r"^const MODELL_MAX_LEBENDIG = [^\n]*$", "MODELL_MAX_LEBENDIG"),
                      (r"^function platzSchaffen\(.*?^\}", "platzSchaffen"),
+                     (r"^const WEICH_STUFEN = [^\n]*$", "WEICH_STUFEN"),
+                     (r"^const WEICH_BEIM_ZIEHEN = [^\n]*$", "WEICH_BEIM_ZIEHEN"),
+                     (r"^function weichZeichnen\(.*?^\}", "weichZeichnen"),
                      (r"^function modellZeichnen\(.*?^\}", "modellZeichnen")):
     treffer = re.search(muster, mappe, re.S | re.M)
     pruefe(f"{name} steht in mappe.js", bool(treffer))
@@ -320,6 +323,31 @@ function glAttrappe() {
   };
 }
 
+/* Eine 2D-Flaeche, die nicht malt, sondern mitschreibt: jeder Pfad, jede
+   Farbe, jedes fill. Damit laesst sich pruefen, was ohne Grafikkarte
+   wirklich gezeichnet wird - Zahlen statt Augenschein. */
+function flaecheAttrappe(breit, hoch) {
+  const notiert = { pfade: [], fuellungen: [], farben: [], geleert: 0 };
+  let laufend = null;
+  const ctx = {
+    canvas: null,
+    setTransform: () => {},
+    clearRect: () => { notiert.geleert++; },
+    beginPath: () => { laufend = []; notiert.pfade.push(laufend); },
+    moveTo: (x, y) => { if (laufend) laufend.push([x, y]); },
+    lineTo: (x, y) => { if (laufend) laufend.push([x, y]); },
+    closePath: () => {},
+    fill: () => { notiert.fuellungen.push(laufend ? laufend.length : 0); },
+    set fillStyle(f) { notiert.farben.push(f); },
+    get fillStyle() { return notiert.farben[notiert.farben.length - 1]; },
+  };
+  const bild = {
+    width: breit, height: hoch, clientWidth: breit / 2, clientHeight: hoch / 2,
+    getContext: () => ctx,
+  };
+  return { bild, notiert };
+}
+
 function werfen(m, p) {
   // spaltenweise: m[spalte * 4 + zeile]
   const o = [0, 1, 2, 3].map((z) =>
@@ -387,6 +415,59 @@ for (const [seite, hoehe] of [[0.6, -0.5], [0, 0], [1.5, 1.5], [3.1, -1.5], [-2.
     rand = Math.max(rand, dx, dy);
   }
   ergebnis.drehungen.push({ seite, hoehe, drin, vorne, rand: Math.round(rand * 100) / 100 });
+}
+
+/* 5a. Dasselbe ohne Grafikkarte: von Hand in die 2D-Flaeche */
+{
+  const f = flaecheAttrappe(640, 480);
+  const w = { bild: f.bild, weich: true, netz: wuerfel,
+              seite: 0.6, hoehe: -0.5, weg: MODELL_WEG, punkt: [0, 0, 0] };
+  modellZeichnen(w);                       // muss den weichen Weg nehmen
+  const alle = [].concat.apply([], f.notiert.pfade);
+  ergebnis.weich = {
+    geleert: f.notiert.geleert,
+    fuellungen: f.notiert.fuellungen.length,
+    farben: f.notiert.farben.length,
+    verschiedene: new Set(f.notiert.farben).size,
+    // Drei Ecken je Dreieck: so viele Punkte, so viele Dreiecke.
+    dreiecke: alle.length / 3,
+    // Liegt alles im Bild? Etwas Luft fuer die Perspektive, aber nicht
+    // das Doppelte - dann stimmte die Matrix nicht.
+    drin: alle.every((p) => p[0] > -640 && p[0] < 1280 && p[1] > -480 && p[1] < 960),
+    // Nicht alles an einer Stelle: dann waere nichts gerechnet worden.
+    breite: Math.round(Math.max.apply(null, alle.map((p) => p[0]))
+                     - Math.min.apply(null, alle.map((p) => p[0]))),
+  };
+
+  // Ziehen bei vielen Dreiecken: es muss gesiebt werden, sonst folgt
+  // nichts mehr der Hand.
+  const viele = { punkte: new Float32Array(WEICH_BEIM_ZIEHEN * 4 * 9),
+                  normalen: new Float32Array(WEICH_BEIM_ZIEHEN * 4 * 9),
+                  dreiecke: WEICH_BEIM_ZIEHEN * 4,
+                  mitte: [0, 0, 0], radius: 1 };
+  for (let i = 0; i < viele.punkte.length; i += 9) {
+    for (let e = 0; e < 3; e++) {
+      viele.punkte[i + e * 3] = (i % 7) / 7 + e * 0.1;
+      viele.punkte[i + e * 3 + 1] = (i % 5) / 5 - e * 0.1;
+      viele.punkte[i + e * 3 + 2] = (i % 3) / 3;
+      viele.normalen[i + e * 3 + 2] = 1;
+    }
+  }
+  const g1 = flaecheAttrappe(640, 480);
+  modellZeichnen({ bild: g1.bild, weich: true, netz: viele, zieht: true,
+                   seite: 0.6, hoehe: -0.5, weg: MODELL_WEG, punkt: [0, 0, 0] });
+  const g2 = flaecheAttrappe(640, 480);
+  modellZeichnen({ bild: g2.bild, weich: true, netz: viele, zieht: false,
+                   seite: 0.6, hoehe: -0.5, weg: MODELL_WEG, punkt: [0, 0, 0] });
+  ergebnis.weich_ziehen = [].concat.apply([], g1.notiert.pfade).length / 3;
+  ergebnis.weich_ruhe = [].concat.apply([], g2.notiert.pfade).length / 3;
+
+  // Was hinter der Kamera liegt, darf nicht gezeichnet werden - sonst
+  // klappt das Teil beim Drehen nach aussen um.
+  const h = flaecheAttrappe(640, 480);
+  modellZeichnen({ bild: h.bild, weich: true, netz: wuerfel,
+                   seite: 0.6, hoehe: -0.5, weg: 0.0, punkt: [0, 0, 0] });
+  ergebnis.weich_hinter = [].concat.apply([], h.notiert.pfade).length / 3;
 }
 
 /* 5b. Umschalt-Ziehen schiebt den Drehpunkt */
@@ -619,6 +700,31 @@ for wer, muster in (("das Modell", r"bild\.addEventListener\('pointercancel'"),
 # Grund nennt der Browser selbst, aber nur im Ereignis
 # webglcontextcreationerror und nur während getContext läuft. Eine Meldung,
 # die den falschen Grund nennt, schickt die Fehlersuche in die Irre.
+print("\nOhne Grafikkarte: dasselbe von Hand gezeichnet")
+_w = d["weich"]
+pruefe("die Fläche wird geleert, bevor gemalt wird", _w["geleert"] == 1, _w)
+pruefe("alle 12 Dreiecke des Würfels kommen an", _w["dreiecke"] == 12, _w)
+pruefe("und sie liegen im Bild", _w["drin"], _w)
+pruefe("das Teil hat eine Ausdehnung, steht also nicht auf einem Punkt",
+       _w["breite"] > 50, _w)
+pruefe("gefüllt wird auch wirklich", _w["fuellungen"] >= 1, _w)
+# Eine einzige Farbe hiesse: die Beleuchtung rechnet nicht, alles flach.
+pruefe("die Flächen sind verschieden hell", _w["verschiedene"] >= 3, _w)
+# Mehr Stufen als vorgesehen hiesse, das Zusammenfassen greift nicht.
+pruefe("aber höchstens so viele Stufen wie vorgesehen",
+       _w["verschiedene"] <= int(re.search(r"WEICH_STUFEN = (\d+)", mappe).group(1)), _w)
+pruefe("beim Ziehen wird gesiebt", d["weich_ziehen"] < d["weich_ruhe"],
+       (d["weich_ziehen"], d["weich_ruhe"]))
+pruefe("und zwar deutlich", d["weich_ziehen"] * 2 <= d["weich_ruhe"],
+       (d["weich_ziehen"], d["weich_ruhe"]))
+pruefe("in Ruhe wird vollständig gezeichnet",
+       d["weich_ruhe"] == int(re.search(r"WEICH_BEIM_ZIEHEN = (\d+)", mappe).group(1)) * 4,
+       d["weich_ruhe"])
+# Steht die Kamera im Teil, liegen Ecken hinter ihr. Wer die mitrechnet,
+# bekommt Dreiecke, die quer durchs Bild klappen.
+pruefe("was hinter der Kamera liegt, wird ausgelassen", d["weich_hinter"] < 12,
+       d["weich_hinter"])
+
 print("\nWarum keine 3D-Fläche zu bekommen war")
 _m = (Path(__file__).resolve().parent.parent
       / "app/oberflaeche/mappe.js").read_text(encoding="utf-8")
@@ -638,16 +744,19 @@ _wecken = re.search(r"^function modellWecken\(.*?^\}", _m, re.S | re.M)
 pruefe("modellWecken steht in mappe.js", bool(_wecken))
 if _wecken:
     _t = _wecken.group(0)
-    pruefe("die Meldung nennt den Grund des Browsers", "GL_KLAGE" in _t, _t)
-    # Nennt der Browser keinen Grund, ist es fast immer die abgeschaltete
-    # Beschleunigung. Ein anderer Verdacht an erster Stelle schickt die
-    # Fehlersuche in die Irre - einmal passiert, mit "andere Tabs schliessen".
-    pruefe("und sonst zuerst die Grafikbeschleunigung",
-           "Grafikbeschleunigung" in _t and "Tabs" not in _t, _t)
-    # Der alte Satz bleibt - aber nur fuer den Fall, fuer den er stimmt.
-    pruefe("'WebGL fehlt' steht nur noch da, wo WebGL wirklich fehlt",
-           "window.WebGLRenderingContext" in _t
-           and _t.index("window.WebGLRenderingContext") < _t.index("WebGL fehlt"), _t)
+    # Hier stand einmal eine Meldung statt eines Modells - erst "WebGL fehlt
+    # oder ist aus", dann ein Hinweis auf die Grafikbeschleunigung. Beide
+    # stimmten, genuetzt hat keiner. Jetzt wird gezeichnet.
+    pruefe("ohne 3D-Fläche wird weich gezeichnet, nicht gemeldet",
+           "z.weich = true" in _t and "kachelBehalten" not in _t, _t)
+    pruefe("und das Teil lässt sich auch dort drehen",
+           "drehenAnbieten(z)" in _t and "modellZeichnen(z)" in _t, _t)
+    # Der Grund geht nicht verloren, er steht nur nicht mehr im Weg.
+    pruefe("der Grund des Browsers kommt ins Protokoll",
+           "GL_KLAGE" in _t and "console" in _t, _t)
+    # Zweimal wecken haengt die Bedienung zweimal an - jede Drehung zaehlte
+    # dann doppelt.
+    pruefe("und ein zweites Wecken prallt ab", "z.weich ||" in _t, _t[:300])
 
 print()
 if fehler:
