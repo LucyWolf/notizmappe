@@ -3542,12 +3542,29 @@ $('#e-ferne-anmelden').addEventListener('click', async () => {
     $('#e-ferne-passwort').value = '';
     $('#e-ferne-hinweis').textContent = `Angemeldet an ${r.adresse} als ${r.benutzer}.`;
     await einstellungenLaden();
+    await angemeldetUebernehmen();
   } catch (f) {
     $('#e-ferne-hinweis').textContent = f.message;
   } finally {
     knopf.disabled = false;
   }
 });
+
+/* Das Anmelden schaltet drueben schon um - ferne.anmelden() setzt
+ * ferne_aktiv. Die Oberflaeche zeigt aber weiter den eigenen Ordner: alter
+ * Baum, alte offene Seite. Deren Abgleich fragt dann beim Server nach einer
+ * Seite, die es dort nicht gibt ("Die Seite ist nicht mehr da"), und an die
+ * eigenen kommt man auch nicht mehr heran, weil die Bruecke fern ist.
+ *
+ * Bis hierher half nur: Fenster zu, Fenster auf. Genau das macht
+ * seitenwechsel() von Hand - ohne Neuladen, das geht hier nicht. */
+async function angemeldetUebernehmen() {
+  try {
+    await seitenwechsel(true, null);
+  } catch (f) {
+    $('#e-ferne-hinweis').textContent = f.message;
+  }
+}
 
 $('#e-ferne-code-senden').addEventListener('click', async () => {
   $('#e-ferne-hinweis').textContent = 'wird geprüft …';
@@ -3556,6 +3573,9 @@ $('#e-ferne-code-senden').addEventListener('click', async () => {
     $('#e-ferne-code').value = '';
     $('#e-ferne-hinweis').textContent = `Angemeldet an ${r.adresse} als ${r.benutzer}.`;
     await einstellungenLaden();
+    // Mit zweitem Schritt endet das Anmelden hier - also auch hier
+    // uebernehmen, sonst steht dasselbe halb umgeschaltete Fenster da.
+    await angemeldetUebernehmen();
   } catch (f) { $('#e-ferne-hinweis').textContent = f.message; }
 });
 

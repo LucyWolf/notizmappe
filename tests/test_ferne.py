@@ -347,6 +347,41 @@ gerufen = {f"{art} {weg}" for weg, arten in wege.items() for art in arten} | VON
 tot = sorted(alle - gerufen)
 pruefe("und kein Weg steht da, den niemand ruft", not tot, ", ".join(tot))
 
+# --- Anmelden schaltet auch die Oberflaeche um -------------------------------
+#
+# ferne.anmelden() setzt ferne_aktiv - ab da liegt die Bruecke am Server. Die
+# Oberflaeche zeigte aber weiter den eigenen Ordner: alter Baum, alte offene
+# Seite. Deren Abgleich fragte dann beim Server nach einer Seite, die es dort
+# nicht gibt ("Die Seite ist nicht mehr da"), und an die eigenen kam man auch
+# nicht mehr. Es half nur, das Fenster zu schliessen und neu zu oeffnen.
+print("\nNach dem Anmelden zeigt das Fenster, was es soll")
+import re as _re                                                  # noqa: E402
+
+_q = (WURZEL / "app/ferne.py").read_text(encoding="utf-8")
+pruefe("anmelden() schaltet die Verbindung ein",
+       bool(_re.search(r"ferne_aktiv=True", _q)), "ferne.py")
+_m = (WURZEL / "app/oberflaeche/mappe.js").read_text(encoding="utf-8")
+for knopf, weg in (("e-ferne-anmelden", "/api/ferne/anmelden"),
+                   ("e-ferne-code-senden", "/api/ferne/code")):
+    _h = _re.search(r"\$\('#" + knopf + r"'\)\.addEventListener\(.*?^\}\);", _m, _re.S | _re.M)
+    pruefe(f"{knopf} steht in mappe.js", bool(_h))
+    if _h:
+        _t = _h.group(0)
+        pruefe(f"{knopf} meldet an", weg in _t, _t[:200])
+        pruefe(f"und übernimmt es danach ins Fenster",
+               "angemeldetUebernehmen()" in _t, _t)
+_u = _re.search(r"^async function angemeldetUebernehmen\(.*?^\}", _m, _re.S | _re.M)
+pruefe("angemeldetUebernehmen steht in mappe.js", bool(_u))
+if _u:
+    # seitenwechsel() leert die offene Seite, laedt den Baum und macht die
+    # erste Seite drueben auf - genau das, was sonst nur ein Neustart tat.
+    pruefe("und geht über seitenwechsel", "seitenwechsel(true" in _u.group(0), _u.group(0))
+_s = _re.search(r"^async function seitenwechsel\(.*?^\}", _m, _re.S | _re.M)
+if _s:
+    _t = _s.group(0)
+    pruefe("seitenwechsel vergisst die offene Seite", "offen = null" in _t, _t[:400])
+    pruefe("und lädt den Baum neu", "baumLaden()" in _t, _t[:600])
+
 print("alles gruen" if not fehler else f"{len(fehler)} FEHLER:\n - " + "\n - ".join(fehler))
 server.shutdown()
 shutil.rmtree(DATEN, ignore_errors=True)
