@@ -7,8 +7,10 @@ keinen Server mehr - die Oberfläche ruft genau diese Methoden auf.
 """
 import inspect
 import base64
+import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -446,6 +448,13 @@ import re
 js = (WURZEL / "app/oberflaeche/mappe.js").read_text(encoding="utf-8")
 
 
+def funktion_von(anfang: str) -> str:
+    """Die ganze Funktion mitsamt Kopf - zum Laufenlassen in node."""
+    i = js.index(anfang)
+    return anfang.split("function", 1)[0] + js[i:js.index(rumpf_von(anfang), i)
+                                               + len(rumpf_von(anfang)) + 1]
+
+
 def rumpf_von(anfang: str) -> str:
     """Den Koerper einer Funktion herausschneiden, ueber Klammerzaehlen."""
     i = js.index(anfang)
@@ -575,6 +584,78 @@ pruefe("Eine Datei auf einem fremden Rechner geht nicht",
 pruefe("Gelesen wird immer hier, nie am Server",
        "anhang_aus_pfad" not in bruecke_modul.FERN)
 
+# Gemessen, nicht vermutet: so sieht ein Zug aus dem Dateimanager in
+# WebKitGTK wirklich aus - dataTransfer.files leer, text/uri-list eine leere
+# Zeichenkette, und die Adresse steht einzig im HTML.
+GEMESSEN_HTML = (
+    '<a style="caret-color: rgb(0, 0, 0); color: rgb(0, 0, 0); font-size: medium;'
+    ' text-decoration: none;">file:///tmp/Halterung%20gro%C3%9F.stl</a>')
+
+harnisch = "\n".join(funktion_von(n) for n in
+                     ("function zugLesen", "function entzerren", "function dateiAdressen")) + """
+const AUFGABE = JSON.parse(process.argv[2]);
+function dt(daten) {
+  return { types: Object.keys(daten), getData: function (a) { return daten[a] || ''; } };
+}
+const ergebnis = {};
+ergebnis.webkit = dateiAdressen(dt({ 'text/uri-list': '', 'text/html': AUFGABE.html }));
+ergebnis.liste = dateiAdressen(dt({ 'text/uri-list': 'file:///a.stl\\r\\nfile:///b.stl' }));
+ergebnis.kommentar = dateiAdressen(dt({ 'text/uri-list': '# Kommentar\\nfile:///c.stl' }));
+ergebnis.netz = dateiAdressen(dt({ 'text/html': '<a href="https://beispiel.de/x.stl">x</a>' }));
+ergebnis.maskiert = dateiAdressen(dt({ 'text/html': '<a>file:///tmp/a&amp;b.stl</a>' }));
+ergebnis.doppelt = dateiAdressen(dt({ 'text/html':
+  '<a href="file:///tmp/a.stl">file:///tmp/a.stl</a>' }));
+ergebnis.zwei = dateiAdressen(dt({ 'text/html':
+  '<a>file:///tmp/a.stl</a><a>file:///tmp/b.stl</a>' }));
+ergebnis.leer = dateiAdressen(dt({}));
+console.log(JSON.stringify(ergebnis));
+"""
+
+ordner = Path(tempfile.mkdtemp(prefix="zugtest-"))
+(ordner / "pruef.js").write_text(harnisch, encoding="utf-8")
+aufgabe = json.dumps({"html": GEMESSEN_HTML})
+if shutil.which("node"):
+    befehl = ["node", str(ordner / "pruef.js"), aufgabe]
+elif shutil.which("docker"):
+    (ordner / "aufgabe.json").write_text(aufgabe, encoding="utf-8")
+    befehl = ["docker", "run", "--rm", "-v", f"{ordner}:/p:ro", "node:alpine", "sh", "-c",
+              'node /p/pruef.js "$(cat /p/aufgabe.json)"']
+else:
+    befehl = None
+
+if befehl is None:
+    print("  --  weder node noch docker da, das Zerlegen bleibt ungeprueft")
+else:
+    lauf = subprocess.run(befehl, capture_output=True, text=True)
+    try:
+        erg = json.loads(lauf.stdout.strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        erg = {}
+        pruefe("der Harnisch laeuft durch", False, lauf.stderr[-300:] or lauf.stdout[-300:])
+    if erg:
+        pruefe("Aus dem HTML von WebKitGTK kommt die Adresse heraus",
+               erg["webkit"] == ["file:///tmp/Halterung%20gro%C3%9F.stl"], erg.get("webkit"))
+        pruefe("Eine echte uri-list wird weiterhin bevorzugt",
+               erg["liste"] == ["file:///a.stl", "file:///b.stl"], erg.get("liste"))
+        pruefe("Kommentarzeilen fallen weg", erg["kommentar"] == ["file:///c.stl"], erg.get("kommentar"))
+        pruefe("Was aus dem Netz gezogen wird, nicht", erg["netz"] == [], erg.get("netz"))
+        pruefe("&amp; wird wieder zu &", erg["maskiert"] == ["file:///tmp/a&b.stl"], erg.get("maskiert"))
+        pruefe("Dieselbe Adresse zweimal ist ein Anhang",
+               erg["doppelt"] == ["file:///tmp/a.stl"], erg.get("doppelt"))
+        pruefe("Zwei Dateien bleiben zwei", len(erg["zwei"]) == 2, erg.get("zwei"))
+        pruefe("Ohne alles kommt nichts heraus", erg["leer"] == [], erg.get("leer"))
+shutil.rmtree(ordner, ignore_errors=True)
+
+pruefe("Beim Ablegen wird die Wirkung gesetzt, sonst kommt nichts an",
+       js.count("dropEffect = 'copy'") >= 2)
+pruefe("Kommt nichts an, bleibt das nicht stumm",
+       "weder die " in js and "Über 📎 geht sie sicher" in js)
+bericht = rumpf_von("function zugBericht")
+pruefe("Das Protokoll nennt jede Quelle einzeln",
+       "uri-list" in bericht and "text/plain" in bericht and "text/html" in bericht)
+pruefe("und nur ihre Längen, nicht ihren Inhalt",
+       bericht.count(".length") >= 1 and "Zeichen" in bericht)
+
 pruefe("Beim Ziehen zählt auch text/uri-list, nicht nur Files",
        "text/uri-list" in rumpf_von("function zugDateien"))
 pruefe("und die Fläche fragt genau danach", js.count("zugDateien(ev.dataTransfer)") >= 2)
@@ -591,7 +672,7 @@ pruefe("In der Serverfassung gibt es den Weg nicht",
 pruefe("Was danebenfällt, landet trotzdem in der Seite",
        "Abgelegt neben der Fläche" in js)
 pruefe("Jeder Zug steht im Protokoll, auch der leere",
-       "Adresse(n), Arten: '" in js)
+       "insProtokoll('Abgelegt: ' + zugBericht(" in js)
 
 print("\nHerunterladen steht im Menü")
 menue = (WURZEL / "app/oberflaeche/index.html").read_text(encoding="utf-8")

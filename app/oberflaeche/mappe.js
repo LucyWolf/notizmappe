@@ -1081,14 +1081,53 @@ function zugDateien(dt) {
          || arten.includes('text/plain');
 }
 
+function zugLesen(dt, art) {
+  try { return (dt && dt.getData(art)) || ''; } catch (f) { return ''; }
+}
+
+/* Aus &amp; wieder & machen - im HTML steht die Adresse maskiert. */
+function entzerren(text) {
+  return text.replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+}
+
 function dateiAdressen(dt) {
-  let roh = '';
-  try {
-    roh = (dt && (dt.getData('text/uri-list') || dt.getData('text/plain'))) || '';
-  } catch (f) { return []; }
-  return roh.split(/[\r\n]+/)
+  const liste = zugLesen(dt, 'text/uri-list') || zugLesen(dt, 'text/plain');
+  const aus_liste = liste.split(/[\r\n]+/)
     .map((z) => z.trim())
     .filter((z) => z && z.charAt(0) !== '#' && (z.startsWith('file://') || z.startsWith('/')));
+  if (aus_liste.length) return aus_liste;
+
+  /* WebKitGTK rückt bei einer Datei nichts davon heraus: dataTransfer.files
+   * bleibt leer, und text/uri-list gibt eine leere Zeichenkette zurück -
+   * gemessen, nicht vermutet. Was es hergibt, ist text/html, und darin steht
+   * die Adresse als Verweis:
+   *     <a style="…">file:///home/…/Halterung.stl</a>
+   * Also wird sie dort herausgesucht. Nur file:// - was aus dem Netz gezogen
+   * wird, hat auf dieser Platte nichts zu suchen. */
+  const html = zugLesen(dt, 'text/html');
+  const gefunden = [];
+  const muster = /file:\/\/[^"'<>\s]+/g;
+  let treffer = muster.exec(html);
+  while (treffer) {
+    const adresse = entzerren(treffer[0]);
+    if (gefunden.indexOf(adresse) < 0) gefunden.push(adresse);
+    treffer = muster.exec(html);
+  }
+  return gefunden;
+}
+
+/* Was beim Ablegen wirklich ankam - fürs Protokoll. Nicht die Inhalte,
+ * sondern ihre Längen: so steht hinterher da, welche Quelle leer war, ohne
+ * dass der Name einer Datei durch die Gegend geschrieben wird. */
+function zugBericht(dt, dateien, adressen) {
+  if (!dt) return 'gar nichts (kein dataTransfer)';
+  const arten = Array.from(dt.types || []).join(' ') || 'keine';
+  return dateien.length + ' Datei(en), ' + adressen.length + ' Adresse(n)'
+    + ' | Arten: ' + arten
+    + ' | uri-list: ' + zugLesen(dt, 'text/uri-list').length
+    + ' Zeichen, text: ' + zugLesen(dt, 'text/plain').length
+    + ', html: ' + zugLesen(dt, 'text/html').length;
 }
 
 /* Der Weg für Abgelegtes, von dem nur die Adresse da ist. */
@@ -1134,6 +1173,9 @@ for (const art of ['dragenter', 'dragover']) {
   buehne.addEventListener(art, (ev) => {
     if (!zugDateien(ev.dataTransfer)) return;
     ev.preventDefault();
+    // Ohne gesetzte Wirkung steht sie auf "none", und manche Ansicht liefert
+    // dann gar kein Ablegen - der Zeiger zeigt dasselbe, aber nichts kommt an.
+    try { ev.dataTransfer.dropEffect = 'copy'; } catch (f) { /* egal */ }
     buehne.classList.add('zieltafel');
   });
 }
@@ -1145,10 +1187,13 @@ buehne.addEventListener('drop', (ev) => {
   const dt = ev.dataTransfer;
   const dateien = dt ? Array.from(dt.files || []) : [];
   const adressen = dateien.length ? [] : dateiAdressen(dt);
-  insProtokoll('Abgelegt: ' + dateien.length + ' Datei(en), ' + adressen.length
-               + ' Adresse(n), Arten: '
-               + (dt ? (Array.from(dt.types || []).join(' ') || 'keine') : 'nichts'));
-  if (!dateien.length && !adressen.length) return;
+  insProtokoll('Abgelegt: ' + zugBericht(dt, dateien, adressen));
+  if (!dateien.length && !adressen.length) {
+    // Angenommen und dann nichts in der Hand: das darf nicht stumm bleiben.
+    melden('Von dieser Datei ist beim Loslassen nichts angekommen - weder die '
+           + 'Datei selbst noch ihre Adresse. Über 📎 geht sie sicher.');
+    return;
+  }
   ev.preventDefault();
   buehne.classList.remove('zieltafel');
   if (adressen.length) {
@@ -1191,13 +1236,17 @@ for (const art of ['dragenter', 'dragover', 'drop']) {
     if (buehne.contains(ev.target)) return;      // die Fläche macht es selbst
     if (!zugDateien(ev.dataTransfer)) return;
     ev.preventDefault();
+    try { ev.dataTransfer.dropEffect = 'copy'; } catch (f) { /* egal */ }
     if (art !== 'drop') return;
     const dt = ev.dataTransfer;
     const dateien = Array.from(dt.files || []);
     const adressen = dateien.length ? [] : dateiAdressen(dt);
-    insProtokoll('Abgelegt neben der Fläche: ' + dateien.length + ' Datei(en), '
-                 + adressen.length + ' Adresse(n)');
-    if (!dateien.length && !adressen.length) return;
+    insProtokoll('Abgelegt neben der Fläche: ' + zugBericht(dt, dateien, adressen));
+    if (!dateien.length && !adressen.length) {
+      melden('Von dieser Datei ist beim Loslassen nichts angekommen - weder die '
+             + 'Datei selbst noch ihre Adresse. Über 📎 geht sie sicher.');
+      return;
+    }
     const mitte = Math.round((buehne.scrollLeft + 80) / zoom / RASTER) * RASTER;
     const oben = Math.round((buehne.scrollTop + 80) / zoom / RASTER) * RASTER;
     if (adressen.length) pfadeAnnehmen(adressen, mitte, oben);
