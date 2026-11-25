@@ -611,6 +611,39 @@ for wer, muster in (("das Modell", r"bild\.addEventListener\('pointercancel'"),
     pruefe(f"abgebrochener Zeiger: {wer} hoert auf",
            bool(re.search(muster, mappe)))
 
+# --- Wenn keine 3D-Fläche zu bekommen ist ------------------------------------
+#
+# "Dieser Browser zeichnet kein 3D (WebGL fehlt oder ist aus)" stand da auch
+# dann, wenn WebGL sehr wohl da war und der Browser nur gerade keine Fläche
+# mehr hergab - zu viele Kontexte, Beschleunigung aus, GPU gesperrt. Den
+# Grund nennt der Browser selbst, aber nur im Ereignis
+# webglcontextcreationerror und nur während getContext läuft. Eine Meldung,
+# die den falschen Grund nennt, schickt die Fehlersuche in die Irre.
+print("\nWarum keine 3D-Fläche zu bekommen war")
+_m = (Path(__file__).resolve().parent.parent
+      / "app/oberflaeche/mappe.js").read_text(encoding="utf-8")
+_gl = re.search(r"^function glBauen\(.*?^\}", _m, re.S | re.M)
+pruefe("glBauen steht in mappe.js", bool(_gl))
+if _gl:
+    _t = _gl.group(0)
+    pruefe("der Grund wird beim Browser erfragt",
+           "webglcontextcreationerror" in _t, _t[:300])
+    pruefe("und der Horcher kommt vor getContext",
+           _t.index("webglcontextcreationerror") < _t.index("getContext"), _t[:300])
+    pruefe("er wird hinterher wieder abgehaengt",
+           "removeEventListener" in _t, _t[-300:])
+    # Manche Browser geben nur noch webgl2 her.
+    pruefe("webgl2 wird als zweites versucht", "'webgl2'" in _t, _t[:600])
+_wecken = re.search(r"^function modellWecken\(.*?^\}", _m, re.S | re.M)
+pruefe("modellWecken steht in mappe.js", bool(_wecken))
+if _wecken:
+    _t = _wecken.group(0)
+    pruefe("die Meldung nennt den Grund des Browsers", "GL_KLAGE" in _t, _t)
+    # Der alte Satz bleibt - aber nur fuer den Fall, fuer den er stimmt.
+    pruefe("'WebGL fehlt' steht nur noch da, wo WebGL wirklich fehlt",
+           "window.WebGLRenderingContext" in _t
+           and _t.index("window.WebGLRenderingContext") < _t.index("WebGL fehlt"), _t)
+
 print()
 if fehler:
     print(f"{len(fehler)} Prüfungen gescheitert")

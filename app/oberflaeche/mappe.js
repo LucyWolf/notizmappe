@@ -7281,12 +7281,32 @@ const MODELL_FLAECHE = [
   '}',
 ].join('\n');
 
+/* Warum eine 3D-Fläche nicht aufging. Der Browser sagt es - aber nur in
+ * diesem Ereignis, und nur während getContext läuft. Ohne das steht da
+ * "WebGL fehlt oder ist aus", und das ist in den meisten Fällen falsch:
+ * WebGL ist da, der Browser gibt nur gerade keine Fläche mehr her. */
+let GL_KLAGE = '';
+
 function glBauen(bild) {
   // alpha: die Flaeche bleibt hinter dem Modell durchsichtig, damit der
   // Kasten seine eigene Farbe behaelt - hell wie dunkel, ohne dass hier
   // eine Farbe nachgebaut wird.
-  const gl = bild.getContext('webgl', { alpha: true, antialias: true,
-                                        premultipliedAlpha: true });
+  const wunsch = { alpha: true, antialias: true, premultipliedAlpha: true };
+  GL_KLAGE = '';
+  const hoeren = function (ev) { if (ev && ev.statusMessage) GL_KLAGE = ev.statusMessage; };
+  bild.addEventListener('webglcontextcreationerror', hoeren);
+  // webgl2 als zweiter Versuch: manche Browser geben nur noch den her, und
+  // für das, was hier gezeichnet wird, ist er abwärtskompatibel.
+  let gl = null;
+  for (const art of ['webgl', 'webgl2', 'experimental-webgl']) {
+    try {
+      gl = bild.getContext(art, wunsch);
+    } catch (f) {
+      if (!GL_KLAGE) GL_KLAGE = f.message;
+    }
+    if (gl) break;
+  }
+  bild.removeEventListener('webglcontextcreationerror', hoeren);
   if (!gl) return null;
   const bauen = (art, quelle) => {
     const t = gl.createShader(art);
@@ -7439,8 +7459,16 @@ function modellWecken(z) {
     klage = f.message;
   }
   if (!z.glz) {
-    kachelBehalten(z, klage ? 'Die 3D-Fläche ging nicht auf: ' + klage
-                            : 'Dieser Browser zeichnet kein 3D (WebGL fehlt oder ist aus).');
+    // Erst der Grund, den der Browser selbst nennt - der steht in GL_KLAGE
+    // und sagt meist genau, woran es lag ("GPU access blocked", "too many
+    // contexts"). Nur wenn WebGL wirklich fehlt, bleibt der alte Satz.
+    const grund = klage || GL_KLAGE;
+    kachelBehalten(z, grund
+      ? 'Die 3D-Fläche ging nicht auf: ' + grund
+      : (window.WebGLRenderingContext
+          ? 'Der Browser gibt gerade keine 3D-Fläche her. Meist hilft: andere Tabs '
+            + 'mit 3D schließen und neu laden; sonst steht die Beschleunigung aus.'
+          : 'Dieser Browser zeichnet kein 3D (WebGL fehlt oder ist aus).'));
     return;
   }
   netzHochladen(z);
