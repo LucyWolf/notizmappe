@@ -734,14 +734,9 @@ function dateiBauen(e) {
       if (r && r.fehler) melden(r.fehler);
     } catch (f) { melden('Ließ sich nicht öffnen: ' + f.message); }
   });
-  kachel.addEventListener('contextmenu', async (ev) => {
-    ev.preventDefault();
-    ev.stopPropagation();
-    try {
-      const b = await bruecke();
-      await b.anhang_speichern_unter(offen.notizbuch, offen.abschnitt, offen.name, e.datei);
-    } catch (f) { melden('Speichern ging nicht: ' + f.message); }
-  });
+  // Die rechte Maustaste macht hier nichts Eigenes mehr: sie öffnet das Menü
+  // wie überall, und dort steht "Herunterladen". Vorher sprang ohne Vorwarnung
+  // ein Speichern-Dialog auf - ein Menüpunkt, den niemand sehen konnte.
   kachel.append(
     Object.assign(document.createElement('span'), { className: 'zeichen', textContent: '📎' }),
     Object.assign(document.createElement('span'), { className: 'dname', textContent: e.datei }),
@@ -1068,10 +1063,67 @@ buehne.addEventListener('dblclick', (ev) => {
   angefasst();
 });
 
-// Dateien auf die Flaeche ziehen
+/* --- Dateien auf die Fläche ziehen -----------------------------------------
+ *
+ * Nicht jede Webansicht legt eine gezogene Datei als Datei hin. Unter
+ * Wayland kommt aus dem Dateimanager oft nur ihre Adresse ("file:///…") und
+ * die Art heißt dann "text/uri-list" statt "Files". Wer darauf nicht
+ * vorbereitet ist, sagt beim Ziehen gar nicht erst zu - dann kommt kein
+ * "drop", und es passiert buchstäblich nichts. Deshalb zählt hier beides.
+ *
+ * Aus der Adresse wird eine Datei nicht hier, sondern im Programm: es liest
+ * sie von der Platte und legt sie auf demselben Weg ab wie der Dateiwähler -
+ * also auch am Server, wenn eine Verbindung steht. */
+function zugDateien(dt) {
+  if (!dt) return false;
+  const arten = Array.from(dt.types || []);
+  return arten.includes('Files') || arten.includes('text/uri-list')
+         || arten.includes('text/plain');
+}
+
+function dateiAdressen(dt) {
+  let roh = '';
+  try {
+    roh = (dt && (dt.getData('text/uri-list') || dt.getData('text/plain'))) || '';
+  } catch (f) { return []; }
+  return roh.split(/[\r\n]+/)
+    .map((z) => z.trim())
+    .filter((z) => z && z.charAt(0) !== '#' && (z.startsWith('file://') || z.startsWith('/')));
+}
+
+/* Der Weg für Abgelegtes, von dem nur die Adresse da ist. */
+async function pfadeAnnehmen(pfade, x, y) {
+  if (!offen) { sagen('Erst eine Seite öffnen', 2000); insProtokoll('Abgelegt: keine Seite offen'); return; }
+  let versatz = 0;
+  for (const p of pfade) {
+    insProtokoll('Abgelegt als Adresse: ' + p);
+    zustandAnzeige.textContent = 'lädt …';
+    let r;
+    try {
+      const b = await bruecke();
+      r = await b.anhang_aus_pfad(offen.notizbuch, offen.abschnitt, offen.name, p);
+    } catch (f) {
+      melden('Hinzufügen ging nicht: ' + f.message);
+      insProtokoll('Abgelegt: Brücke sagt ' + f.message);
+      zustandAnzeige.textContent = '';
+      return;
+    }
+    if (r && r.fehler) {
+      melden('Hinzufügen ging nicht: ' + r.fehler);
+      insProtokoll('Abgelegt: abgelehnt - ' + r.fehler);
+      zustandAnzeige.textContent = '';
+      continue;
+    }
+    insProtokoll(`Abgelegt: liegt als ${r.datei} (${r.groesse} Byte)`);
+    elementAnlegen(r, { name: r.beschriftung || r.datei }, x, y + versatz);
+    versatz += 40;
+  }
+  zustandAnzeige.textContent = '';
+}
+
 for (const art of ['dragenter', 'dragover']) {
   buehne.addEventListener(art, (ev) => {
-    if (!ev.dataTransfer || !Array.from(ev.dataTransfer.types || []).includes('Files')) return;
+    if (!zugDateien(ev.dataTransfer)) return;
     ev.preventDefault();
     buehne.classList.add('zieltafel');
   });
@@ -1081,11 +1133,22 @@ buehne.addEventListener('dragleave', (ev) => {
   buehne.classList.remove('zieltafel');
 });
 buehne.addEventListener('drop', (ev) => {
-  insProtokoll('Abgelegt: ' + ((ev.dataTransfer && ev.dataTransfer.files.length) || 0)
-               + ' Datei(en)');
-  if (!ev.dataTransfer || !ev.dataTransfer.files.length) return;
+  const dt = ev.dataTransfer;
+  const dateien = dt ? Array.from(dt.files || []) : [];
+  const adressen = dateien.length ? [] : dateiAdressen(dt);
+  insProtokoll('Abgelegt: ' + dateien.length + ' Datei(en), ' + adressen.length
+               + ' Adresse(n), Arten: '
+               + (dt ? (Array.from(dt.types || []).join(' ') || 'keine') : 'nichts'));
+  if (!dateien.length && !adressen.length) return;
   ev.preventDefault();
   buehne.classList.remove('zieltafel');
+  if (adressen.length) {
+    const r0 = flaeche.getBoundingClientRect();
+    pfadeAnnehmen(adressen,
+      Math.max(0, Math.round((ev.clientX - r0.left) / zoom / RASTER) * RASTER),
+      Math.max(0, Math.round((ev.clientY - r0.top) / zoom / RASTER) * RASTER));
+    return;
+  }
   // Auf einen Textkasten gezogen: Bilder dorthin, wo der Zeiger im Text steht.
   const text = ev.target.closest && ev.target.closest('.kasten .text');
   const k = text && text.closest('.kasten');
@@ -1109,6 +1172,29 @@ buehne.addEventListener('drop', (ev) => {
     Math.max(0, Math.round((ev.clientX - r.left) / zoom / RASTER) * RASTER),
     Math.max(0, Math.round((ev.clientY - r.top) / zoom / RASTER) * RASTER));
 });
+
+/* Neben die Fläche gefallen - auf die Leiste, den Baum, die Kopfzeile.
+ * Bisher nahm das niemand an: die Ansicht wollte dann zur Datei springen,
+ * und weil die Seite im Fenster gar keine Adresse hat, wäre sie danach
+ * schwarz gewesen. Jetzt landet es da, wo es auch über 📎 landen würde. */
+for (const art of ['dragenter', 'dragover', 'drop']) {
+  document.addEventListener(art, (ev) => {
+    if (buehne.contains(ev.target)) return;      // die Fläche macht es selbst
+    if (!zugDateien(ev.dataTransfer)) return;
+    ev.preventDefault();
+    if (art !== 'drop') return;
+    const dt = ev.dataTransfer;
+    const dateien = Array.from(dt.files || []);
+    const adressen = dateien.length ? [] : dateiAdressen(dt);
+    insProtokoll('Abgelegt neben der Fläche: ' + dateien.length + ' Datei(en), '
+                 + adressen.length + ' Adresse(n)');
+    if (!dateien.length && !adressen.length) return;
+    const mitte = Math.round((buehne.scrollLeft + 80) / zoom / RASTER) * RASTER;
+    const oben = Math.round((buehne.scrollTop + 80) / zoom / RASTER) * RASTER;
+    if (adressen.length) pfadeAnnehmen(adressen, mitte, oben);
+    else dateienAnnehmen(dateien, mitte, oben);
+  });
+}
 
 // Bild aus der Zwischenablage: landet als Datei, nicht als Text im Kasten.
 document.addEventListener('paste', (ev) => {
@@ -1567,11 +1653,35 @@ const rechtsmenue = $('#rechtsmenue');
 
 function menueZu() { rechtsmenue.hidden = true; }
 
+/* Welcher Anhang liegt unter dem Zeiger? Ein Bild im Text zählt mit: auch
+ * dafür gab es bisher keinen Weg, wieder an die Datei zu kommen. */
+function anhangUnter(ziel) {
+  if (!ziel || !ziel.closest) return null;
+  const bild = ziel.closest('img[data-datei]');
+  if (bild && bild.dataset.datei) {
+    return { datei: bild.dataset.datei, name: bild.alt || bild.dataset.datei };
+  }
+  const kasten = ziel.closest('.kasten');
+  const e = kasten && elemente.find((x) => x.id === kasten.dataset.id);
+  if (e && e.datei) return { datei: e.datei, name: e.beschriftung || e.datei };
+  return null;
+}
+
+// Worauf sich "Herunterladen" im Menü bezieht. Beim Öffnen gesetzt, nicht
+// beim Klicken: bis dahin ist der Zeiger längst woanders.
+let menueAnhang = null;
+
 document.addEventListener('contextmenu', (ev) => {
   if (ev.target.closest('#einstellungen')) return;
   ev.preventDefault();
   const imText = !!ev.target.closest('[contenteditable]');
   const etwasMarkiert = !window.getSelection().isCollapsed;
+  menueAnhang = anhangUnter(ev.target);
+  const laden = rechtsmenue.querySelector('[data-tun="herunterladen"]');
+  if (laden) {
+    laden.hidden = !menueAnhang;
+    laden.textContent = menueAnhang ? `Herunterladen: ${menueAnhang.name}` : 'Herunterladen …';
+  }
   rechtsmenue.querySelector('[data-tun="ausschneiden"]').disabled = !(imText && etwasMarkiert);
   rechtsmenue.querySelector('[data-tun="kopieren"]').disabled = !etwasMarkiert;
   rechtsmenue.querySelector('[data-tun="einfuegen"]').disabled = !imText;
@@ -1604,6 +1714,16 @@ rechtsmenue.addEventListener('click', async (ev) => {
       try { text = await navigator.clipboard.readText(); }
       catch (f) { sagen('Einfügen geht hier nur mit Strg+V', 3000); return; }
       document.execCommand('insertText', false, text);
+    } else if (tun === 'herunterladen') {
+      // Derselbe Weg am eigenen Rechner wie am Server: die Brücke holt die
+      // Datei dort, wo die Notiz gerade liegt, und fragt dann, wohin damit.
+      if (!menueAnhang || !offen) { sagen('Hier ist kein Anhang', 2000); return; }
+      insProtokoll('Herunterladen: ' + menueAnhang.datei);
+      const b = await bruecke();
+      const r = await b.anhang_speichern_unter(offen.notizbuch, offen.abschnitt,
+                                               offen.name, menueAnhang.datei);
+      if (r && r.fehler) { melden(r.fehler); insProtokoll('Herunterladen: ' + r.fehler); }
+      else if (r && r.ziel) sagen('Gespeichert: ' + r.ziel, 4000);
     } else if (tun === 'alles') {
       const feld = kasten ? kasten.querySelector('.text') : null;
       if (feld) {
@@ -1619,7 +1739,10 @@ rechtsmenue.addEventListener('click', async (ev) => {
   }
   if (kasten) {
     const e = elemente.find((x) => x.id === kasten.dataset.id);
-    if (e) { e.html = kasten.querySelector('.text').innerHTML; angefasst(); }
+    // Nur Textkästen haben Text. Bei einer Datei- oder Bildkachel gäbe es
+    // hier sonst einen Fehler mitten im Menü - und der Punkt täte nichts.
+    const feld = kasten.querySelector('.text');
+    if (e && feld) { e.html = feld.innerHTML; angefasst(); }
   }
 });
 

@@ -156,7 +156,11 @@ for p in quellen("app/*.py"):
     if p.name in ("aktualisieren.py", "ferne.py"):
         continue
     text = p.read_text(encoding="utf-8")
-    if re.search(r"^\\s*(import|from)\\s+(urllib|socket|http\\.client|requests|httpx)\\b", text, re.M):
+    # urllib.parse zerlegt Adressen und öffnet nichts - Netzwerkzeug ist, was
+    # eine Verbindung aufmachen kann. Seit dem Ziehen und Ablegen braucht die
+    # Brücke das Zerlegen: aus "file:///..." wird ein Pfad auf dieser Platte.
+    if re.search(r"^\\s*(import|from)\\s+(urllib\\.request|urllib\\.error|socket"
+                 r"|http\\.client|requests|httpx)\\b", text, re.M):
         netz.append(p.name)
 pruefe("kein anderes Modul holt sich Netzwerkzeug", not netz, ", ".join(netz))
 pruefe("die Bruecke leitet nur die bekannten Methoden weiter",
@@ -168,7 +172,8 @@ pruefe("Updates holen von GitHub, sonst nirgendwoher",
        "api.github.com" in akt and not re.search(r"https?://(?!api\.github\.com)[a-z]", akt))
 andere = [p.relative_to(WURZEL) for p in quellen("app/*.py")
           if p.name not in ("aktualisieren.py", "ferne.py")
-          and re.search(r"urllib|requests\.|httpx", p.read_text(encoding="utf-8"))]
+          and re.search(r"urllib\.request|urllib\.error|urlopen|requests\.|httpx",
+                        p.read_text(encoding="utf-8"))]
 pruefe("nur aktualisieren.py und ferne.py gehen ins Netz", not andere, andere)
 
 # --- Und kein location.reload() ----------------------------------------------

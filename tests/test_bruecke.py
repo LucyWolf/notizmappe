@@ -147,8 +147,12 @@ pruefe("Stil ist eingebettet", "<style>" in seite_fertig and "stil.css" not in s
 pruefe("Skript ist eingebettet", "pywebview.api" in seite_fertig and "<script src" not in seite_fertig)
 pruefe("Symbol ist eingebettet", "data:image/png" in seite_fertig)
 pruefe("die Flaeche ist drin", 'id="flaeche"' in seite_fertig)
+# Gemeint ist: die fertige Seite laedt nichts von der Platte nach. Das Wort
+# "file://" allein ist kein Verweis - seit dem Ziehen und Ablegen steht es als
+# Text im Skript, weil der Dateimanager Adressen in dieser Form herausgibt.
 pruefe("kein Verweis auf eine Datei mehr",
-       'href="icon.png"' not in seite_fertig and "file://" not in seite_fertig)
+       'href="icon.png"' not in seite_fertig and '="file://' not in seite_fertig
+       and "src='file://" not in seite_fertig)
 pruefe("kein fetch mehr in der Oberflaeche", "fetch(" not in js)
 
 # Jeder Aufruf in der Oberfläche muss drüben auch ankommen. "b.baum is not a
@@ -522,6 +526,87 @@ pruefe("und wo er gelandet ist", "liegt als ${r.datei}" in hoch)
 pruefe("Der Dateiwaehler sagt, dass er aufgeht", "insProtokoll('Dateiwahl: wird geöffnet')" in js)
 pruefe("und wie viele Dateien herauskamen", "Datei(en) gewählt" in js)
 pruefe("Abgelegtes ebenso", "insProtokoll('Abgelegt: '" in js)
+
+# --- Gezogen, nicht gewaehlt ------------------------------------------------
+#
+# Unter Wayland gibt der Dateimanager beim Ablegen keine Datei heraus, sondern
+# nur ihre Adresse - die Art heisst dann "text/uri-list" und nicht "Files".
+# Wer nur auf "Files" sieht, sagt schon beim Ziehen nicht zu; dann kommt gar
+# kein "drop" und es passiert buchstaeblich nichts.
+print("\nEine Datei, von der nur die Adresse da ist")
+
+zieh = Path(tempfile.mkdtemp(prefix="notizen-zieh-"))
+inhalt = b"solid probe\n" + bytes(range(256)) * 40
+gezogen = zieh / "Halterung groß.stl"
+gezogen.write_bytes(inhalt)
+b.notizbuch_anlegen("Gezogen")
+b.abschnitt_anlegen("Gezogen", "Teile")
+b.seite_anlegen("Gezogen", "Teile", "Seite")
+
+adresse = "file://" + str(gezogen).replace(" ", "%20").replace("ß", "%C3%9F")
+r = b.anhang_aus_pfad("Gezogen", "Teile", "Seite", adresse)
+pfad = speicher.anhang_ordner("Gezogen", "Teile", "Seite") / (r.get("datei") or "-")
+pruefe("Eine file://-Adresse wird angenommen", not r.get("fehler"), r)
+pruefe("Leerzeichen und Umlaut überleben die Adresse", r.get("beschriftung") == "Halterung groß.stl", r)
+pruefe("und die Datei liegt wirklich da, Byte für Byte",
+       pfad.is_file() and speicher.anhang_inhalt("Gezogen", "Teile", "Seite", r["datei"]) == inhalt)
+
+schlicht = zieh / "ohne.stl"
+schlicht.write_bytes(inhalt)
+pruefe("Ein nackter Pfad geht auch",
+       not b.anhang_aus_pfad("Gezogen", "Teile", "Seite", str(schlicht)).get("fehler"))
+pruefe("Ein Ordner nicht",
+       "Ordner" in str(b.anhang_aus_pfad("Gezogen", "Teile", "Seite", str(zieh)).get("fehler")))
+pruefe("Was es nicht gibt, auch nicht",
+       "gibt es" in str(b.anhang_aus_pfad("Gezogen", "Teile", "Seite",
+                                          str(zieh / "weg.stl")).get("fehler")))
+leer = zieh / "leer.stl"
+leer.write_bytes(b"")
+pruefe("Eine leere Datei wird abgelehnt",
+       "leer" in str(b.anhang_aus_pfad("Gezogen", "Teile", "Seite", str(leer)).get("fehler")))
+dick = zieh / "dick.stl"
+with dick.open("wb") as f:
+    f.truncate(speicher.MAX_ANHANG + 1)
+pruefe("Und eine zu große, bevor sie gelesen wird",
+       "größer" in str(b.anhang_aus_pfad("Gezogen", "Teile", "Seite", str(dick)).get("fehler")))
+pruefe("Eine Datei auf einem fremden Rechner geht nicht",
+       "anderen Rechner" in str(b.anhang_aus_pfad("Gezogen", "Teile", "Seite",
+                                                  "file://woanders/etwas.stl").get("fehler")))
+pruefe("Gelesen wird immer hier, nie am Server",
+       "anhang_aus_pfad" not in bruecke_modul.FERN)
+
+pruefe("Beim Ziehen zählt auch text/uri-list, nicht nur Files",
+       "text/uri-list" in rumpf_von("function zugDateien"))
+pruefe("und die Fläche fragt genau danach", js.count("zugDateien(ev.dataTransfer)") >= 2)
+adr = rumpf_von("function dateiAdressen")
+pruefe("Adressen kommen aus uri-list oder Text", "text/uri-list" in adr and "text/plain" in adr)
+pruefe("Kommentarzeilen der Liste zählen nicht mit", "'#'" in adr)
+pruefe("Nur Datei-Adressen, nichts aus dem Netz",
+       "startsWith('file://')" in adr and "startsWith('/')" in adr)
+drop = rumpf_von("buehne.addEventListener('drop'")
+pruefe("Ohne Datei sucht das Ablegen nach Adressen", "dateiAdressen(dt)" in drop)
+pruefe("und gibt sie an das Programm weiter", "pfadeAnnehmen(adressen" in drop)
+pruefe("Was danebenfällt, landet trotzdem in der Seite",
+       "Abgelegt neben der Fläche" in js)
+pruefe("Jeder Zug steht im Protokoll, auch der leere",
+       "Adresse(n), Arten: '" in js)
+
+print("\nHerunterladen steht im Menü")
+menue = (WURZEL / "app/oberflaeche/index.html").read_text(encoding="utf-8")
+pruefe("Der Eintrag ist da", 'data-tun="herunterladen"' in menue)
+pruefe("und bleibt verborgen, solange kein Anhang gemeint ist", 'data-tun="herunterladen" hidden' in menue)
+pruefe("Das Menü sucht den Anhang unter dem Zeiger", "menueAnhang = anhangUnter(ev.target)" in js)
+unter = rumpf_von("function anhangUnter")
+pruefe("Eine Kachel zählt", "elemente.find" in unter)
+pruefe("und ein Bild mitten im Text auch", "img[data-datei]" in unter)
+pruefe("Der Punkt holt die Datei über die Brücke",
+       "b.anhang_speichern_unter(offen.notizbuch" in js)
+pruefe("Die Kachel macht daraus nichts Eigenes mehr",
+       "kachel.addEventListener('contextmenu'" not in js)
+pruefe("Der Weg funktioniert auch am Server",
+       "ferne.anhang_holen" in (WURZEL / "app/bruecke.py").read_text(encoding="utf-8"))
+
+shutil.rmtree(zieh, ignore_errors=True)
 
 pruefe("Der Knopf dafuer steht im Reiter Hilfe",
        'id="hilfe-protokoll"' in (WURZEL / "app/oberflaeche/index.html").read_text(encoding="utf-8"))

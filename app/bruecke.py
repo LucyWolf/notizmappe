@@ -20,6 +20,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.parse
 from pathlib import Path
 
 import aktualisieren
@@ -412,6 +413,62 @@ class Bruecke:
         abgelegt["art"] = "bild" if typ else "datei"
         abgelegt["medientyp"] = typ or "application/octet-stream"
         return abgelegt
+
+    @_gefasst
+    def anhang_aus_pfad(self, notizbuch: str, abschnitt: str, name: str,
+                        pfad: str) -> dict:
+        """Eine Datei anhaengen, von der nur die Adresse bekannt ist.
+
+        Beim Ziehen aus dem Dateimanager gibt die Webansicht nicht ueberall
+        eine Datei heraus - unter Wayland kommt oft nur "file:///...".  Dann
+        liest das Programm sie selbst. Danach geht es denselben Weg wie der
+        Dateiwaehler: anhang_ablegen entscheidet, ob das hier landet oder am
+        Server, und niemand muss daran denken.
+
+        Ausdruecklich nicht in FERN: gelesen wird immer an diesem Rechner.
+        Der Server hat die Datei nicht, und ein Pfad, den jemand anderes
+        vorgibt, waere dort ein Weg in fremde Ordner.
+        """
+        if not isinstance(pfad, str) or len(pfad) > 4096 or "\x00" in pfad:
+            raise Abbruch("Damit lässt sich keine Datei finden")
+        roh = pfad.strip()
+        if roh.startswith("file://"):
+            # file://rechner/pfad gibt es auch - gelesen wird aber nur, was an
+            # diesem Rechner liegt. Alles andere waere ein Zugriff irgendwohin.
+            # Nach "file://" steht der Rechner, und der bleibt hier leer:
+            # "file:///home/..." - drei Striche. Steht dort ein Name, liegt die
+            # Datei woanders, und dorthin greift das Programm nicht.
+            ohne = roh[len("file://"):]
+            rechner, strich, rest = ohne.partition("/")
+            if rechner:
+                raise Abbruch("Die Datei liegt auf einem anderen Rechner")
+            roh = urllib.parse.unquote(strich + rest)
+        if not roh.startswith("/") and sys.platform != "win32":
+            raise Abbruch("Damit lässt sich keine Datei finden")
+        quelle = Path(roh)
+        if quelle.is_dir():
+            raise Abbruch("Das ist ein Ordner, keine Datei")
+        if not quelle.is_file():
+            raise Abbruch("Die Datei gibt es nicht (mehr)")
+        try:
+            groesse = quelle.stat().st_size
+        except OSError as f:
+            raise Abbruch(f"Ließ sich nicht lesen: {f}")
+        if groesse > speicher.MAX_ANHANG:
+            raise Abbruch(f"Datei ist größer als {speicher.MAX_ANHANG // 1024 // 1024} MB")
+        if not groesse:
+            raise Abbruch("Datei ist leer")
+        try:
+            daten = quelle.read_bytes()
+        except OSError as f:
+            raise Abbruch(f"Ließ sich nicht lesen: {f}")
+        antwort = self.anhang_ablegen(notizbuch, abschnitt, name, quelle.name,
+                                      base64.b64encode(daten).decode("ascii"))
+        if isinstance(antwort, dict) and not antwort.get("fehler"):
+            # Wie die Datei hiess, bevor sie abgelegt wurde - die Kachel
+            # beschriftet sich danach.
+            antwort.setdefault("beschriftung", quelle.name)
+        return antwort
 
     @_gefasst
     def anhang_bild(self, notizbuch: str, abschnitt: str, name: str, datei: str) -> dict:
@@ -935,7 +992,13 @@ class Bruecke:
         nichts" fragt, soll die Antwort im Fenster vorfinden.
         """
         import fenster                                       # noqa: PLC0415
-        wieviel = max(10, min(int(zeilen or 60), 400))
+        try:
+            wieviel = int(zeilen or 60)
+        except (TypeError, ValueError):
+            # Unsinn aus der Oberflaeche ist kein Grund fuer einen
+            # Programmfehler - dann eben die uebliche Menge.
+            wieviel = 60
+        wieviel = max(10, min(wieviel, 400))
         try:
             alles = fenster.PROTOKOLL.read_text(encoding="utf-8", errors="replace")
         except OSError as f:
