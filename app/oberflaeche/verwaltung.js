@@ -506,6 +506,20 @@
      mehr dazu. */
 
 
+  /* Die bekannten Mailanbieter. Das sind veröffentlichte Adressen ihrer
+     Mailserver, keine Zugangsdaten von irgendjemandem - sie dürfen hier
+     stehen. Alle fünf nehmen STARTTLS auf 587; gäbe es einen mit 465, stünde
+     die Verschlüsselung in der Zeile mit dabei. */
+  const ANBIETER = {
+    gmail:   { server: 'smtp.gmail.com',      port: 587, sicherheit: 'starttls' },
+    outlook: { server: 'smtp.office365.com',  port: 587, sicherheit: 'starttls' },
+    gmx:     { server: 'mail.gmx.net',        port: 587, sicherheit: 'starttls' },
+    webde:   { server: 'smtp.web.de',         port: 587, sicherheit: 'starttls' },
+    yahoo:   { server: 'smtp.mail.yahoo.com', port: 587, sicherheit: 'starttls' },
+  };
+  const ANBIETER_NAMEN = [['gmail', 'Gmail'], ['outlook', 'Outlook / Office 365'],
+                          ['gmx', 'GMX'], ['webde', 'Web.de'], ['yahoo', 'Yahoo']];
+
   /* Mailversand. Steht unter Optionen bei der Verwaltung, nicht im Profil: es
      ist eine Einstellung des Servers, keine des eigenen Zugangs. Nur Verwalter sehen
      sie - fuer alle anderen antwortet /post mit 403, und dann verschwindet
@@ -514,6 +528,11 @@
     if (!optionentafel() || document.getElementById('postteil')) return;
 
     const an = el('input', { type: 'checkbox', id: 'po-an' });
+    const anbieter = el('select', { id: 'po-anbieter' });
+    anbieter.append(el('option', { value: '', textContent: '— von Hand eintragen —' }));
+    for (const [wert, text] of ANBIETER_NAMEN) {
+      anbieter.append(el('option', { value: wert, textContent: text }));
+    }
     const server = el('input', { type: 'text', id: 'po-server', placeholder: 'mail.example.de' });
     const port = el('input', { type: 'number', id: 'po-port', value: '587', min: '1', max: '65535' });
     const sicherheit = el('select', { id: 'po-sicherheit' });
@@ -528,12 +547,23 @@
     const passwort = el('input', { type: 'password', id: 'po-passwort',
                                    placeholder: 'Passwort', autocomplete: 'new-password' });
     const absender = el('input', { type: 'email', id: 'po-absender',
-                                   placeholder: 'notizmappe@example.de' });
+                                   placeholder: 'leer = wie der Anmeldename' });
     const stelle = el('input', { type: 'text', id: 'po-stelle',
                                  placeholder: 'https://notizen.example.de' });
     const hinweis = el('p', { className: 'hinweis', id: 'po-hinweis' });
     const sichern = el('button', { type: 'button', textContent: 'Speichern' });
     const testen = el('button', { type: 'button', textContent: 'Testnachricht an mich' });
+
+    // Nur Host, Port und Verschlüsselung vorfüllen - alles andere bleibt
+    // stehen. "Von Hand eintragen" rührt nichts an: wer schon etwas getippt
+    // hat, soll es nicht beim Durchklicken verlieren.
+    anbieter.addEventListener('change', () => {
+      const a = ANBIETER[anbieter.value];
+      if (!a) return;
+      server.value = a.server;
+      port.value = a.port;
+      sicherheit.value = a.sicherheit;
+    });
 
     sichern.addEventListener('click', async () => {
       hinweis.textContent = 'wird gespeichert …';
@@ -566,11 +596,16 @@
         + 'Datenordner - der Server muss sich damit anmelden können. Wer an die '
         + 'Datei kommt, hat das Mailkonto.' }),
       zeile('Einschalten', an),
+      zeile('Anbieter', anbieter),
       zeile('Mailserver', server),
       zeile('Port', port),
       zeile('Verschlüsselung', sicherheit),
       zeile('Anmeldename', benutzer),
       zeile('Passwort', passwort),
+      el('p', { className: 'hinweis', textContent:
+        'Gmail, Outlook, GMX und Web.de nehmen hier nicht das Kennwort des '
+        + 'Kontos, sondern ein App-Passwort, das man dort einmal anlegt. '
+        + 'Leer lassen heißt: das gespeicherte bleibt.' }),
       zeile('Absender', absender),
       zeile('Adresse dieses Servers', stelle),
       el('p', { className: 'hinweis', textContent:
@@ -596,6 +631,11 @@
     document.getElementById('po-passwort').placeholder = d.passwort_da ? 'unverändert' : 'Passwort';
     document.getElementById('po-absender').value = d.absender || '';
     document.getElementById('po-stelle').value = d.stelle || '';
+    // Steht dort schon der Server eines bekannten Anbieters, soll das Menü
+    // ihn auch zeigen - sonst stünde da "von Hand eintragen", obwohl es
+    // Gmail ist.
+    const wahl = Object.keys(ANBIETER).find((k) => ANBIETER[k].server === (d.server || ''));
+    document.getElementById('po-anbieter').value = wahl || '';
   }
 
   function abschnittBauen() {
