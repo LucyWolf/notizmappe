@@ -53,6 +53,27 @@
     return window.serverHol(rumpf ? 'POST' : 'GET', weg, rumpf || {});
   }
 
+  /* An welchem Server wird hier eigentlich etwas eingestellt?
+     Im Browser ist das der, von dem die Seite kommt; im Fenster der, an dem
+     es angemeldet ist. Dass beides nicht dasselbe sein muss, war nirgends zu
+     sehen: wer zwei Container laufen hat, stellt im Fenster den einen ein und
+     schaut im Browser auf den anderen - und haelt das Speichern fuer kaputt.
+     Deshalb steht die Adresse jetzt da, wo das Ergebnis gemeldet wird. */
+  let serverAdresse = '';
+
+  async function welcherServer() {
+    if (serverAdresse) return serverAdresse;
+    if (typeof window.NOTIZMAPPE_HOL === 'function') {
+      serverAdresse = window.location.origin;
+      return serverAdresse;
+    }
+    try {
+      const f = await api('/api/ferne');
+      serverAdresse = (f && f.adresse) || '';
+    } catch (f) { serverAdresse = ''; }
+    return serverAdresse;
+  }
+
   /* "Zwei Schritte beim Anmelden" steht nicht hier, sondern in der Fassung,
      die gerade läuft - im Browser in shim.js, im Fenster in mappe.js. Die
      Verwaltung stößt es nur an. */
@@ -575,7 +596,10 @@
         });
         passwort.value = '';
         passwort.placeholder = d.passwort_da ? 'unverändert' : 'Passwort';
-        hinweis.textContent = d.hinweis || 'Gespeichert.';
+        // Mit Adresse: "Gespeichert." allein hilft nicht, wenn man gleich
+        // darauf woanders nachschaut und dort nichts steht.
+        hinweis.textContent = (d.hinweis || 'Gespeichert.')
+          + (serverAdresse ? ` Steht jetzt auf ${serverAdresse}.` : '');
       } catch (f) { hinweis.textContent = f.message; }
     });
     testen.addEventListener('click', async () => {
@@ -636,6 +660,9 @@
     // Gmail ist.
     const wahl = Object.keys(ANBIETER).find((k) => ANBIETER[k].server === (d.server || ''));
     document.getElementById('po-anbieter').value = wahl || '';
+    const wo = await welcherServer();
+    const hinweis = document.getElementById('po-hinweis');
+    if (wo && hinweis) hinweis.textContent = `Eingestellt wird der Server ${wo}.`;
   }
 
   function abschnittBauen() {
