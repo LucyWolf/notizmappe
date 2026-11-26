@@ -610,6 +610,21 @@
       } catch (f) { hinweis.textContent = f.message; }
     });
 
+    /* Ein Haken im Fenster ist noch keine Einstellung am Server. Wer ihn
+       setzt und gleich darauf dort nachsieht, haelt das Uebertragen fuer
+       kaputt - dabei war es nie abgeschickt. Die Meldezeile sagt es deshalb,
+       sobald etwas abweicht, und raeumt sich beim Speichern selbst wieder
+       weg. Kein neues Feld, keine neue Farbe: dieselbe Zeile, die danach
+       "Gespeichert." sagt. */
+    const nichtGespeichert = () => {
+      hinweis.textContent = 'Geändert – steht noch nicht am Server. Auf Speichern drücken.';
+    };
+    for (const feld of [an, anbieter, server, port, sicherheit, benutzer,
+                        passwort, absender, stelle]) {
+      feld.addEventListener('change', nichtGespeichert);
+      feld.addEventListener('input', nichtGespeichert);
+    }
+
     const zeile = (text, feld) => el('p', { className: 'zeile2' },
                                      [el('span', { textContent: text }), feld]);
     optionAnhaengen(el('section', { id: 'postteil' }, [
