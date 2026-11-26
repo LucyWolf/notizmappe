@@ -515,10 +515,25 @@ class Bruecke:
         Nur verbunden: oertlich gibt es kein Konto, das man einstellen
         koennte. Welche Seiten gehen, steht in ferne.SERVERSEITEN.
         """
+        import fenster                                       # noqa: PLC0415
         if not ferne.aktiv():
             raise Abbruch("Das gibt es nur, wenn du an einem Server arbeitest")
-        return ferne.serverseite(str(art or "GET"), str(weg or ""),
-                                 rumpf if isinstance(rumpf, dict) else None)
+        art, weg = str(art or "GET"), str(weg or "")
+        wohin = ferne.stand().get("adresse") or "?"
+        try:
+            antwort = ferne.serverseite(art, weg,
+                                        rumpf if isinstance(rumpf, dict) else None)
+        except Exception as f:                               # noqa: BLE001
+            fenster.notieren(f"Server-Seite: {art} {weg} an {wohin} → "
+                             f"{type(f).__name__}: {f}")
+            raise
+        # Nur die Adresse und was zurueckkam, nie der Rumpf: dort stehen
+        # Passwoerter (Mailkonto, eigenes Konto). Sonst liegt das Protokoll
+        # voll mit Zugangsdaten, und man schickt es jemandem zum Anschauen.
+        kurz = (antwort.get("fehler") or antwort.get("hinweis")
+                or f"ok, {len(antwort)} Felder") if isinstance(antwort, dict) else "?"
+        fenster.notieren(f"Server-Seite: {art} {weg} an {wohin} → {kurz}")
+        return antwort
 
     @_gefasst
     def anhang_oeffnen(self, notizbuch: str, abschnitt: str, name: str, datei: str) -> dict:

@@ -536,6 +536,22 @@ pruefe("Der Dateiwaehler sagt, dass er aufgeht", "insProtokoll('Dateiwahl: wird 
 pruefe("und wie viele Dateien herauskamen", "Datei(en) gewählt" in js)
 pruefe("Abgelegtes ebenso", "insProtokoll('Abgelegt: '" in js)
 
+# Dasselbe eine Etage tiefer: was die Verwaltung am Server einstellt, geht
+# ueber server_seite. "Gespeichert" und trotzdem nichts drueben zu sehen hat
+# genau eine Erklaerung - es war ein anderer Server. Die Adresse gehoert
+# deshalb ins Protokoll, der Rumpf auf keinen Fall: da steht das Passwort des
+# Mailkontos drin.
+_py = (WURZEL / "app/bruecke.py").read_text(encoding="utf-8")
+seite = _py[_py.index("def server_seite"):_py.index("def anhang_oeffnen")]
+pruefe("Jeder Serveraufruf steht mit Weg und Adresse im Protokoll",
+       'fenster.notieren(f"Server-Seite: {art} {weg} an {wohin}' in seite)
+pruefe("auch der, der schiefgeht", seite.count("fenster.notieren") >= 2
+       and "except Exception" in seite)
+pruefe("und was zurueckkam, kurz dahinter",
+       'antwort.get("fehler")' in seite and 'antwort.get("hinweis")' in seite)
+pruefe("der Rumpf steht nie drin - dort liegen Passwoerter",
+       "notieren" in seite and "{rumpf" not in seite)
+
 # --- Gezogen, nicht gewaehlt ------------------------------------------------
 #
 # Unter Wayland gibt der Dateimanager beim Ablegen keine Datei heraus, sondern
