@@ -586,7 +586,29 @@
       sicherheit.value = a.sicherheit;
     });
 
+    /* Welches Feld ist gemeint? Der Server schreibt ganze Saetze, keine
+       Feldnamen - also an einem Stueck Text erkennen. Trifft nichts zu,
+       wird eben nur die Zeile rot; falsch markieren waere schlimmer. */
+    const WORAN = [['Adresse des Servers', stelle], ['Absenderadresse', absender],
+                   ['Rechnername', server], ['Port', port],
+                   ['Verschlüsselung', sicherheit], ['Anmeldename', benutzer]];
+
+    const sauber = () => {
+      hinweis.classList.remove('schlecht');
+      for (const [, feld] of WORAN) feld.classList.remove('schlecht');
+    };
+
+    const abgelehnt = (text) => {
+      sauber();
+      hinweis.textContent = text;
+      hinweis.classList.add('schlecht');
+      for (const [wort, feld] of WORAN) {
+        if (text.indexOf(wort) >= 0) { feld.classList.add('schlecht'); feld.focus(); break; }
+      }
+    };
+
     sichern.addEventListener('click', async () => {
+      sauber();
       hinweis.textContent = 'wird gespeichert …';
       try {
         const d = await hol('/post', {
@@ -600,14 +622,15 @@
         // darauf woanders nachschaut und dort nichts steht.
         hinweis.textContent = (d.hinweis || 'Gespeichert.')
           + (serverAdresse ? ` Steht jetzt auf ${serverAdresse}.` : '');
-      } catch (f) { hinweis.textContent = f.message; }
+      } catch (f) { abgelehnt(f.message); }
     });
     testen.addEventListener('click', async () => {
+      sauber();
       hinweis.textContent = 'wird verschickt … das kann einen Moment dauern.';
       try {
         const d = await hol('/post/probe', {});
         hinweis.textContent = d.hinweis || 'Abgeschickt.';
-      } catch (f) { hinweis.textContent = f.message; }
+      } catch (f) { abgelehnt(f.message); }
     });
 
     /* Ein Haken im Fenster ist noch keine Einstellung am Server. Wer ihn
@@ -678,6 +701,14 @@
     const wo = await welcherServer();
     const hinweis = document.getElementById('po-hinweis');
     if (wo && hinweis) hinweis.textContent = `Eingestellt wird der Server ${wo}.`;
+    // Ist noch keine Adresse eingetragen, steht hier die, mit der gerade
+    // geredet wird - im Browser die der Seite, im Fenster die aus der
+    // Verbindung. Ohne sie lehnt der Server das Einschalten ab und speichert
+    // dann gar nichts; das sah aus, als käme vom Fenster nichts an.
+    // Geraten wird nichts: die Adresse steht sichtbar im Feld und wird erst
+    // mit dem Speichern verschickt, wie alles andere auch. Der Server nimmt
+    // sie weiterhin nur aus dem Formular, nie aus der Anfrage.
+    if (wo && !(d.stelle || '')) document.getElementById('po-stelle').value = wo;
   }
 
   function abschnittBauen() {
@@ -1013,6 +1044,13 @@
         border-radius: 6px; padding: 5px 8px; text-align: center; user-select: all;
       }
       #v-meldung { color: var(--matt); font-size: 12px; margin-top: 10px; }
+      /* Eine Ablehnung in Grau sieht aus wie ein Hinweis und wird ueberlesen -
+         und dann sucht man den Fehler wochenlang woanders. */
+      #po-hinweis.schlecht { color: var(--warnung); font-weight: 600; }
+      #postteil input.schlecht, #postteil select.schlecht {
+        border-color: var(--warnung); box-shadow: 0 0 0 2px
+          color-mix(in srgb, var(--warnung) 25%, transparent);
+      }
     `;
     document.head.append(stil);
   }
