@@ -74,11 +74,131 @@
     return serverAdresse;
   }
 
-  /* "Zwei Schritte beim Anmelden" steht nicht hier, sondern in der Fassung,
-     die gerade läuft - im Browser in shim.js, im Fenster in mappe.js. Die
-     Verwaltung stößt es nur an. */
-  function zweiLaden() {
-    if (typeof window.NOTIZMAPPE_ZWEI_LADEN === 'function') window.NOTIZMAPPE_ZWEI_LADEN();
+  /* --- Zwei Schritte beim Anmelden ---------------------------------------
+   *
+   * Stand bis 1.2.52 in shim.js und damit nur im Browser - im Fenster blieb
+   * der Kasten leer. Jetzt hier, bei der übrigen Verwaltung, aus demselben
+   * Grund wie damals der Mailversand: zwei Oberflächen für dieselbe Sache
+   * laufen auseinander, sobald eine angefasst wird.
+   *
+   * Der Ablauf beim Einrichten der App ist absichtlich dreistufig: QR zeigen,
+   * Notfallcodes zeigen, und erst einschalten, wenn ein Code stimmt. Wer sein
+   * Geheimnis nie in die App bekommen hat, sperrt sich sonst selbst aus - und
+   * die Notfallcodes muss man gesehen haben, bevor man sie braucht.
+   *
+   * Daneben der Code per Mail: eigener Schalter, unabhängig. Beides zusammen
+   * geht; dann zählt beim Anmelden, was man gerade zur Hand hat.
+   */
+  let zweiVorbereitet = null;
+
+  async function zweiLaden() {
+    // Ältere Serverfassungen legen die Oberfläche selbst hin. Dann die
+    // nehmen, sonst stünde der Kasten zweimal da.
+    if (typeof window.NOTIZMAPPE_ZWEI_LADEN === 'function') {
+      window.NOTIZMAPPE_ZWEI_LADEN();
+      return;
+    }
+    const wo = document.getElementById('v-zwei');
+    if (!wo) return;
+    let d;
+    try { d = await hol('/zwei-schritte'); } catch (f) { return; }
+    wo.textContent = '';
+    if (zweiVorbereitet) { zweiEinrichtenZeigen(wo); return; }
+
+    wo.append(el('p', { className: 'zeile2' }, [
+      el('span', { textContent: 'Code aus einer App' }),
+      el('span', { textContent: d.an ? `an · ${d.codes_uebrig} Notfallcodes übrig` : 'aus' }),
+    ]));
+    const knopf = el('button', { type: 'button',
+      textContent: d.an ? 'Abschalten' : 'Einrichten' });
+    knopf.addEventListener('click', async () => {
+      if (d.an) {
+        if (!confirm('Code aus der App abschalten?')) return;
+        try { await hol('/zwei-schritte', { was: 'aus' }); zweiLaden(); verwaltungLaden(); }
+        catch (f) { sagen(f.message); }
+        return;
+      }
+      try {
+        zweiVorbereitet = await hol('/zwei-schritte', { was: 'vorbereiten' });
+        zweiLaden();
+      } catch (f) { sagen(f.message); }
+    });
+    wo.append(el('p', { className: 'knoepfe' }, [knopf]));
+    if (!d.an) {
+      wo.append(el('p', { className: 'hinweis', textContent:
+        'Zusätzlich zum Passwort ein Code aus einer Authenticator-App. '
+        + 'Beim Einrichten bekommst du Notfallcodes für den Fall, dass das Telefon weg ist.' }));
+    }
+
+    // Der zweite Weg. Ohne Adresse im Profil kommt der Code nirgends an -
+    // dann steht hier, was fehlt, statt eines Schalters, der nichts tut.
+    const mail = el('input', { type: 'checkbox', id: 'v-zweimail', checked: !!d.mail });
+    mail.disabled = !d.mail_moeglich && !d.mail;
+    mail.addEventListener('change', async () => {
+      try {
+        await hol('/zwei-schritte', { was: 'mail', an: mail.checked });
+        sagen(mail.checked
+          ? 'Beim Anmelden kommt ab jetzt ein Code per Mail - zusätzlich zum Passwort.'
+          : 'Der Code per Mail ist aus.');
+        zweiLaden(); verwaltungLaden();
+      } catch (f) { sagen(f.message); mail.checked = !mail.checked; }
+    });
+    wo.append(el('p', { className: 'zeile2' }, [
+      el('span', { textContent: 'Code per Mail' }), mail,
+    ]));
+    wo.append(el('p', { className: 'hinweis', textContent: d.mail_moeglich
+      ? 'Der Code geht an die Adresse aus deinem Profil und gilt zehn Minuten. '
+        + 'Bequemer als die App, aber schwächer: wer dein Postfach hat, kommt hinein.'
+      : 'Dafür fehlt die Mailadresse im Profil - ohne sie käme der Code nirgends an.' }));
+  }
+
+  function zweiEinrichtenZeigen(wo) {
+    const v = zweiVorbereitet;
+    const qr = el('div', { className: 'qrkasten' });
+    qr.innerHTML = v.qr;                     // kommt vom eigenen Server, kein fremder Inhalt
+
+    const codefeld = el('input', { type: 'text', placeholder: '123456',
+                                   inputMode: 'numeric', autocomplete: 'one-time-code' });
+    const fertig = el('button', { type: 'button', textContent: 'Einschalten' });
+    fertig.addEventListener('click', async () => {
+      try {
+        await hol('/zwei-schritte', { was: 'einschalten', code: codefeld.value });
+        zweiVorbereitet = null;
+        sagen('Zwei Schritte sind an. Beim nächsten Anmelden fragt er nach dem Code.');
+        zweiLaden();
+        verwaltungLaden();
+      } catch (f) { sagen(f.message); }
+    });
+    const abbrechen = el('button', { type: 'button', textContent: 'Abbrechen' });
+    abbrechen.addEventListener('click', () => { zweiVorbereitet = null; zweiLaden(); });
+
+    const codes = el('div', { className: 'notfallcodes' });
+    for (const c of v.codes) codes.append(el('code', { textContent: c }));
+    const kopieren = el('button', { type: 'button', textContent: 'Codes kopieren' });
+    kopieren.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(v.codes.join('\n'));
+        sagen('Notfallcodes kopiert - sicher ablegen, nicht neben dem Passwort.');
+      } catch (f) { sagen('Bitte abschreiben - die Zwischenablage ging nicht.'); }
+    });
+
+    wo.append(
+      el('h4', { textContent: '1. In der App einlesen' }),
+      qr,
+      el('p', { className: 'hinweis', textContent:
+        'Geht die Kamera nicht, trag dieses Geheimnis von Hand ein:' }),
+      el('code', { className: 'geheimnis', textContent: v.geheim }),
+      el('h4', { textContent: '2. Notfallcodes aufschreiben' }),
+      el('p', { className: 'hinweis', textContent:
+        'Jeder gilt genau einmal. Sie sind der Weg hinein, wenn das Telefon weg ist - '
+        + 'und sie werden danach nie wieder angezeigt.' }),
+      codes,
+      el('p', { className: 'knoepfe' }, [kopieren]),
+      el('h4', { textContent: '3. Mit einem Code aus der App bestätigen' }),
+      el('p', { className: 'hinweis', textContent:
+        'Erst damit wird eingeschaltet - so steht fest, dass die App wirklich funktioniert.' }),
+      el('p', { className: 'ordnerzeile' }, [codefeld, fertig, abbrechen]),
+    );
   }
 
   /* Die Bereichswahl oben im Band gibt es nur im Browser - im Fenster ist
