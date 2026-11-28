@@ -665,6 +665,13 @@
      Nur im Browser am Server: das Fenster am Desktop zeigt die Speicher (noch)
      nicht in seiner Leiste, und ein Knopf, dessen Wirkung man nicht sieht,
      waere schlimmer als keiner. */
+  // Die Arten, die sich verbinden lassen - je Art die Felder, die sie braucht.
+  const SPEICHERARTEN = [
+    ['smb', 'NAS / Windows-Freigabe (SMB)'],
+    ['webdav', 'Nextcloud / WebDAV'],
+    ['sftp', 'SFTP (SSH)'],
+  ];
+
   function speicherBauen() {
     if (typeof window.NOTIZMAPPE_HOL !== 'function') return;
     if (document.getElementById('speicherteil')) return;
@@ -672,31 +679,85 @@
     const liste = el('div', { id: 'speicher-liste' });
     const standard = el('p', { id: 'speicher-standard', className: 'zeile2' });
     const hinweis = el('p', { id: 'speicher-hinweis', className: 'hinweis' });
+    const feld = (id, platz, mehr) => el('input', Object.assign(
+      { type: 'text', id, placeholder: platz, autocapitalize: 'none', autocomplete: 'off' }, mehr || {}));
 
-    const name = el('input', { type: 'text', id: 'speicher-name', placeholder: 'Name in der Leiste, z. B. NAS',
-                               maxLength: 40 });
-    const wirt = el('input', { type: 'text', id: 'speicher-wirt', placeholder: 'NAS: Name oder IP, z. B. 192.168.178.20',
-                               autocapitalize: 'none' });
-    const freigabe = el('input', { type: 'text', id: 'speicher-freigabe', placeholder: 'Freigabe, z. B. home',
-                                   autocapitalize: 'none' });
-    const unter = el('input', { type: 'text', id: 'speicher-unter', value: 'Notizmappe',
-                                placeholder: 'Ordner darin', autocapitalize: 'none' });
-    const benutzer = el('input', { type: 'text', id: 'speicher-benutzer', placeholder: 'Benutzer auf der NAS',
-                                   autocapitalize: 'none', autocomplete: 'off' });
+    const art = el('select', { id: 'speicher-art' });
+    for (const [wert, text] of SPEICHERARTEN) art.append(el('option', { value: wert, textContent: text }));
+    const name = feld('speicher-name', 'Name in der Leiste', { maxLength: 40 });
+    const wirt = feld('speicher-wirt', 'NAS: Name oder IP, z. B. 192.168.178.20');
+    const freigabe = feld('speicher-freigabe', 'Freigabe, z. B. home');
+    const adresse = feld('speicher-adresse', 'https://cloud.example.de/remote.php/dav/files/BENUTZER/');
+    const anbieter = el('label', { className: 'haken' }, [
+      el('input', { type: 'checkbox', id: 'speicher-nextcloud', checked: true }),
+      el('span', { textContent: ' Nextcloud' })]);
+    const port = feld('speicher-port', 'Port', { value: '22', maxLength: 5, size: 6 });
+    const unter = feld('speicher-unter', 'Ordner darin', { value: 'Notizmappe' });
+    const benutzer = feld('speicher-benutzer', 'Benutzer');
     const passwort = el('input', { type: 'password', id: 'speicher-passwort', placeholder: 'Passwort',
                                    autocomplete: 'new-password' });
     const verbinden = el('button', { type: 'button', textContent: 'Verbinden' });
+    const abbrechen = el('button', { type: 'button', textContent: 'Abbrechen' });
+
+    const zeileSmb = el('p', { className: 'ordnerzeile' }, [wirt, freigabe]);
+    const zeileDav = el('p', { className: 'ordnerzeile' }, [adresse, anbieter]);
+    // Der Rechner bei SFTP ist dasselbe Feld wie bei SMB (zeileSmb) - zwei
+    // Felder fuer dasselbe waeren beim Umschalten zweimal auszufuellen.
+    const zeileSftp = el('p', { className: 'ordnerzeile' }, [port]);
+    const hilfe = el('p', { className: 'hinweis', id: 'speicher-arthilfe' });
+
+    function artZeigen() {
+      const a = art.value;
+      zeileSmb.hidden = a !== 'smb' && a !== 'sftp';
+      freigabe.hidden = a !== 'smb';
+      wirt.placeholder = a === 'sftp' ? 'Rechner: Name oder IP' : 'NAS: Name oder IP, z. B. 192.168.178.20';
+      zeileDav.hidden = a !== 'webdav';
+      zeileSftp.hidden = a !== 'sftp';
+      hilfe.textContent = {
+        smb: 'Die Freigabe so, wie sie im Dateimanager heißt (\\\\NAS\\Freigabe → Freigabe).',
+        webdav: 'Nextcloud: Einstellungen unten links → WebDAV zeigt die Adresse. Mit zwei '
+          + 'Schritten an der Nextcloud braucht es ein App-Passwort.',
+        sftp: 'Der Ordner gilt ab dem Heimatordner des Benutzers.',
+      }[a] || '';
+    }
+    art.addEventListener('change', artZeigen);
+
+    const formular = el('div', { id: 'speicher-formular', className: 'speicherformular' }, [
+      el('p', { className: 'ordnerzeile' }, [art, name]),
+      hilfe,
+      zeileSmb, zeileDav, zeileSftp,
+      el('p', { className: 'ordnerzeile' }, [el('span', { textContent: 'Ordner darin:' }), unter]),
+      el('p', { className: 'ordnerzeile' }, [benutzer, passwort]),
+      el('p', { className: 'knoepfe' }, [verbinden, abbrechen]),
+    ]);
+    formular.hidden = true;
+    const plus = el('button', { type: 'button', id: 'speicher-plus', textContent: '＋ Speicher hinzufügen' });
+    plus.addEventListener('click', () => {
+      formular.hidden = false;
+      plus.hidden = true;
+      artZeigen();
+      wirt.focus();
+    });
+    function zu() {
+      formular.hidden = true;
+      plus.hidden = false;
+      passwort.value = '';
+    }
+    abbrechen.addEventListener('click', zu);
 
     verbinden.addEventListener('click', async () => {
       verbinden.disabled = true;
       hinweis.textContent = 'wird verbunden … (beim ersten Mal wird dafür rclone geladen)';
       try {
         const d = await hol('/speicher', {
-          art: 'smb', name: name.value, wirt: wirt.value, freigabe: freigabe.value,
-          unterordner: unter.value, benutzer: benutzer.value, passwort: passwort.value,
+          art: art.value, name: name.value, wirt: wirt.value, freigabe: freigabe.value,
+          adresse: adresse.value, anbieter: anbieter.querySelector('input').checked ? 'nextcloud' : 'other',
+          port: port.value, unterordner: unter.value,
+          benutzer: benutzer.value, passwort: passwort.value,
         });
-        passwort.value = '';
         hinweis.textContent = d.hinweis || 'Verbunden.';
+        for (const f of [name, wirt, freigabe, adresse, benutzer]) f.value = '';
+        zu();
         speicherZeigen(d);
         leisteNeu();
       } catch (f) {
@@ -709,23 +770,26 @@
     const teil = el('section', { id: 'speicherteil' }, [
       el('h3', { textContent: 'Eigene Speicher' }),
       el('p', { className: 'hinweis', textContent:
-        'Ohne eigenen Speicher liegen deine Notizen im Standardordner am Server. '
-        + 'Eine NAS, die du hier verbindest, steht als eigener Abschnitt in der Leiste - '
+        'Ohne eigenen Speicher liegen deine Notizen im Standardordner am Server. Jeder '
+        + 'Speicher, den du hier verbindest, steht als eigener Abschnitt in der Leiste - '
         + 'Notizbücher, Abschnitte und Seiten ziehst du einfach hinüber. Der Server '
-        + 'gleicht nach dem Speichern und alle paar Minuten ab; ist die NAS aus, '
+        + 'gleicht nach dem Speichern und alle paar Minuten ab; ist ein Speicher weg, '
         + 'arbeitest du weiter und es wird später nachgeholt.' }),
       standard,
       liste,
-      el('h4', { textContent: 'NAS verbinden (SMB)' }),
-      el('p', { className: 'ordnerzeile' }, [name]),
-      el('p', { className: 'ordnerzeile' }, [wirt, freigabe]),
-      el('p', { className: 'ordnerzeile' }, [unter]),
-      el('p', { className: 'ordnerzeile' }, [benutzer, passwort]),
-      el('p', { className: 'knoepfe' }, [verbinden]),
+      el('p', { className: 'knoepfe' }, [plus]),
+      formular,
       hinweis,
     ]);
     optionAnhaengen(teil);
     speicherLaden();
+  }
+
+  /* Wohin ein Speicher zeigt - eine Zeile, je nach Art. */
+  function speicherZiel(o) {
+    if (o.art === 'webdav') return `${o.adresse}${o.unterordner}`;
+    if (o.art === 'sftp') return `sftp://${o.wirt}${o.port && o.port !== '22' ? ':' + o.port : ''}/${o.unterordner}`;
+    return `//${o.wirt}/${o.freigabe}/${o.unterordner}`;
   }
 
   /* Die Leiste neu laden, damit ein neuer oder entfernter Speicher dort
@@ -810,7 +874,7 @@
       const zeile = el('div', { className: 'speicherort' + (o.stand === 'fehler' ? ' fehler' : '') }, [
         el('p', { className: 'zeile2' }, [
           el('span', { textContent: o.name }),
-          el('code', { textContent: `//${o.wirt}/${o.freigabe}/${o.unterordner}` }),
+          el('code', { textContent: speicherZiel(o) }),
         ]),
         el('p', { className: 'hinweis speicherzustand', textContent: zustand }),
         el('p', { className: 'knoepfe' }, knoepfe),
