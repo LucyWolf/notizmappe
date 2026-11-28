@@ -241,6 +241,12 @@
         teil.hidden = nurVerwalter && !d.darf;
       }
     }
+    // Erst hier steht fest, welche Abschnitte sichtbar sind - und nur die
+    // bekommen einen Reiter. Die Leiste entsteht in alles() schon vorher,
+    // als die Verwaltung noch versteckt war: nach dem Neuladen fehlten
+    // deshalb Name, Benutzer, Zwei Schritte, Einladen, Projekte und Rollen,
+    // und sie kamen erst wieder, wenn ein Klick die Leiste neu baute.
+    optionenReiterBauen();
     const wie = document.getElementById('v-mappe');
     if (wie && document.activeElement !== wie) {
       wie.value = d.mappe || '';
