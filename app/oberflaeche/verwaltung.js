@@ -454,6 +454,7 @@
     'Aus OneNote übernehmen': 'OneNote',
     'Mit einem Server verbinden': 'Server',
     'Name dieser Mappe': 'Name',
+    'Eigene Speicher': 'Speicher',
   };
   let offenerReiter = null;
   try { offenerReiter = localStorage.getItem(REITER_MERK); } catch (f) { /* ohne eben nicht */ }
@@ -652,6 +653,174 @@
     }
     art.dispatchEvent(new Event('change'));
     standZeigen(d);
+  }
+
+  /* --------------------------------------------- Eigene Speicher (NAS)
+
+     Jeder richtet seinen Speicher selbst ein - nicht der Verwalter. Ohne
+     Einrichtung bleibt alles im Standardordner am Server. Ein verbundener
+     Speicher steht als eigener Abschnitt in der Leiste; hinueber kommt man
+     per Ziehen, oder hier mit "alles uebertragen".
+
+     Nur im Browser am Server: das Fenster am Desktop zeigt die Speicher (noch)
+     nicht in seiner Leiste, und ein Knopf, dessen Wirkung man nicht sieht,
+     waere schlimmer als keiner. */
+  function speicherBauen() {
+    if (typeof window.NOTIZMAPPE_HOL !== 'function') return;
+    if (document.getElementById('speicherteil')) return;
+
+    const liste = el('div', { id: 'speicher-liste' });
+    const standard = el('p', { id: 'speicher-standard', className: 'zeile2' });
+    const hinweis = el('p', { id: 'speicher-hinweis', className: 'hinweis' });
+
+    const name = el('input', { type: 'text', id: 'speicher-name', placeholder: 'Name in der Leiste, z. B. NAS',
+                               maxLength: 40 });
+    const wirt = el('input', { type: 'text', id: 'speicher-wirt', placeholder: 'NAS: Name oder IP, z. B. 192.168.178.20',
+                               autocapitalize: 'none' });
+    const freigabe = el('input', { type: 'text', id: 'speicher-freigabe', placeholder: 'Freigabe, z. B. home',
+                                   autocapitalize: 'none' });
+    const unter = el('input', { type: 'text', id: 'speicher-unter', value: 'Notizmappe',
+                                placeholder: 'Ordner darin', autocapitalize: 'none' });
+    const benutzer = el('input', { type: 'text', id: 'speicher-benutzer', placeholder: 'Benutzer auf der NAS',
+                                   autocapitalize: 'none', autocomplete: 'off' });
+    const passwort = el('input', { type: 'password', id: 'speicher-passwort', placeholder: 'Passwort',
+                                   autocomplete: 'new-password' });
+    const verbinden = el('button', { type: 'button', textContent: 'Verbinden' });
+
+    verbinden.addEventListener('click', async () => {
+      verbinden.disabled = true;
+      hinweis.textContent = 'wird verbunden … (beim ersten Mal wird dafür rclone geladen)';
+      try {
+        const d = await hol('/speicher', {
+          art: 'smb', name: name.value, wirt: wirt.value, freigabe: freigabe.value,
+          unterordner: unter.value, benutzer: benutzer.value, passwort: passwort.value,
+        });
+        passwort.value = '';
+        hinweis.textContent = d.hinweis || 'Verbunden.';
+        speicherZeigen(d);
+        leisteNeu();
+      } catch (f) {
+        hinweis.textContent = f.message;
+      } finally {
+        verbinden.disabled = false;
+      }
+    });
+
+    const teil = el('section', { id: 'speicherteil' }, [
+      el('h3', { textContent: 'Eigene Speicher' }),
+      el('p', { className: 'hinweis', textContent:
+        'Ohne eigenen Speicher liegen deine Notizen im Standardordner am Server. '
+        + 'Eine NAS, die du hier verbindest, steht als eigener Abschnitt in der Leiste - '
+        + 'Notizbücher, Abschnitte und Seiten ziehst du einfach hinüber. Der Server '
+        + 'gleicht nach dem Speichern und alle paar Minuten ab; ist die NAS aus, '
+        + 'arbeitest du weiter und es wird später nachgeholt.' }),
+      standard,
+      liste,
+      el('h4', { textContent: 'NAS verbinden (SMB)' }),
+      el('p', { className: 'ordnerzeile' }, [name]),
+      el('p', { className: 'ordnerzeile' }, [wirt, freigabe]),
+      el('p', { className: 'ordnerzeile' }, [unter]),
+      el('p', { className: 'ordnerzeile' }, [benutzer, passwort]),
+      el('p', { className: 'knoepfe' }, [verbinden]),
+      hinweis,
+    ]);
+    optionAnhaengen(teil);
+    speicherLaden();
+  }
+
+  /* Die Leiste neu laden, damit ein neuer oder entfernter Speicher dort
+     sofort steht - baumLaden kommt aus mappe.js. */
+  function leisteNeu() {
+    try { if (typeof window.baumLaden === 'function') window.baumLaden(); } catch (f) { /* egal */ }
+  }
+
+  function zeitText(s) {
+    return s ? new Date(s * 1000).toLocaleString() : '';
+  }
+
+  /* Ein Knopf, der beim ersten Klick fragt und erst beim zweiten tut.
+     confirm() gibt es nicht in jeder Ansicht, und eine Frage, die man
+     wegklicken muss, liest niemand. */
+  function zweimal(text, frage, tun) {
+    const k = el('button', { type: 'button', textContent: text });
+    let scharf = false;
+    k.addEventListener('click', async () => {
+      if (!scharf) {
+        scharf = true;
+        k.textContent = frage;
+        k.classList.add('warnknopf');
+        setTimeout(() => { scharf = false; k.textContent = text; k.classList.remove('warnknopf'); }, 5000);
+        return;
+      }
+      await tun();
+    });
+    return k;
+  }
+
+  async function speicherSchritt(weg, rumpf) {
+    const hinweis = document.getElementById('speicher-hinweis');
+    if (hinweis) hinweis.textContent = 'einen Moment …';
+    try {
+      const d = await hol(weg, rumpf);
+      if (hinweis) hinweis.textContent = d.hinweis || '';
+      speicherZeigen(d);
+      leisteNeu();
+    } catch (f) {
+      if (hinweis) hinweis.textContent = f.message;
+    }
+  }
+
+  function speicherZeigen(d) {
+    const liste = document.getElementById('speicher-liste');
+    const standard = document.getElementById('speicher-standard');
+    if (!liste || !standard || !d) return;
+
+    standard.textContent = '';
+    standard.append(el('span', { textContent: 'Standard' }),
+                    el('span', { textContent: d.standard_aus ? 'ausgeblendet'
+                      : (d.standard_leer ? 'am Server, leer' : 'am Server') }));
+    if (d.standard_aus) {
+      standard.append(el('button', { type: 'button', textContent: 'Wieder einblenden',
+        onclick: () => speicherSchritt('/speicher/standard', { aus: false }) }));
+    } else if ((d.orte || []).length) {
+      const aus = el('button', { type: 'button', textContent: 'Ausblenden',
+        title: d.standard_leer ? 'Der Standardordner verschwindet aus der Leiste.'
+          : 'Erst alles in einen anderen Speicher übertragen - sonst lägen Notizen unsichtbar herum.',
+        onclick: () => speicherSchritt('/speicher/standard', { aus: true }) });
+      aus.disabled = !d.standard_leer;
+      standard.append(aus);
+    }
+
+    liste.textContent = '';
+    for (const o of d.orte || []) {
+      let zustand;
+      if (o.stand === 'ok') zustand = '✓ abgeglichen ' + zeitText(o.zuletzt);
+      else if (o.stand === 'fehler') zustand = '⚠ ' + (o.fehler || 'Fehler') + (o.seit ? ` (seit ${zeitText(o.seit)})` : '');
+      else zustand = '⟳ wird abgeglichen …';
+      const knoepfe = [
+        el('button', { type: 'button', textContent: 'Jetzt abgleichen',
+          onclick: () => speicherSchritt('/speicher/abgleichen', { kennung: o.kennung }) }),
+      ];
+      if (!d.standard_aus && !d.standard_leer) {
+        knoepfe.push(zweimal('Alles aus Standard hierher', 'Wirklich alles übertragen?',
+          () => speicherSchritt('/speicher/uebertragen', { kennung: o.kennung })));
+      }
+      knoepfe.push(zweimal('Abhängen', 'Wirklich abhängen?',
+        () => speicherSchritt('/speicher/entfernen', { kennung: o.kennung })));
+      const zeile = el('div', { className: 'speicherort' + (o.stand === 'fehler' ? ' fehler' : '') }, [
+        el('p', { className: 'zeile2' }, [
+          el('span', { textContent: o.name }),
+          el('code', { textContent: `//${o.wirt}/${o.freigabe}/${o.unterordner}` }),
+        ]),
+        el('p', { className: 'hinweis speicherzustand', textContent: zustand }),
+        el('p', { className: 'knoepfe' }, knoepfe),
+      ]);
+      liste.append(zeile);
+    }
+  }
+
+  async function speicherLaden() {
+    try { speicherZeigen(await hol('/speicher')); } catch (f) { /* ohne Recht: Teil bleibt leer */ }
   }
 
   /* Profilknopf: steht jetzt in der gemeinsamen Oberflaeche (mappe.js) -
@@ -1229,6 +1398,7 @@
   window.Verwaltung = {
     bauen: abschnittBauen,
     ablage: ablageBauen,
+    speicher: speicherBauen,
     post: postBauen,
     // Auch hier ein Pfeil: dieses Objekt entsteht beim Laden der Datei, also
     // lange bevor abschnittBauen sich vor verwaltungLaden haengt.

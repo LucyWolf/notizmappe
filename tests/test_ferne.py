@@ -333,8 +333,14 @@ for treffer in _re.finditer(r"hol\('(/[a-z0-9/-]+)'(\s*,)?", verwaltung):
     weg, rumpf = treffer.group(1), bool(treffer.group(2))
     wege.setdefault(weg, set()).add("POST" if rumpf else "GET")
 pruefe("es werden ueberhaupt Wege gefunden", len(wege) >= 8, sorted(wege))
+# Die eigenen Speicher (NAS) baut verwaltung.js nur im Browser auf - das
+# Fenster zeigt sie nicht in seiner Leiste, also ruft es die Wege auch nie.
+NUR_IM_BROWSER = {"/speicher"}
 fehlt = sorted(f"{art} {weg}" for weg, arten in wege.items() for art in arten
-               if weg not in ferne.SERVERSEITEN.get(art, ()))
+               if weg not in ferne.SERVERSEITEN.get(art, ()) and weg not in NUR_IM_BROWSER)
+pruefe("die Speicherseite baut sich im Fenster wirklich nicht",
+       "if (typeof window.NOTIZMAPPE_HOL !== 'function') return;" in
+       verwaltung.split("function speicherBauen()")[1][:200])
 pruefe("jeder Weg steht in ferne.SERVERSEITEN", not fehlt, ", ".join(fehlt))
 # Und andersherum nichts Totes: ein Weg, den niemand ruft, ist eine offene
 # Tuer ohne Zweck.

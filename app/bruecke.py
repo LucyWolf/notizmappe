@@ -1049,6 +1049,19 @@ class Bruecke:
     def ferne_abmelden(self) -> dict:
         return ferne.abmelden()
 
+    # Mehrere Speicher in einer Leiste (NAS, ...) gibt es nur in der
+    # Serverfassung im Browser - dort faengt der Server diese beiden Aufrufe
+    # selbst ab. Hier stehen sie, damit ein Aufruf einen Satz zurueckbekommt
+    # statt "is not a function"; die Oberflaeche ruft sie nur, wenn der Baum
+    # eine Speicherliste mitbringt, und das tut er im Fenster nicht.
+    @_gefasst
+    def quelle_wechseln(self, rumpf: dict) -> dict:
+        raise Abbruch("Eigene Speicher gibt es nur in der Serverfassung.")
+
+    @_gefasst
+    def verschieben(self, rumpf: dict) -> dict:
+        raise Abbruch("Verschieben zwischen Speichern gibt es nur in der Serverfassung.")
+
     @_gefasst
     def ferne_umschalten(self, rumpf: dict) -> dict:
         d = _woerterbuch(rumpf)

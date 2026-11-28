@@ -82,6 +82,10 @@ const WEGE = {
   'POST /api/ferne/abmelden':  (p, b) => b.ferne_abmelden(),
   'POST /api/ferne/code':      (p, b, r) => b.ferne_code(r),
   'POST /api/ferne/umschalten': (p, b, r) => b.ferne_umschalten(r),
+  // Nur am Server mit eigenen Speichern (NAS, ...): dort gibt es mehr als zwei
+  // Seiten, und sie heissen nach einer Kennung statt "server"/"eigen".
+  'POST /api/quelle':          (p, b, r) => b.quelle_wechseln(r),
+  'POST /api/verschieben':     (p, b, r) => b.verschieben(r),
   'POST /api/einstellungen':   (p, b, r) => b.optionen_setzen(r),
   'POST /api/ordner/waehlen':  (p, b) => b.ordner_waehlen(),
   'POST /api/ordner':          (p, b, r) => b.ordner_setzen(r),
@@ -355,10 +359,133 @@ function ordnerZeigen(e) {
   }
 }
 
+/* Die Ueberschrift eines Speichers in der Leiste.
+ *
+ * Mit eigenen Speichern am Server kommt "q" mit: Name und wie es um den
+ * Abgleich steht. Ein Speicher, der nicht erreichbar ist, sagt das hier und
+ * nicht erst, wenn man etwas vermisst - gearbeitet wird trotzdem weiter. */
+function quellKopf(welche, q) {
+  const kopf = document.createElement('div');
+  kopf.className = 'quelle' + (welche === baumSeite ? ' hier' : '');
+  kopf.append(Object.assign(document.createElement('span'), {
+    textContent: q ? q.name : (welche === 'server' ? baumMappe : 'Eigener Ordner') }));
+  if (q && q.stand === 'fehler') {
+    const seit = q.seit ? new Date(q.seit * 1000).toLocaleString() : '?';
+    kopf.append(Object.assign(document.createElement('span'), {
+      className: 'quellzustand fehler', textContent: '⚠',
+      title: `Nicht abgeglichen seit ${seit}: ${q.fehler || 'unbekannter Fehler'}\n`
+        + 'Gearbeitet wird am Server weiter; sobald der Speicher wieder da ist, wird nachgeholt.' }));
+  } else if (q && (q.stand === 'laeuft' || q.stand === 'neu')) {
+    kopf.append(Object.assign(document.createElement('span'), {
+      className: 'quellzustand', textContent: '⟳', title: 'Wird abgeglichen …' }));
+  }
+  const mehr = Object.assign(document.createElement('button'),
+                             { type: 'button', textContent: '＋',
+                               title: 'Neues Notizbuch hier' });
+  mehr.addEventListener('click', () => notizbuchAnlegen(welche));
+  kopf.append(mehr);
+  kopf.title = welche === baumSeite
+    ? 'Hier schreibst du gerade'
+    : 'Ein Klick auf eine Seite wechselt hierher';
+  ablageziel(kopf, { quelle: welche, pfad: [] });
+  return kopf;
+}
+
+/* ---- Ziehen zwischen den Speichern ----------------------------------------
+ *
+ * Nur wenn es mehrere Speicher gibt (Server mit NAS o. ae.). Am Desktop
+ * bleibt die Leiste, wie sie war - zwischen eigenem Ordner und Server
+ * verschiebt der Desktop nichts.
+ *
+ * Eigener Datentyp statt text/plain: sonst hielte die Leiste das beim
+ * Loslassen neben ein Ziel fuer eine Adresse und wollte sie als Anhang
+ * ablegen (siehe die Behandlung "neben die Flaeche gefallen"). */
+const ZUGART = 'application/x-notizmappe-eintrag';
+const TIEFE = { notizbuch: 1, abschnitt: 2, seite: 3 };
+let gezogen = null;
+
+function ziehbar(el, daten) {
+  if (!baumQuellen.length) return;
+  el.draggable = true;
+  el.addEventListener('dragstart', (ev) => {
+    ev.stopPropagation();
+    gezogen = daten;
+    ev.dataTransfer.effectAllowed = 'move';
+    ev.dataTransfer.setData(ZUGART, daten.titel);
+    el.classList.add('wirdgezogen');
+  });
+  el.addEventListener('dragend', () => {
+    gezogen = null;
+    el.classList.remove('wirdgezogen');
+    for (const x of document.querySelectorAll('#baum .ablageziel')) x.classList.remove('ablageziel');
+  });
+}
+
+function ablageziel(el, ziel) {
+  if (!baumQuellen.length) return;
+  // Ein Notizbuch passt nur auf einen Speicher, ein Abschnitt auf einen
+  // Speicher oder ein Notizbuch, eine Seite auch auf einen Abschnitt.
+  const passt = () => gezogen && ziel.pfad.length < TIEFE[gezogen.art];
+  el.addEventListener('dragover', (ev) => {
+    if (!passt()) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    ev.dataTransfer.dropEffect = 'move';
+    el.classList.add('ablageziel');
+  });
+  el.addEventListener('dragleave', (ev) => {
+    if (!el.contains(ev.relatedTarget)) el.classList.remove('ablageziel');
+  });
+  el.addEventListener('drop', async (ev) => {
+    if (!passt()) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    el.classList.remove('ablageziel');
+    const was = gezogen;
+    gezogen = null;
+    await verschieben(was, ziel);
+  });
+}
+
+async function verschieben(was, ziel) {
+  // Liegt die offene Seite darin? Dann erst fertig speichern - sonst wandert
+  // die Datei ohne den letzten Satz, und der landet danach im Leeren.
+  const drin = offen && was.quelle === baumSeite && offen.notizbuch === was.pfad[0]
+    && (was.pfad.length < 2 || offen.abschnitt === was.pfad[1])
+    && (was.pfad.length < 3 || offen.name === was.pfad[2]);
+  if (drin) {
+    clearTimeout(speicherUhr);
+    if (schmutzig) await speichernJetzt();
+    while (speichertGerade) await speichertGerade;
+  }
+  try {
+    await api('/api/verschieben', 'POST',
+              { art: was.art, von: { quelle: was.quelle, pfad: was.pfad }, nach: ziel });
+  } catch (f) {
+    melden('Verschieben ging nicht: ' + f.message);
+    return;
+  }
+  if (drin) {
+    schmutzig = false;
+    offen = null;
+    flaecheLeeren();
+    merker.legen('zuletzt', 'null');
+  }
+  await baumLaden();
+  const wohin = baumQuellen.find((q) => q.kennung === ziel.quelle);
+  sagen(`„${was.titel}“ liegt jetzt in ${wohin ? wohin.name : 'dem Ziel'}`);
+}
+
+function quellName(kennung) {
+  const q = baumQuellen.find((x) => x.kennung === kennung);
+  return q ? q.name : kennung;
+}
+
 function baumZeichnen() {
   const baum = $('#baum');
   baum.textContent = '';
-  if (!baumDaten || !baumDaten.length) {
+  const mitQuellen = baumQuellen.length > 0;
+  if ((!baumDaten || !baumDaten.length) && !mitQuellen) {
     baumMeldung('Hier liegt noch kein Notizbuch.', ['Einstellungen öffnen', () => tafelZeigen(true)]);
     // Wo "hier" ist, gehört dazu - sonst sucht man an der falschen Stelle.
     api('/api/einstellungen').then((e) => {
@@ -370,26 +497,23 @@ function baumZeichnen() {
     }).catch(() => { /* dann eben ohne Pfad */ });
     return;
   }
+  // Mit eigenen Speichern steht jeder Speicher in der Leiste, auch ein leerer
+  // - sonst gaebe es nichts, worauf man das erste Notizbuch ziehen koennte.
+  const folge = mitQuellen
+    ? baumQuellen.flatMap((q) => [{ kopf: q }, ...baumDaten.filter((b) => b.quelle === q.kennung)])
+    : baumDaten;
   let letzteQuelle = null;
-  for (const buch of baumDaten) {
+  for (const eintrag of folge) {
+    if (eintrag.kopf) {
+      baum.append(quellKopf(eintrag.kopf.kennung, eintrag.kopf));
+      continue;
+    }
+    const buch = eintrag;
     // Ueberschrift, sobald die Seite wechselt - sonst stuenden die
     // Notizbuecher von hier und von dort ununterscheidbar untereinander.
-    if (buch.quelle && buch.quelle !== letzteQuelle) {
+    if (!mitQuellen && buch.quelle && buch.quelle !== letzteQuelle) {
       letzteQuelle = buch.quelle;
-      const welche = buch.quelle;
-      const kopf = document.createElement('div');
-      kopf.className = 'quelle' + (welche === baumSeite ? ' hier' : '');
-      kopf.append(Object.assign(document.createElement('span'),
-                                { textContent: welche === 'server' ? baumMappe : 'Eigener Ordner' }));
-      const mehr = Object.assign(document.createElement('button'),
-                                 { type: 'button', textContent: '＋',
-                                   title: 'Neues Notizbuch hier' });
-      mehr.addEventListener('click', () => notizbuchAnlegen(welche));
-      kopf.append(mehr);
-      kopf.title = welche === baumSeite
-        ? 'Hier schreibst du gerade'
-        : 'Ein Klick auf eine Seite wechselt hierher';
-      baum.append(kopf);
+      baum.append(quellKopf(buch.quelle, null));
     }
     const bd = document.createElement('div');
     const klappschluessel = (buch.quelle ? buch.quelle + '/' : '') + buch.name;
@@ -400,7 +524,7 @@ function baumZeichnen() {
     const fremd = !!buch.quelle && buch.quelle !== baumSeite;
     const hier = buch.quelle;
     if (fremd) bd.classList.add('drueben');
-    bd.append(zeile(buch.name, [
+    const buchzeile = zeile(buch.name, [
       ['+ Abschnitt', '＋', () => aufSeite(hier, async () => {
         const n = prompt('Name des Abschnitts:'); if (!n) return;
         await api('/api/abschnitt', 'POST', { notizbuch: buch.name, name: n });
@@ -408,13 +532,16 @@ function baumZeichnen() {
       })],
       ['Notizbuch loeschen', '🗑',
        () => aufSeite(hier, () => loeschen('notizbuch', [buch.name], buch.name))],
-    ], () => klappen(bd, klappschluessel), zugeklappt.has(klappschluessel)));
+    ], () => klappen(bd, klappschluessel), zugeklappt.has(klappschluessel));
+    ziehbar(buchzeile, { art: 'notizbuch', quelle: hier, pfad: [buch.name], titel: buch.name });
+    ablageziel(buchzeile, { quelle: hier, pfad: [buch.name] });
+    bd.append(buchzeile);
 
     for (const ab of buch.abschnitte) {
       const schluessel = klappschluessel + '/' + ab.name;
       const ad = document.createElement('div');
       ad.className = 'abschnitt' + (zugeklappt.has(schluessel) ? ' eingeklappt' : '');
-      ad.append(zeile(ab.name, [
+      const abzeile = zeile(ab.name, [
         ['+ Seite', '＋', () => aufSeite(hier, async () => {
           const r = await api('/api/seite', 'POST', { notizbuch: buch.name, abschnitt: ab.name, titel: 'Neue Seite' });
           zugeklappt.delete(schluessel); await baumLaden();
@@ -423,7 +550,10 @@ function baumZeichnen() {
         })],
         ['Abschnitt loeschen', '🗑',
          () => aufSeite(hier, () => loeschen('abschnitt', [buch.name, ab.name], ab.name))],
-      ], () => klappen(ad, schluessel), zugeklappt.has(schluessel)));
+      ], () => klappen(ad, schluessel), zugeklappt.has(schluessel));
+      ziehbar(abzeile, { art: 'abschnitt', quelle: hier, pfad: [buch.name, ab.name], titel: ab.name });
+      ablageziel(abzeile, { quelle: hier, pfad: [buch.name, ab.name] });
+      ad.append(abzeile);
 
       for (const s of ab.seiten) {
         const sd = zeile(s.titel, [
@@ -431,6 +561,7 @@ function baumZeichnen() {
            () => aufSeite(hier, () => loeschen('seite', [buch.name, ab.name, s.name], s.titel))],
         ]);
         sd.classList.add('seite');
+        ziehbar(sd, { art: 'seite', quelle: hier, pfad: [buch.name, ab.name, s.name], titel: s.titel });
         if (s.konflikt) sd.classList.add('konflikt');
         if (s.konflikt) sd.title = 'Konfliktkopie vom Sync - hier stehen zwei Fassungen derselben Seite';
         // Beschädigt: die Datei lässt sich nicht lesen. Das gehört in die
@@ -521,12 +652,14 @@ function erstesSeitchen() {
  * die eigenen. Welche davon gerade die aktive ist, sagt der Baum mit. */
 let baumSeite = '';            // 'server', 'eigen' oder leer (gar nicht verbunden)
 let baumMappe = 'Servermappe';
+let baumQuellen = [];           // am Server mit eigenen Speichern: [{kennung, name, stand, ...}]
 
 async function baumLaden() {
   const r = await api('/api/baum');
   baumDaten = r.notizbuecher;
   baumSeite = r.jetzt || '';
   baumMappe = r.mappe || 'Servermappe';
+  baumQuellen = Array.isArray(r.quellen) ? r.quellen : [];
   baumZeichnen();
 }
 
@@ -544,7 +677,10 @@ async function seitenwechsel(an, ziel) {
   try {
     if (schmutzig) await speichernJetzt();
   } catch (f) { /* lieber wechseln als haengenbleiben */ }
-  await api('/api/ferne/umschalten', 'POST', { an });
+  // Eine Kennung (Speicher am Server) oder ja/nein (Desktop: Server oder
+  // eigener Ordner).
+  if (typeof an === 'string') await api('/api/quelle', 'POST', { quelle: an });
+  else await api('/api/ferne/umschalten', 'POST', { an });
   schmutzig = false;
   offen = null;
   flaecheLeeren();
@@ -558,14 +694,21 @@ async function seitenwechsel(an, ziel) {
     return erste ? { buch: erste[0], abschnitt: erste[1], name: erste[2] } : null;
   })();
   if (wohin) await seiteOeffnen(wohin.buch, wohin.abschnitt, wohin.name);
-  sagen(an ? `Jetzt in ${baumMappe}` : 'Jetzt im eigenen Ordner');
+  sagen(typeof an === 'string' ? `Jetzt in ${quellName(an)}`
+    : (an ? `Jetzt in ${baumMappe}` : 'Jetzt im eigenen Ordner'));
+}
+
+/* Wohin umschalten, um in "quelle" zu arbeiten - Kennung oder ja/nein. */
+function wechselZiel(quelle) {
+  return baumQuellen.length ? quelle : quelle === 'server';
 }
 
 /* Eine Seite von drueben aufmachen: umschalten und genau sie oeffnen. */
 async function seiteDrueben(buch, abschnitt, name, quelle) {
-  sagen(quelle === 'server' ? `Wechsle zu ${baumMappe} …` : 'Wechsle zum eigenen Ordner …', 0);
+  sagen(baumQuellen.length ? `Wechsle zu ${quellName(quelle)} …`
+    : (quelle === 'server' ? `Wechsle zu ${baumMappe} …` : 'Wechsle zum eigenen Ordner …'), 0);
   try {
-    await seitenwechsel(quelle === 'server', { buch, abschnitt, name });
+    await seitenwechsel(wechselZiel(quelle), { buch, abschnitt, name });
   } catch (f) {
     melden('Umschalten ging nicht: ' + f.message);
   }
@@ -1858,7 +2001,7 @@ async function notizbuchAnlegen(quelle) {
  * passiert genau einmal, und danach sucht man sie. */
 async function aufSeite(quelle, tun) {
   if (quelle && baumSeite && quelle !== baumSeite) {
-    await seitenwechsel(quelle === 'server', null);
+    await seitenwechsel(wechselZiel(quelle), null);
   }
   await tun();
 }
