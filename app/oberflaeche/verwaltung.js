@@ -38,6 +38,12 @@
     return k;
   }
 
+  /* Ein Feld mit Namen davor - dieselbe Zeilenform wie im Mailversand.
+     Namenlose Kästchen nebeneinander raten sich schlecht. */
+  function beschriftet(text, feld) {
+    return el('p', { className: 'zeile2' }, [el('span', { textContent: text }), feld]);
+  }
+
   /* Eine Meldung in der Verwaltung - nicht in der Statuszeile: wer hier
      etwas einstellt, schaut hierher. */
   function sagen(text) {
@@ -864,8 +870,13 @@
       einMinuten.append(el('option', { value: String(m), textContent: m + ' Minuten' }));
     }
     const einKnopf = el('button', { type: 'button', textContent: 'Einladungslink erzeugen' });
-    const einFeld = el('input', { type: 'text', id: 'v-einladungslink', readOnly: true, hidden: true });
-    const einKopieren = el('button', { type: 'button', textContent: 'Kopieren', hidden: true });
+    const einFeld = el('input', { type: 'text', id: 'v-einladungslink', readOnly: true });
+    const einKopieren = el('button', { type: 'button', textContent: 'Kopieren' });
+    // Die ganze Zeile verschwindet, nicht nur ihr Inhalt: ein leeres Feld,
+    // das auf einen Link wartet, sieht aus wie eines, in das man etwas
+    // eintragen soll.
+    const einZeile = el('p', { className: 'ordnerzeile', id: 'v-einladungslinkzeile',
+                               hidden: true }, [einFeld, einKopieren]);
     einKopieren.addEventListener('click', async () => {
       einFeld.select();
       try {
@@ -880,8 +891,7 @@
           recht: 'schreiben', minuten: Number(einMinuten.value),
         });
         einFeld.value = r.link;
-        einFeld.hidden = false;
-        einKopieren.hidden = false;
+        einZeile.hidden = false;
         sagen(`Gilt ${r.minuten} Minuten und genau einmal.`);
         verwaltungLaden();
       } catch (f) { sagen(f.message); }
@@ -930,8 +940,15 @@
       el('p', { className: 'hinweis', textContent:
         'Ein Link, der kurz gilt und genau einmal. Wer ihn öffnet, legt sich Name und '
         + 'Passwort selbst an - so muss kein Passwort durch die Gegend geschickt werden.' }),
-      el('p', { className: 'ordnerzeile' }, [einRolle, einProjekt, einMinuten, einKnopf]),
-      el('p', { className: 'ordnerzeile' }, [einFeld, einKopieren]),
+      // Drei namenlose Kästchen nebeneinander sagen niemandem, was sie
+      // bedeuten - zumal eines davon entscheidet, was der Eingeladene
+      // hinterher darf. Also beschriftet, in derselben Zeilenform wie der
+      // Mailversand.
+      beschriftet('Rolle', einRolle),
+      beschriftet('Projekt', einProjekt),
+      beschriftet('Gültig', einMinuten),
+      el('p', { className: 'knoepfe' }, [einKnopf]),
+      einZeile,
       el('div', { id: 'v-einladungen' }),
       el('h3', { textContent: 'Projekte', style: 'margin-top:14px' }),
       el('p', { className: 'hinweis', textContent:
@@ -1194,11 +1211,16 @@
 
   async function alles() {
     if (!serverDa()) return;
+    // verwaltungLaden steht hinter einem Pfeil, nicht als Name: abschnittBauen
+    // haengt sich davor (fuellen() plus Reiter), und diese Liste entsteht,
+    // bevor der erste Schritt gelaufen ist. Ohne den Pfeil stuende hier fuer
+    // immer die alte Fassung - dann fuellen sich die Auswahlfelder bei
+    // "Einladen" nie, und die Reiterleiste bleibt halb leer. Genau so war es.
     for (const [name, tun] of [['Verwaltung', abschnittBauen],
                                ['Ablage', ablageBauen],
                                ['Mailversand', postBauen],
                                ['Reiter', optionenReiterBauen],
-                               ['Verwaltung laden', verwaltungLaden]]) {
+                               ['Verwaltung laden', () => verwaltungLaden()]]) {
       // Jeder Schritt für sich: fällt einer aus, steht der Rest trotzdem da.
       try { await tun(); } catch (f) { console.error('[notizmappe] ' + name + ':', f); }
     }
@@ -1208,7 +1230,9 @@
     bauen: abschnittBauen,
     ablage: ablageBauen,
     post: postBauen,
-    laden: verwaltungLaden,
+    // Auch hier ein Pfeil: dieses Objekt entsteht beim Laden der Datei, also
+    // lange bevor abschnittBauen sich vor verwaltungLaden haengt.
+    laden: () => verwaltungLaden(),
     reiterBauen: optionenReiterBauen,
     da: serverDa,
     alles: alles,
